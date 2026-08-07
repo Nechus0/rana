@@ -109,7 +109,7 @@ pub struct WireError {
 }
 
 impl serde::Serialize for RanaError {
-    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+fn serialize<S: serde::Serializer>(&self, s: S) -> std::result::Result<S::Ok, S::Error> {
         let kind = match self {
             RanaError::NoApiKey => "no_api_key",
             RanaError::ApiKeyRejected => "api_key_rejected",
