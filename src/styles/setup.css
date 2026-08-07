@@ -1,0 +1,218 @@
+/* ============================================================
+   Rana · Ersteinrichtung
+   ------------------------------------------------------------
+   Der Assistent ist das Erste, was von der Anwendung zu sehen ist.
+   Er nimmt das ganze Fenster ein und hat bewusst keine Seitenschiene:
+   es gibt hier nur einen Weg, und der geht nach vorn.
+   ============================================================ */
+
+.setup {
+  height: 100vh;
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  background: var(--paper);
+}
+
+/* ---- Die linke Seite: wo man ist ------------------------- */
+.setup-side {
+  background: var(--sphagnum-deep);
+  border-right: 1px solid var(--line);
+  padding: var(--s7) var(--s5);
+  display: flex;
+  flex-direction: column;
+}
+
+.setup-brand { margin-bottom: var(--s7); }
+.setup-brand .name {
+  font-family: var(--face-display);
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -.02em;
+  line-height: 1;
+  color: var(--peat);
+}
+.setup-brand .version {
+  font-family: var(--face-display);
+  font-style: italic;
+  font-size: var(--t-base);
+  color: var(--reed);
+  margin-top: 3px;
+}
+.setup-brand .claim {
+  font-size: var(--t-sm);
+  color: var(--reed);
+  margin-top: var(--s4);
+  line-height: var(--lh-read);
+  max-width: 30ch;
+}
+
+/* Dieselbe senkrechte Spur wie in der Anwendung — damit der
+   Assistent nicht wie ein Fremdkörper wirkt, sondern wie derselbe
+   Weg, nur einen Schritt früher. */
+.setup-steps { position: relative; display: flex; flex-direction: column; gap: 2px; }
+.setup-steps::before {
+  content: "";
+  position: absolute;
+  left: 11px; top: 18px; bottom: 18px;
+  width: 1px; background: var(--line-strong);
+}
+.setup-step {
+  position: relative;
+  display: flex; align-items: center; gap: var(--s3);
+  padding: 7px 0;
+  font-size: var(--t-sm);
+  color: var(--reed-faint);
+  transition: color var(--dur) var(--ease);
+}
+.setup-dot {
+  position: relative; z-index: 1;
+  width: 23px; height: 23px; flex: none;
+  border-radius: 50%;
+  background: var(--sphagnum-deep);
+  border: 1px solid var(--line-strong);
+  display: grid; place-items: center;
+  font-family: var(--face-record);
+  font-size: 11px; font-weight: 600;
+  color: var(--reed-faint);
+  transition: all var(--dur) var(--ease);
+}
+.setup-step.is-done { color: var(--peat-soft); }
+.setup-step.is-done .setup-dot {
+  background: var(--arvalis-wash);
+  border-color: var(--arvalis-line);
+  color: var(--arvalis);
+}
+.setup-step.is-current { color: var(--peat); font-weight: 600; }
+.setup-step.is-current .setup-dot {
+  background: var(--arvalis); border-color: var(--arvalis); color: #fff;
+}
+
+/* ---- Die rechte Seite: was zu tun ist -------------------- */
+.setup-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+.setup-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: var(--s7) var(--s7) var(--s6);
+}
+.setup-inner { max-width: 620px; }
+
+.setup-eyebrow {
+  font-family: var(--face-record);
+  font-size: var(--t-xs);
+  letter-spacing: var(--record-track);
+  text-transform: uppercase;
+  color: var(--arvalis);
+  margin-bottom: var(--s3);
+}
+.setup-body h2 { font-size: var(--t-xl); margin-bottom: var(--s3); }
+.setup-lede {
+  font-size: var(--t-md);
+  color: var(--peat-soft);
+  line-height: var(--lh-read);
+  margin-bottom: var(--s6);
+  max-width: 56ch;
+}
+
+.setup-foot {
+  border-top: 1px solid var(--line);
+  background: var(--sphagnum);
+  padding: var(--s4) var(--s7);
+  display: flex; align-items: center; gap: var(--s3);
+}
+
+/* ---- Auswahl mit Erläuterung ----------------------------- */
+.choice-grid { display: grid; gap: var(--s2); }
+.choice-grid.two { grid-template-columns: 1fr 1fr; }
+
+.choice {
+  display: flex; align-items: flex-start; gap: var(--s3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r);
+  padding: var(--s3) var(--s4);
+  cursor: pointer;
+  background: var(--paper);
+  transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+.choice:hover { border-color: var(--reed-faint); background: var(--sphagnum); }
+.choice input { position: absolute; opacity: 0; width: 0; height: 0; }
+.choice:has(input:checked) {
+  border-color: var(--arvalis);
+  background: var(--arvalis-wash);
+}
+.choice:has(input:focus-visible) { outline: 2px solid var(--arvalis); outline-offset: 2px; }
+
+.choice-mark {
+  width: 16px; height: 16px; flex: none; margin-top: 3px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 50%;
+  display: grid; place-items: center;
+  transition: border-color var(--dur-fast) var(--ease);
+}
+.choice:has(input:checked) .choice-mark { border-color: var(--arvalis); }
+.choice-mark::after {
+  content: ""; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--arvalis);
+  transform: scale(0);
+  transition: transform var(--dur-fast) var(--ease);
+}
+.choice:has(input:checked) .choice-mark::after { transform: scale(1); }
+
+.choice-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.choice-title { font-size: var(--t-base); font-weight: 550; }
+.choice-desc { font-size: var(--t-sm); color: var(--reed); line-height: 1.45; }
+
+/* ---- Schlüsselfeld --------------------------------------- */
+.key-row { display: flex; gap: var(--s2); align-items: stretch; }
+.key-row input { font-family: var(--face-record); font-size: var(--t-sm); letter-spacing: 0; }
+.key-state {
+  display: flex; align-items: center; gap: var(--s2);
+  font-size: var(--t-sm);
+  min-height: 22px;
+}
+.key-state.ok { color: var(--moss); }
+.key-state.bad { color: var(--brick); }
+.key-state svg { width: 15px; height: 15px; flex: none; }
+
+/* Ein kleiner Wartepunkt, solange geprüft wird */
+.spinner {
+  width: 13px; height: 13px; flex: none;
+  border: 2px solid var(--line-strong);
+  border-top-color: var(--arvalis);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2s; } }
+
+/* ---- Zusammenfassung am Ende ----------------------------- */
+.summary { display: flex; flex-direction: column; gap: 0; margin-bottom: var(--s5); }
+.summary-row {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  gap: var(--s4);
+  padding: var(--s3) 0;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t-sm);
+}
+.summary-row:first-child { border-top: 1px solid var(--line); }
+.summary-row dt {
+  font-family: var(--face-record);
+  font-size: var(--t-xs);
+  letter-spacing: var(--record-track);
+  text-transform: uppercase;
+  color: var(--reed);
+}
+.summary-row dd { margin: 0; color: var(--peat); }
+.summary-row dd .missing { color: var(--amber); }
+
+@media (max-width: 900px) {
+  .setup { grid-template-columns: 1fr; }
+  .setup-side { display: none; }
+  .setup-body, .setup-foot { padding-left: var(--s5); padding-right: var(--s5); }
+  .choice-grid.two { grid-template-columns: 1fr; }
+}

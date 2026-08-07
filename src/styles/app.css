@@ -1,0 +1,567 @@
+/* ============================================================
+   Rana · Anwendungsgerüst
+   Seitenschiene · Arbeitsfläche · Kontextspalte
+   ============================================================ */
+
+#app { height: 100vh; display: flex; flex-direction: column; }
+
+.shell {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: var(--rail-w) minmax(0, 1fr) var(--ctx-w);
+  min-height: 0;
+}
+.shell.no-context { grid-template-columns: var(--rail-w) minmax(0, 1fr); }
+
+/* ============================================================
+   Seitenschiene
+   ============================================================ */
+.rail {
+  background: var(--sphagnum-deep);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* ---- Kennung ---------------------------------------------- */
+.brand {
+  padding: var(--s5) var(--s4) var(--s4);
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+}
+.brand-name {
+  font-family: var(--face-display);
+  font-size: var(--t-lg);
+  font-weight: 600;
+  letter-spacing: -.015em;
+  color: var(--peat);
+}
+/* Der Artname als Versionsbezeichnung — kursiv, wie in der Systematik. */
+.brand-version {
+  font-family: var(--face-display);
+  font-size: var(--t-sm);
+  font-style: italic;
+  color: var(--reed);
+  letter-spacing: .005em;
+}
+
+/* ---- Fallauswahl ------------------------------------------ */
+.rail-section { padding: 0 var(--s3) var(--s3); }
+.rail-head {
+  display: flex; align-items: center; gap: var(--s2);
+  padding: var(--s2) var(--s2) var(--s2) var(--s3);
+}
+.rail-head .record { flex: 1; }
+
+.case-search {
+  margin: 0 var(--s3) var(--s2);
+  position: relative;
+}
+.case-search input {
+  padding: 7px 10px 7px 30px;
+  font-size: var(--t-sm);
+  background: var(--paper);
+}
+.case-search svg {
+  position: absolute; left: 9px; top: 50%; transform: translateY(-50%);
+  width: 14px; height: 14px; color: var(--reed-faint); pointer-events: none;
+}
+
+.case-list {
+  list-style: none; margin: 0; padding: 0 var(--s3);
+  overflow-y: auto;
+  max-height: 32vh;
+  flex: 0 1 auto;
+}
+.case-item {
+  display: flex; align-items: center; gap: var(--s2);
+  width: 100%;
+  text-align: left;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: var(--r);
+  padding: 7px 9px;
+  font: inherit;
+  font-size: var(--t-sm);
+  color: var(--peat-soft);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease);
+}
+.case-item:hover { background: var(--paper); }
+.case-item[aria-current="true"] {
+  background: var(--paper);
+  border-color: var(--line);
+  color: var(--peat);
+  font-weight: 550;
+}
+.case-item-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.case-item-nr {
+  font-family: var(--face-record);
+  font-size: var(--t-xs);
+  color: var(--reed-faint);
+  font-variant-numeric: tabular-nums;
+}
+.case-empty { padding: var(--s3) var(--s3); font-size: var(--t-sm); color: var(--reed-faint); }
+
+/* ============================================================
+   Die Schrittfolge als senkrechte Spur
+   ------------------------------------------------------------
+   Eine durchgehende Linie verbindet die fünf Schritte. Sie ist
+   hier berechtigt, weil die Schritte tatsächlich eine Folge
+   sind: ohne Stammdaten kein Bericht, ohne Bericht keine
+   Ausgabe. Der Fortschritt füllt die Linie von oben.
+   ============================================================ */
+.spine {
+  position: relative;
+  padding: var(--s4) var(--s3) var(--s4) 0;
+  margin-top: var(--s2);
+  border-top: 1px solid var(--line);
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Die ruhende Spur */
+.spine::before {
+  content: "";
+  position: absolute;
+  left: 27px; top: 34px; bottom: 34px;
+  width: 1px;
+  background: var(--line-strong);
+}
+/* Der zurückgelegte Teil */
+.spine::after {
+  content: "";
+  position: absolute;
+  left: 27px; top: 34px;
+  width: 1px;
+  height: var(--spine-progress, 0px);
+  background: var(--arvalis);
+  transition: height var(--dur-slow) var(--ease), background var(--dur-fade) var(--ease);
+}
+
+.spine-step {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  width: 100%;
+  padding: 9px var(--s3) 9px 16px;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: var(--t-sm);
+  color: var(--reed);
+  cursor: pointer;
+  text-align: left;
+  border-radius: var(--r);
+  transition: color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+.spine-step:hover { color: var(--peat); background: var(--paper); }
+
+.spine-node {
+  position: relative;
+  z-index: 1;
+  width: 23px; height: 23px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--sphagnum-deep);
+  border: 1px solid var(--line-strong);
+  display: grid;
+  place-items: center;
+  font-family: var(--face-record);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--reed);
+  transition: background var(--dur) var(--ease),
+              border-color var(--dur) var(--ease),
+              color var(--dur) var(--ease),
+              box-shadow var(--dur-fade) var(--ease);
+}
+.spine-step:hover .spine-node { border-color: var(--reed-faint); }
+
+.spine-step.is-done .spine-node {
+  background: var(--arvalis-wash);
+  border-color: var(--arvalis-line);
+  color: var(--arvalis);
+}
+.spine-step.is-current { color: var(--peat); font-weight: 600; }
+.spine-step.is-current .spine-node {
+  background: var(--arvalis);
+  border-color: var(--arvalis);
+  color: #fff;
+}
+.spine-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Offene Pflichtangabe in diesem Schritt */
+.spine-flag {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--amber);
+  flex: none;
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease);
+}
+.spine-step.has-gap .spine-flag { opacity: 1; }
+
+/* ---- Fuss der Schiene -------------------------------------- */
+.rail-foot {
+  border-top: 1px solid var(--line);
+  padding: var(--s3);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.rail-link {
+  display: flex; align-items: center; gap: var(--s3);
+  padding: 8px var(--s3);
+  border: none; background: transparent;
+  border-radius: var(--r);
+  font: inherit; font-size: var(--t-sm);
+  color: var(--peat-soft);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--dur-fast) var(--ease);
+}
+.rail-link:hover { background: var(--paper); color: var(--peat); }
+.rail-link svg { width: 16px; height: 16px; flex: none; opacity: .7; }
+.rail-link .spacer { flex: 1; }
+
+/* ============================================================
+   Arbeitsfläche
+   ============================================================ */
+.work {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--sphagnum);
+}
+
+.work-head {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--s4);
+  padding: var(--s5) var(--s6) var(--s4);
+  border-bottom: 1px solid var(--line);
+  background: var(--sphagnum);
+}
+.work-title { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.work-eyebrow {
+  font-family: var(--face-record);
+  font-size: var(--t-xs);
+  letter-spacing: var(--record-track);
+  text-transform: uppercase;
+  color: var(--reed);
+}
+.work-head h2 { font-size: var(--t-xl); }
+
+.work-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: var(--s6);
+  scroll-behavior: smooth;
+}
+.work-inner { max-width: var(--work-max); margin: 0 auto; }
+.work-inner.wide { max-width: 1000px; }
+
+.work-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s4) var(--s6);
+  border-top: 1px solid var(--line);
+  background: var(--sphagnum-deep);
+}
+
+/* ---- Gruppen innerhalb eines Schrittes ---------------------- */
+.group { margin-bottom: var(--s6); }
+.group:last-child { margin-bottom: 0; }
+
+.group-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s3);
+  padding-bottom: var(--s2);
+  margin-bottom: var(--s4);
+  border-bottom: 1px solid var(--line);
+}
+/* Die Nummer entspricht dem Gliederungspunkt im fertigen Bericht.
+   Sie ist keine Zierde, sondern zeigt, wo der Text landet. */
+.group-num {
+  font-family: var(--face-record);
+  font-size: var(--t-xs);
+  font-weight: 600;
+  color: var(--arvalis);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+.group-title { font-family: var(--face-ui); font-size: var(--t-md); font-weight: 600; flex: 1; }
+.group-body { display: flex; flex-direction: column; gap: var(--s4); }
+
+/* ---- Aufklappbares ----------------------------------------- */
+details.fold {
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--paper);
+  margin-top: var(--s4);
+}
+details.fold > summary {
+  cursor: pointer;
+  padding: var(--s3) var(--s4);
+  font-size: var(--t-sm);
+  font-weight: 550;
+  display: flex; align-items: center; gap: var(--s2);
+  list-style: none;
+  border-radius: var(--r);
+}
+details.fold > summary::-webkit-details-marker { display: none; }
+details.fold > summary::before {
+  content: "";
+  width: 6px; height: 6px; flex: none;
+  border-right: 1.5px solid var(--reed);
+  border-bottom: 1.5px solid var(--reed);
+  transform: rotate(-45deg);
+  transition: transform var(--dur) var(--ease);
+  margin-right: 2px;
+}
+details.fold[open] > summary::before { transform: rotate(45deg); }
+details.fold > summary:hover { background: var(--sphagnum); }
+.fold-body { padding: 0 var(--s4) var(--s4); border-top: 1px solid var(--line); padding-top: var(--s4); }
+
+/* ============================================================
+   Kontextspalte
+   Sie zeigt nur, was gerade etwas zu sagen hat.
+   ============================================================ */
+.context {
+  background: var(--sphagnum-deep);
+  border-left: 1px solid var(--line);
+  overflow-y: auto;
+  padding: var(--s5) var(--s4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+}
+.ctx-block { display: flex; flex-direction: column; gap: var(--s3); }
+.ctx-block > .record { padding-bottom: var(--s2); border-bottom: 1px solid var(--line); }
+
+/* ---- Vollständigkeit als Balken, nicht als Ring -------------
+   Ein Ring zeigt eine Zahl. Ein Balken zeigt, was fehlt.       */
+.completeness { display: flex; flex-direction: column; gap: var(--s3); }
+.comp-bar {
+  height: 3px;
+  background: var(--line-strong);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.comp-fill {
+  height: 100%;
+  width: var(--comp, 0%);
+  background: var(--arvalis);
+  transition: width var(--dur-slow) var(--ease), background var(--dur) var(--ease);
+}
+.comp-fill.is-full { background: var(--moss); }
+.comp-value {
+  font-family: var(--face-record);
+  font-size: var(--t-2xl);
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.02em;
+  line-height: 1;
+  color: var(--peat);
+}
+.comp-value small { font-size: var(--t-md); color: var(--reed); }
+
+.gap-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.gap-item {
+  display: flex; align-items: flex-start; gap: var(--s2);
+  font-size: var(--t-sm);
+  color: var(--peat-soft);
+  padding: 5px 0;
+  border: none; background: none; text-align: left;
+  cursor: pointer; font-family: inherit;
+  width: 100%;
+  border-radius: var(--r-sm);
+}
+.gap-item:hover { color: var(--arvalis); }
+.gap-item::before {
+  content: "";
+  width: 4px; height: 4px; border-radius: 50%;
+  background: var(--amber);
+  flex: none; margin-top: 8px;
+}
+
+/* ---- Verbrauch --------------------------------------------- */
+.budget { display: flex; flex-direction: column; gap: var(--s2); }
+.budget-row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s2); }
+.budget-amount {
+  font-family: var(--face-record);
+  font-size: var(--t-md);
+  font-variant-numeric: tabular-nums;
+  color: var(--peat);
+}
+.budget-of { font-size: var(--t-sm); color: var(--reed); font-family: var(--face-record); }
+.budget-bar { height: 3px; background: var(--line-strong); border-radius: 2px; overflow: hidden; }
+.budget-fill {
+  height: 100%; width: var(--used, 0%);
+  background: var(--moss);
+  transition: width var(--dur-slow) var(--ease), background var(--dur) var(--ease);
+}
+.budget-fill.warn { background: var(--amber); }
+.budget-fill.stop { background: var(--brick); }
+
+/* ============================================================
+   DIE VERWANDLUNG
+   ------------------------------------------------------------
+   Der Moorfrosch färbt sich für wenige Tage im Jahr leuchtend
+   blau und verblasst danach wieder. Rana tut dasselbe, und zwar
+   genau dann, wenn Daten das Gerät verlassen.
+
+   Das ist nicht nur Zierde: die Farbe ist die Übertragungs-
+   anzeige. Solange irgendetwas blau leuchtet, spricht die
+   Anwendung mit der Schnittstelle. Wird es wieder ruhig, ist
+   die Verbindung beendet. Das lässt sich nicht übersehen und
+   nicht missverstehen.
+   ============================================================ */
+:root[data-transmitting="true"] {
+  --arvalis: var(--bloom);
+}
+
+/* Die Spur färbt sich und glimmt */
+:root[data-transmitting="true"] .spine::after {
+  background: var(--bloom);
+  box-shadow: 0 0 10px var(--bloom-glow);
+}
+:root[data-transmitting="true"] .spine-step.is-current .spine-node {
+  background: var(--bloom);
+  border-color: var(--bloom);
+  box-shadow: 0 0 0 4px var(--bloom-glow);
+  animation: pulse 1.9s var(--ease) infinite;
+}
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 3px var(--bloom-glow); }
+  50%      { box-shadow: 0 0 0 8px transparent; }
+}
+
+/* Ein schmaler Faden am oberen Rand des Fensters, solange gesendet wird */
+.transmit-thread {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  z-index: 200;
+  background: linear-gradient(90deg,
+    transparent, var(--bloom) 30%, var(--bloom) 70%, transparent);
+  background-size: 220% 100%;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-fade) var(--ease);
+}
+:root[data-transmitting="true"] .transmit-thread {
+  opacity: 1;
+  animation: thread 1.6s linear infinite;
+  transition: opacity var(--dur) var(--ease);
+}
+@keyframes thread {
+  from { background-position: 120% 0; }
+  to   { background-position: -120% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-transmitting="true"] .spine-step.is-current .spine-node { animation: none; }
+  :root[data-transmitting="true"] .transmit-thread { animation: none; }
+}
+
+/* ============================================================
+   Anlauf beim Öffnen: die Schiene baut sich von oben auf
+   ============================================================ */
+@media (prefers-reduced-motion: no-preference) {
+  .spine-step { animation: rise var(--dur-slow) var(--ease) backwards; }
+  .spine-step:nth-child(1) { animation-delay: .04s; }
+  .spine-step:nth-child(2) { animation-delay: .08s; }
+  .spine-step:nth-child(3) { animation-delay: .12s; }
+  .spine-step:nth-child(4) { animation-delay: .16s; }
+  .spine-step:nth-child(5) { animation-delay: .20s; }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(5px); }
+    to   { opacity: 1; transform: none; }
+  }
+}
+
+/* ============================================================
+   Dialoge
+   ============================================================ */
+.scrim {
+  position: fixed; inset: 0; z-index: 300;
+  background: rgba(35, 40, 42, .38);
+  backdrop-filter: blur(2px);
+  display: grid; place-items: center;
+  padding: var(--s5);
+  animation: fade var(--dur) var(--ease);
+}
+@keyframes fade { from { opacity: 0 } to { opacity: 1 } }
+
+.dialog {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--lift-high);
+  width: min(560px, 100%);
+  max-height: 86vh;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.dialog-head { padding: var(--s5) var(--s5) var(--s3); }
+.dialog-head h3 { font-size: var(--t-lg); }
+.dialog-body { padding: 0 var(--s5) var(--s4); overflow-y: auto; display: flex; flex-direction: column; gap: var(--s4); }
+.dialog-foot {
+  padding: var(--s4) var(--s5);
+  border-top: 1px solid var(--line);
+  background: var(--sphagnum);
+  display: flex; gap: var(--s3); justify-content: flex-end;
+}
+
+/* ============================================================
+   Meldungen
+   ============================================================ */
+.toasts {
+  position: fixed; bottom: var(--s5); right: var(--s5); z-index: 400;
+  display: flex; flex-direction: column; gap: var(--s2);
+  pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
+  background: var(--peat);
+  color: var(--sphagnum);
+  border-radius: var(--r);
+  padding: 11px var(--s4);
+  font-size: var(--t-sm);
+  box-shadow: var(--lift-high);
+  max-width: 420px;
+  display: flex; align-items: flex-start; gap: var(--s3);
+  animation: slidein var(--dur) var(--ease);
+}
+@keyframes slidein { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } }
+.toast.is-danger { background: var(--brick); color: #fff; }
+.toast.is-ok { background: var(--moss); color: #fff; }
+.toast-close { background: none; border: none; color: inherit; opacity: .6; cursor: pointer; padding: 0; font-size: 16px; line-height: 1; }
+.toast-close:hover { opacity: 1; }
+
+/* ============================================================
+   Enges Fenster
+   ============================================================ */
+@media (max-width: 1240px) {
+  .shell { grid-template-columns: var(--rail-w) minmax(0, 1fr); }
+  .context { display: none; }
+}
+@media (max-width: 900px) {
+  .shell { grid-template-columns: 1fr; }
+  .rail {
+    position: fixed; inset: 0 auto 0 0; width: var(--rail-w);
+    z-index: 100; transform: translateX(-100%);
+    transition: transform var(--dur) var(--ease);
+    box-shadow: var(--lift-high);
+  }
+  .rail.is-open { transform: none; }
+  .work-head, .work-body, .work-foot { padding-left: var(--s4); padding-right: var(--s4); }
+}

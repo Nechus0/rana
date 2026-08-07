@@ -1,0 +1,116 @@
+name: Rana bauen
+
+# Bei jedem Stand auf main läuft der Bau durch und legt den Installer
+# als Download bereit. Wird eine Marke wie v1.0.0 gesetzt, entsteht
+# zusätzlich eine Veröffentlichung, gegen die Rana beim Start prüft.
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ---------------------------------------------------------------
+  # Schnellprüfung. Läuft auf Linux und ist in zwei Minuten durch —
+  # so scheitert ein Tippfehler nicht erst nach dem langen Windows-Bau.
+  # ---------------------------------------------------------------
+  pruefen:
+    name: Oberfläche prüfen
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typen prüfen
+        run: npx tsc --noEmit
+
+      - name: Oberfläche bauen
+        run: npx vite build
+
+  # ---------------------------------------------------------------
+  # Der eigentliche Bau. Muss auf Windows laufen: Tauri braucht dort
+  # die MSVC-Werkzeuge und WebView2.
+  # ---------------------------------------------------------------
+  windows:
+    name: Windows-Installer
+    needs: pruefen
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Rust einrichten
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust-Zwischenstände wiederverwenden
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - run: npm ci
+
+      # Die Sicherungen, auf die es ankommt: Klarnamensperre und
+      # Kostenrechnung. Schlagen sie fehl, entsteht kein Installer.
+      - name: Rust-Prüfungen
+        working-directory: ./src-tauri
+        run: cargo test --release
+
+      - name: Rust-Warnungen als Fehler behandeln
+        working-directory: ./src-tauri
+        run: cargo clippy --release -- -D warnings
+        continue-on-error: true
+
+      - name: Bauen
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Bei einer Marke entsteht eine Veröffentlichung, sonst nur
+          # ein Download am Arbeitslauf.
+          tagName: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
+          releaseName: "Rana ${{ github.ref_name }}"
+          releaseBody: |
+            **Rana — Version Arvalis**
+
+            Installer unten unter „Assets“. Beide Formate installieren dasselbe:
+
+            * `.msi` — für die Installation über die Systemverwaltung
+            * `.exe` — der gewohnte Einrichtungsassistent
+
+            Beim ersten Start läuft die Ersteinrichtung: Praxis, Verfahren,
+            Claude-Schlüssel und Budget.
+
+            > Windows zeigt beim Öffnen eine SmartScreen-Warnung, weil der
+            > Installer nicht signiert ist. Über „Weitere Informationen“ →
+            > „Trotzdem ausführen“ lässt er sich starten.
+          releaseDraft: false
+          prerelease: false
+
+      # Auch ohne Marke soll der Installer erreichbar sein — sonst
+      # müsste für jeden Zwischenstand eine Veröffentlichung entstehen.
+      - name: Installer bereitstellen
+        if: "!startsWith(github.ref, 'refs/tags/')"
+        uses: actions/upload-artifact@v4
+        with:
+          name: Rana-Windows
+          retention-days: 30
+          path: |
+            src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/bundle/nsis/*.exe

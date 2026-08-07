@@ -1,0 +1,149 @@
+/* ============================================================
+   Rana · Design-System
+   ------------------------------------------------------------
+   Bildwelt: Rana arvalis, der Moorfrosch. Ein unauffälliges,
+   erdfarbenes Tier, das sich in wenigen Tagen im Frühjahr
+   leuchtend blau färbt und danach wieder verblasst.
+
+   Daraus die Regel dieses Systems: alles ist ruhig, gedeckt und
+   diszipliniert. Blau erscheint nur an der einen Stelle, an der
+   es etwas bedeutet — während Daten das Gerät verlassen.
+
+   Farben werden ausschliesslich über diese Variablen benutzt.
+   Kein Hexwert steht ausserhalb dieser Datei.
+   ============================================================ */
+
+:root {
+  color-scheme: light;
+
+  /* ---- Palette ------------------------------------------- */
+  --peat:            #23282a;   /* Text. Fast schwarz, kühl-grüner Unterton */
+  --peat-soft:       #414a4c;   /* Text zweiter Ordnung */
+  --reed:            #6b7671;   /* Beschriftungen, Hilfetext */
+  --reed-faint:      #939e98;   /* Platzhalter, abgeschaltet */
+  --sphagnum:        #e9ede9;   /* Anwendungshintergrund, blasses Moos */
+  --sphagnum-deep:   #dce2dc;   /* Vertiefungen, Leisten */
+  --paper:           #ffffff;   /* Karten und Dokument */
+  --line:            #d3dad5;   /* Haarlinien */
+  --line-strong:     #bcc5bf;   /* Feldränder */
+
+  --arvalis:         #3a6faf;   /* Akzent. Das gedeckte Moorfroschblau */
+  --arvalis-deep:    #2d5a92;   /* gedrückter Zustand */
+  --arvalis-wash:    #e6edf6;   /* Flächen, ausgewählte Zeile */
+  --arvalis-line:    #b9cce4;
+
+  /* Das Paarungsblau. Ausschliesslich für die Übertragung. */
+  --bloom:           #4e93e0;
+  --bloom-glow:      #4e93e055;
+
+  --amber:           #a0742a;   /* Hinweis, fehlende Angabe */
+  --amber-wash:      #fbf2e0;
+  --amber-line:      #e6d4ab;
+  --moss:            #3f7a52;   /* Bestätigung */
+  --moss-wash:       #e6f0e9;
+  --brick:           #9e4740;   /* Löschen, Fehler */
+  --brick-wash:      #f8ebea;
+
+  /* ---- Schrift -------------------------------------------
+     Eine Superfamilie, drei Rollen:
+       Serif = das gedruckte Dokument, das die App erzeugt
+       Sans  = die Bedienoberfläche
+       Mono  = die Aktenebene: Beschriftungen, Zahlen, Status
+     Alle Schnitte liegen lokal bei, es wird nichts nachgeladen. */
+  --face-display: "IBM Plex Serif", Cambria, Georgia, serif;
+  --face-ui:      "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --face-record:  "IBM Plex Mono", "Cascadia Mono", Consolas, monospace;
+  --face-doc:     Cambria, "Times New Roman", serif;      /* nur im Bericht */
+  --face-doc-alt: Calibri, "Segoe UI", sans-serif;        /* nur im Bericht */
+
+  /* Typenskala. Schrittweite 1.2, verankert auf 15px. */
+  --t-xs:   11.5px;
+  --t-sm:   12.5px;
+  --t-base: 15px;
+  --t-md:   17px;
+  --t-lg:   21px;
+  --t-xl:   27px;
+  --t-2xl:  34px;
+
+  --lh-tight: 1.22;
+  --lh-ui:    1.5;
+  --lh-read:  1.65;
+
+  /* Die Aktenebene ist immer klein, versal und gesperrt. */
+  --record-track: .09em;
+
+  /* ---- Raster ---------------------------------------------
+     Alle Abstände sind Vielfache von 4. */
+  --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
+  --s5: 24px; --s6: 32px; --s7: 48px; --s8: 64px;
+
+  --rail-w: 264px;
+  --ctx-w:  296px;
+  --work-max: 780px;
+
+  /* Kleine Radien. Dies ist ein Werkzeug, keine Anwendung fürs Telefon. */
+  --r-sm: 3px;
+  --r:    5px;
+  --r-lg: 8px;
+
+  /* Eine einzige Erhebungsstufe. Mehr braucht es nicht. */
+  --lift: 0 1px 2px rgba(35, 40, 42, .06), 0 6px 20px rgba(35, 40, 42, .05);
+  --lift-high: 0 12px 40px rgba(35, 40, 42, .18);
+
+  --ease: cubic-bezier(.32, .72, .34, 1);
+  --dur-fast: .12s;
+  --dur:      .2s;
+  --dur-slow: .45s;
+  /* Das Verblassen nach der Übertragung. Bewusst langsam. */
+  --dur-fade: 1.4s;
+}
+
+/* ---- Dunkler Modus ---------------------------------------
+   Berichte entstehen oft abends. Dieselbe Logik, andere Tiefe:
+   das Moor bei Nacht, das Blau bleibt das Blau.             */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --peat:            #e7ece8;
+  --peat-soft:       #b9c2bc;
+  --reed:            #8e9a93;
+  --reed-faint:      #6a756e;
+  --sphagnum:        #171b1a;
+  --sphagnum-deep:   #101413;
+  --paper:           #1e2322;
+  --line:            #2f3835;
+  --line-strong:     #414b47;
+
+  --arvalis:         #6ba3e2;
+  --arvalis-deep:    #8bb9ea;
+  --arvalis-wash:    #1c2a38;
+  --arvalis-line:    #2f4a66;
+
+  --bloom:           #7cb8f2;
+  --bloom-glow:      #7cb8f266;
+
+  --amber:           #d6a75a;
+  --amber-wash:      #2c2418;
+  --amber-line:      #4a3c22;
+  --moss:            #7cb890;
+  --moss-wash:       #17281d;
+  --brick:           #d98a83;
+  --brick-wash:      #2c1a18;
+
+  --lift: 0 1px 2px rgba(0, 0, 0, .4), 0 6px 20px rgba(0, 0, 0, .3);
+  --lift-high: 0 12px 40px rgba(0, 0, 0, .55);
+}
+
+/* Das Dokument selbst bleibt immer weiss auf schwarz gedruckt —
+   der dunkle Modus färbt die Oberfläche, nicht das Papier. */
+:root[data-theme="dark"] .paper-sheet {
+  --paper: #ffffff;
+  --peat: #1a1a1a;
+  --reed: #555555;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: .01s; --dur: .01s; --dur-slow: .01s; --dur-fade: .01s;
+  }
+}
