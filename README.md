@@ -1,6 +1,6 @@
 # Rana
 
-**Version Arvalis · 1.0.0**
+**Version Arvalis · 1.1.0**
 
 Assistent für Berichte an den Gutachter zu Anträgen auf Psychotherapie
 (Formblatt PTV 3). Windows-Anwendung. Alle Falldaten bleiben verschlüsselt
@@ -45,6 +45,12 @@ gesetzt, unmittelbar vor und nach dem Netzzugriff. Die Oberfläche kann sie
 weder vortäuschen noch unterdrücken. Solange etwas blau leuchtet, spricht
 Rana mit Anthropic. Ist es ruhig, tut sie es nicht.
 
+Seit Fassung 1.1.0 gibt es einen zweiten möglichen Gesprächspartner, GitHub,
+für die Aktualisierung. Damit der Satz oben wahr bleibt, ruft Rana dort
+**nie von selbst** an — auch nicht beim Start. Die Prüfung läuft
+ausschliesslich, wenn Sie in der Seitenschiene auf „Aktualisierung“ gehen und
+den Knopf drücken, und sie ist dabei die ganze Zeit im Dialog sichtbar.
+
 ---
 
 ## Sicherheit
@@ -54,7 +60,8 @@ Rana mit Anthropic. Ist es ruhig, tut sie es nicht.
 | **Anthropic-Schlüssel** | Windows Credential Manager. Erreicht die Oberfläche nie — dort ist er nur maskiert sichtbar (`sk-ant-…4f2a`). |
 | **Falldaten** | AES-256-GCM, Schlüssel im Windows-Tresor. Im Klartext stehen in der Datei nur Kennung und Zeitstempel — kein Name, keine Chiffre, keine Diagnose. |
 | **Klarnamen** | Werden getrennt gehalten und gehen **nie** an die Schnittstelle. Vor jedem Aufruf prüft Rust den gesamten Anfragetext an Wortgrenzen; ein Treffer bricht ab, bevor etwas gesendet wird. |
-| **Netz** | Nur `api.anthropic.com`, nur TLS mit Zertifikatsprüfung. Keine Telemetrie, keine Absturzberichte, keine Analysedienste. |
+| **Netz** | Zwei Ziele, beide nur über TLS mit Zertifikatsprüfung: `api.anthropic.com` für die Berichte, `github.com` ausschliesslich für die Aktualisierung — und die läuft nur, wenn Sie sie in der Seitenschiene auslösen. Keine Telemetrie, keine Absturzberichte, keine Analysedienste. |
+| **Aktualisierung** | Heruntergeladene Installer müssen mit dem privaten Schlüssel der Praxis signiert sein. Eine untergeschobene Datei wird verworfen, bevor sie ausgeführt wird. |
 | **Oberfläche** | Strenge CSP, kein Nachladen von aussen. Eingefügter Text wird als reiner Text übernommen. |
 | **Sicherungsdatei** | AES-256-GCM, Schlüssel per PBKDF2-HMAC-SHA-256 mit 600.000 Runden aus dem Passwort. Enthält **nicht** den Anthropic-Schlüssel. |
 
@@ -65,9 +72,12 @@ Rana mit Anthropic. Ist es ruhig, tut sie es nicht.
   Praxis selbst.
 * Ein unbeaufsichtigter, entsperrter Rechner bleibt die grösste reale Lücke.
   Eine Bildschirmsperre ist vorgesehen, aber nicht in dieser Fassung.
-* Der Installer ist **nicht signiert**. Windows zeigt beim ersten Öffnen
-  eine SmartScreen-Warnung. Über „Weitere Informationen“ → „Trotzdem
-  ausführen“ lässt er sich starten.
+* Der Installer trägt **keine Windows-Codesignatur**. Windows zeigt beim
+  ersten Öffnen eine SmartScreen-Warnung; über „Weitere Informationen“ →
+  „Trotzdem ausführen“ lässt er sich starten. Das ist etwas anderes als die
+  Updater-Signatur: die beweist Rana, dass ein Update von Ihnen stammt, sagt
+  Windows aber nichts. Eine Codesignatur kostet rund 300 € im Jahr und wäre
+  erst nötig, wenn Rana an Kolleg:innen weitergegeben werden soll.
 
 ---
 
@@ -101,6 +111,32 @@ gesendet und kosten ab dem zweiten Bericht nur noch ein Zehntel.
 
 ## Bauen
 
+### Einmalig: Signaturschlüssel
+
+Der Updater lädt nur Installer, die mit Ihrem privaten Schlüssel signiert
+sind. Ohne Schlüsselpaar schlägt der Bau fehl.
+
+```powershell
+npm install
+npx tauri signer generate -w "$env:USERPROFILE\.tauri\rana.key"
+```
+
+Der Befehl fragt nach einem Passwort und gibt den **öffentlichen** Schlüssel
+aus. Diesen in `src-tauri/tauri.conf.json` unter `plugins.updater.pubkey`
+eintragen — dort steht bis dahin ein Platzhalter.
+
+Anschliessend unter *Settings → Secrets and variables → Actions* zwei
+Geheimnisse anlegen:
+
+| Name | Wert |
+|---|---|
+| `TAURI_SIGNING_PRIVATE_KEY` | vollständiger Inhalt von `rana.key` |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | das vergebene Passwort |
+
+Der **private** Schlüssel gehört nie ins Repository, nie in einen Chatverlauf
+und nie in eine Datei im Projektordner. Wer ihn besitzt, kann ein gefälschtes
+Rana-Update signieren, das Ihre Anwendung dann selbsttätig installiert.
+
 ### Über GitHub Actions (empfohlen)
 
 Bei jedem Stand auf `main` baut GitHub auf einem echten Windows-Läufer und
@@ -114,8 +150,8 @@ Repository → Actions → letzter Lauf → Artifacts → Rana-Windows
 Für eine Veröffentlichung mit Versionsnummer:
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+git tag v1.1.0
+git push origin v1.1.0
 ```
 
 ### Auf dem eigenen Rechner

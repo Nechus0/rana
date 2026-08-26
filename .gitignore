@@ -6,8 +6,11 @@ src-tauri/gen/
 *.local
 _port/
 
-# Erzeugnisse der Abnahmeprüfung (_test/abnahme.mjs, _test/seiten.mjs)
+# Erzeugnisse der Abnahmeprüfung. Bewusst als Muster statt als Liste:
+# probe.docx war einmal versehentlich im Repository gelandet, weil die
+# Liste den Namen nicht kannte.
 _test/bundle.mjs
-_test/abnahme.docx
-_test/abnahme.pdf
-_test/seite-*.png
+_test/*.docx
+_test/*.pdf
+_test/*.png
+_test/k/

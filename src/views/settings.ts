@@ -13,6 +13,9 @@ import { confirmDialog, dialog, esc, eur, icon, on, qs, qsa, relDate, toast } fr
 
 const CONSOLE_LIMITS = "https://platform.claude.com/settings/limits";
 
+/** Steht auch in package.json, Cargo.toml und tauri.conf.json. */
+export const EIGENE_VERSION = "1.1.0";
+
 // ===============================================================
 // Einstellungen
 // ===============================================================
@@ -526,33 +529,118 @@ export async function zeigeUeber(): Promise<void> {
 }
 
 /**
- * Zeigt an, wenn auf GitHub eine neuere Fassung liegt.
+ * Aktualisierung — ausschliesslich auf Anforderung.
  *
- * Solange das Repository privat ist, antwortet GitHub hier mit 404 und
- * es passiert schlicht nichts — die Prüfung braucht ein öffentliches
- * Repository oder eine Veröffentlichung. Das ist kein Fehler, sondern
- * der erwartete Zustand; deshalb wird auch nichts gemeldet.
+ * Der Vorgänger prüfte still beim Start. Das war bequem und stand im
+ * Widerspruch zu dem, was das README verspricht: dass Rana ruhig
+ * bleibt, solange sie nichts sendet. Ein Programm, das beim Start
+ * unbemerkt GitHub anruft, hält dieses Versprechen nicht.
+ *
+ * Deshalb passiert hier nichts von selbst. Die Prüfung läuft nur, wenn
+ * dieser Dialog geöffnet und der Knopf gedrückt wird — und sie ist
+ * dabei die ganze Zeit sichtbar.
+ *
+ * Heruntergeladen wird nur, was mit Anjas privatem Schlüssel signiert
+ * ist. Ein untergeschobener Installer wird von der Signaturprüfung
+ * verworfen, bevor er ausgeführt wird.
  */
-export async function pruefeAktualisierung(): Promise<void> {
-  // Bewusst still: schlägt die Prüfung fehl, passiert nichts. Eine
-  // Fehlermeldung über eine nicht erreichbare Update-Seite hilft
-  // niemandem beim Schreiben eines Berichts.
-  try {
-    const res = await fetch("https://api.github.com/repos/Nechus0/rana/releases/latest", {
-      headers: { Accept: "application/vnd.github+json" },
-    });
-    if (!res.ok) return;
-    const j = (await res.json()) as { tag_name?: string; html_url?: string };
-    const neu = (j.tag_name ?? "").replace(/^v/, "");
-    if (!neu || neu === "1.0.0") return;
+export async function zeigeAktualisierung(): Promise<void> {
+  await dialog({
+    title: "Aktualisierung",
+    cancel: "Schliessen",
+    body: `
+      <p class="hint">
+        Rana prüft nur, wenn Sie es hier auslösen — nie von selbst und nie im
+        Hintergrund. Geprüft wird gegen die Veröffentlichungen auf GitHub.
+      </p>
+      <div class="row" style="margin-top:4px">
+        <button class="btn btn-primary" id="u_pruefen" type="button">Nach Aktualisierung suchen</button>
+        <span class="spacer"></span>
+        <span class="record-num small muted">installiert: ${esc(EIGENE_VERSION)}</span>
+      </div>
+      <div class="key-state" id="u_status" style="min-height:24px"></div>
+      <div id="u_details"></div>`,
 
-    const ok = await confirmDialog(
-      "Neue Fassung verfügbar",
-      `Auf GitHub liegt Fassung ${neu}. Rana installiert nichts von selbst — der Download öffnet sich im Browser.`,
-      "Herunterladen"
-    );
-    if (ok && j.html_url) await openUrl(j.html_url);
-  } catch {
-    /* still */
-  }
+    onOpen: (root) => {
+      const knopf = qs<HTMLButtonElement>("#u_pruefen", root)!;
+      const status = qs<HTMLElement>("#u_status", root)!;
+      const details = qs<HTMLElement>("#u_details", root)!;
+
+      on(knopf, "click", async () => {
+        knopf.disabled = true;
+        details.innerHTML = "";
+        status.className = "key-state";
+        status.innerHTML = `<span class="spinner"></span> <span>Frage bei GitHub nach …</span>`;
+
+        try {
+          const { check } = await import("@tauri-apps/plugin-updater");
+          const gefunden = await check();
+
+          if (!gefunden) {
+            status.className = "key-state ok";
+            status.innerHTML = `${icon.check} <span>Rana ist auf dem neuesten Stand.</span>`;
+            knopf.disabled = false;
+            return;
+          }
+
+          status.className = "key-state ok";
+          status.innerHTML = `${icon.check} <span>Fassung ${esc(gefunden.version)} liegt vor.</span>`;
+          details.innerHTML = `
+            <div class="notice" style="margin-top:12px">
+              ${gefunden.body ? `<p style="margin-bottom:10px">${esc(gefunden.body).slice(0, 600)}</p>` : ""}
+              <p class="hint">
+                Der Installer wird heruntergeladen, seine Signatur geprüft und
+                anschliessend ausgeführt. Rana startet danach neu. Ihre Fälle
+                bleiben unberührt.
+              </p>
+            </div>
+            <div class="row" style="margin-top:12px">
+              <button class="btn btn-primary" id="u_install" type="button">Herunterladen und installieren</button>
+              <span class="hint" id="u_fortschritt"></span>
+            </div>`;
+
+          on(qs<HTMLElement>("#u_install", details)!, "click", async () => {
+            const btn = qs<HTMLButtonElement>("#u_install", details)!;
+            const fort = qs<HTMLElement>("#u_fortschritt", details)!;
+            btn.disabled = true;
+
+            let gesamt = 0;
+            let geladen = 0;
+            try {
+              await gefunden.downloadAndInstall((e) => {
+                // Der Fortschritt wird angezeigt, weil hier gerade Daten
+                // fliessen — auch das soll nicht unsichtbar passieren.
+                if (e.event === "Started") {
+                  gesamt = e.data.contentLength ?? 0;
+                  fort.textContent = "Lade …";
+                } else if (e.event === "Progress") {
+                  geladen += e.data.chunkLength;
+                  fort.textContent = gesamt
+                    ? `${Math.round((geladen / gesamt) * 100)} %`
+                    : `${Math.round(geladen / 1024)} kB`;
+                } else if (e.event === "Finished") {
+                  fort.textContent = "Signatur geprüft, installiere …";
+                }
+              });
+
+              const { relaunch } = await import("@tauri-apps/plugin-process");
+              await relaunch();
+            } catch (e) {
+              btn.disabled = false;
+              fort.textContent = "";
+              status.className = "key-state bad";
+              status.innerHTML = `${icon.warn} <span>${esc(api.errorText(e))}</span>`;
+            }
+          });
+        } catch (e) {
+          // Kein Netz, kein Server, keine Veröffentlichung — alles davon
+          // ist harmlos. Gesagt wird es trotzdem, weil die Nutzerin die
+          // Prüfung ausdrücklich angestossen hat.
+          status.className = "key-state bad";
+          status.innerHTML = `${icon.warn} <span>Die Prüfung ist fehlgeschlagen: ${esc(api.errorText(e))}</span>`;
+          knopf.disabled = false;
+        }
+      });
+    },
+  });
 }

@@ -39,6 +39,21 @@ jobs:
       - name: Oberfläche bauen
         run: npx vite build
 
+      # Der öffentliche Signaturschlüssel steht nach dem Einbau des
+      # Updaters zunächst als Platzhalter in tauri.conf.json. Wird er
+      # vergessen, scheitert sonst erst der zwanzigminütige Windows-Bau
+      # — oder schlimmer: die Anwendung startet beim Nutzer nicht.
+      # Diese Prüfung kostet drei Sekunden.
+      - name: Signaturschlüssel hinterlegt?
+        shell: bash
+        run: |
+          if grep -q "HIER-DEN-OEFFENTLICHEN-SCHLUESSEL-EINSETZEN" src-tauri/tauri.conf.json; then
+            echo "::error::In src-tauri/tauri.conf.json steht unter plugins.updater.pubkey noch der Platzhalter."
+            echo "Bitte den öffentlichen Schlüssel eintragen — siehe README, Abschnitt „Einmalig: Signaturschlüssel“."
+            exit 1
+          fi
+          echo "Öffentlicher Schlüssel ist eingetragen."
+
   # ---------------------------------------------------------------
   # Der eigentliche Bau. Muss auf Windows laufen: Tauri braucht dort
   # die MSVC-Werkzeuge und WebView2.
@@ -47,6 +62,13 @@ jobs:
     name: Windows-Installer
     needs: pruefen
     runs-on: windows-latest
+
+    # Die Repository-Voreinstellung gibt dem GITHUB_TOKEN nur Leserecht.
+    # Zum Anlegen einer Veröffentlichung braucht tauri-action Schreibrecht
+    # auf den Inhalt. Bewusst hier und nicht global: die Rechte gelten nur
+    # für diesen einen Job und wandern mit dem Repository mit.
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -81,6 +103,11 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Der Updater verlangt eine Signatur. Ohne diese beiden
+          # Geheimnisse schlägt der Bau fehl, sobald
+          # createUpdaterArtifacts gesetzt ist.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           # Bei einer Marke entsteht eine Veröffentlichung, sonst nur
           # ein Download am Arbeitslauf.

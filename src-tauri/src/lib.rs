@@ -262,6 +262,11 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        // Die Aktualisierung wird ausschliesslich von Hand ausgelöst
+        // (Einstellungen → „Nach Aktualisierung suchen"). Rana ruft
+        // GitHub nie von selbst an — siehe das Versprechen im README.
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .setup(|app| {
             let data_dir = Store::data_dir(&app.handle())?;
             let store = Arc::new(Store::open(&data_dir)?);

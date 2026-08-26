@@ -1,7 +1,7 @@
 {
   "name": "rana",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -15,7 +15,9 @@
     "@tauri-apps/plugin-opener": "^2",
     "@fontsource/ibm-plex-sans": "^5",
     "@fontsource/ibm-plex-serif": "^5",
-    "@fontsource/ibm-plex-mono": "^5"
+    "@fontsource/ibm-plex-mono": "^5",
+    "@tauri-apps/plugin-updater": "^2",
+    "@tauri-apps/plugin-process": "^2"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",

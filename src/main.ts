@@ -33,7 +33,7 @@ import * as S from "./core/state";
 import { runSetup } from "./setup/wizard";
 import { bindeSchritt, fallInPapierkorb, renderSchritt, SCHRITTE } from "./views/steps";
 import {
-  pruefeAktualisierung, zeigeEinstellungen, zeigePapierkorb,
+  zeigeAktualisierung, zeigeEinstellungen, zeigePapierkorb,
   zeigeSicherung, zeigeUeber, zeigeVerbrauch,
 } from "./views/settings";
 import { debounce, el, esc, eur, icon, on, qsa, relDate, toast } from "./ui/kit";
@@ -72,7 +72,8 @@ async function starteArbeitsansicht(): Promise<void> {
 
   zeichneGeruest();
   S.subscribe(() => { aktualisiereRand(); });
-  void pruefeAktualisierung();
+  // Bewusst KEINE Prüfung beim Start: Rana ruft GitHub nur an, wenn es
+  // ausdrücklich verlangt wird (Seitenschiene → Aktualisierung).
 }
 
 // ===============================================================
@@ -152,6 +153,7 @@ function railHtml(): string {
         <button class="rail-link" id="lnkPapierkorb">${icon.trash} Papierkorb</button>
         <button class="rail-link" id="lnkEinstellungen">${icon.gear} Einstellungen</button>
         <button class="rail-link" id="lnkThema">${icon.moon} Dunkler Modus</button>
+        <button class="rail-link" id="lnkUpdate">${icon.restore} Aktualisierung</button>
         <button class="rail-link" id="lnkUeber">${icon.info} Über Rana</button>
       </div>
     </nav>`;
@@ -173,6 +175,7 @@ function bindeRail(): void {
   on(el("lnkSicherung"),     "click", () => { void zeigeSicherung(neuZeichnen); });
   on(el("lnkPapierkorb"),    "click", () => { void zeigePapierkorb(neuZeichnen); });
   on(el("lnkEinstellungen"), "click", () => { void zeigeEinstellungen(neuZeichnen); });
+  on(el("lnkUpdate"),        "click", () => { void zeigeAktualisierung(); });
   on(el("lnkUeber"),         "click", () => { void zeigeUeber(); });
   on(el("lnkThema"),         "click", wechsleThema);
 
