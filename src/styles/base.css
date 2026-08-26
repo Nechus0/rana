@@ -125,7 +125,7 @@ a { color: var(--arvalis); text-decoration-thickness: 1px; text-underline-offset
 .field > label,
 .field-label {
   font-family: var(--face-ui);
-  font-size: 11.5px;
+  font-size: var(--t-xs);
   font-weight: 650;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -333,3 +333,16 @@ select {
 .field-zaehler.ist-kurz      { color: var(--amber); }
 .field-zaehler.ist-gut       { color: var(--moss); }
 .field-zaehler.ist-reichlich { color: var(--reed); }
+
+
+/* Felder, die eine Zeichenkette statt Sprache tragen: Schlüssel,
+   Kennungen, eingefügtes JSON. Sie gehören in die Aktenschrift, damit
+   man Verwechslungen wie 0/O und 1/l erkennt. Als Klasse, damit die
+   Gestalt an einer Stelle steht und nicht in jedem Dialog neu. */
+.input-record,
+input.input-record,
+textarea.input-record {
+  font-family: var(--face-record);
+  font-size: var(--t-sm);
+  letter-spacing: 0;
+}

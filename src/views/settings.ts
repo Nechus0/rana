@@ -49,7 +49,7 @@ export async function zeigeEinstellungen(neuZeichnen: () => void): Promise<void>
         <div class="field">
           <label>Hinterlegter Schlüssel</label>
           <div class="row">
-            <code style="font-family:var(--face-record);font-size:12px;color:var(--reed)">
+            <code class="input-record" style="color:var(--reed)">
               ${key.vorhanden ? esc(key.maskiert ?? "") : "keiner hinterlegt"}
             </code>
             <span class="spacer"></span>
@@ -217,8 +217,7 @@ async function schluesselErsetzen(): Promise<void> {
     body: `
       <div class="field">
         <label for="k_neu">Neuer API-Schlüssel</label>
-        <input id="k_neu" type="password" placeholder="sk-ant-…" autocomplete="off" spellcheck="false"
-               style="font-family:var(--face-record);font-size:12px">
+        <input id="k_neu" type="password" placeholder="sk-ant-…" autocomplete="off" spellcheck="false" class="input-record">
       </div>
       <p class="hint">Er wird im Windows-Tresor abgelegt und ist danach nur noch maskiert sichtbar.</p>`,
     onConfirm: async (r) => {
@@ -284,7 +283,7 @@ export async function zeigeVerbrauch(): Promise<void> {
             <tbody>
               ${monate.map(([m, kosten, n]) => `
                 <tr style="border-bottom:1px solid var(--line)">
-                  <td style="padding:8px 0;font-family:var(--face-record);font-size:12px;color:var(--reed)">${esc(monatName(m))}</td>
+                  <td style="padding:8px 0;font-family:var(--face-record);font-size:var(--t-sm);color:var(--reed)">${esc(monatName(m))}</td>
                   <td style="padding:8px 0;text-align:right;font-family:var(--face-record);font-variant-numeric:tabular-nums">${eur(kosten)}</td>
                   <td style="padding:8px 0 8px 20px;text-align:right;color:var(--reed)">${n} ${n === 1 ? "Aufruf" : "Aufrufe"}</td>
                 </tr>`).join("")}

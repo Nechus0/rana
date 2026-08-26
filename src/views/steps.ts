@@ -617,11 +617,11 @@ async function zeigePrompt(): Promise<void> {
       </p>
       <div class="field">
         <label>Regeln <span class="field-note">${system.length.toLocaleString("de-DE")} Zeichen, zwischengespeichert</span></label>
-        <textarea readonly spellcheck="false" style="min-height:170px;font-family:var(--face-record);font-size:11.5px">${esc(system)}</textarea>
+        <textarea readonly spellcheck="false" style="min-height:170px;font-family:var(--face-record);font-size:var(--t-xs)">${esc(system)}</textarea>
       </div>
       <div class="field">
         <label>Falldaten <span class="field-note">${user.length.toLocaleString("de-DE")} Zeichen</span></label>
-        <textarea readonly spellcheck="false" style="min-height:170px;font-family:var(--face-record);font-size:11.5px">${esc(user)}</textarea>
+        <textarea readonly spellcheck="false" style="min-height:170px;font-family:var(--face-record);font-size:var(--t-xs)">${esc(user)}</textarea>
       </div>`,
   });
 }

@@ -409,7 +409,7 @@ function aktualisiereKontext(): void {
     </section>
     
     ${b ? `
-      <section class="ctx-block">
+      <section class="ctx-block ctx-unten">
         <span class="record">Verbrauch</span>
         <div class="budget">
           <div class="budget-row">
