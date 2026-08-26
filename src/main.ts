@@ -33,8 +33,7 @@ import * as S from "./core/state";
 import { runSetup } from "./setup/wizard";
 import { bindeSchritt, fallInPapierkorb, renderSchritt, SCHRITTE } from "./views/steps";
 import {
-  zeigeAktualisierung, zeigeEinstellungen, zeigePapierkorb,
-  zeigeSicherung, zeigeUeber, zeigeVerbrauch,
+  zeigeEinstellungen, zeigePapierkorb, zeigeSicherung
 } from "./views/settings";
 import { debounce, el, esc, eur, icon, on, qsa, relDate, toast } from "./ui/kit";
 
