@@ -141,6 +141,10 @@ a { color: var(--arvalis); text-decoration-thickness: 1px; text-underline-offset
   font-size: var(--t-sm);
   color: var(--reed-faint);
   font-weight: 400;
+  /* Kurze Hinweise stehen neben der Beschriftung. Lange umbrechen
+     sauber darunter, statt die Zeile auseinanderzuziehen. */
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 input[type="text"], input[type="number"], input[type="date"],
@@ -230,8 +234,12 @@ select {
 .row { display: flex; align-items: center; gap: var(--s3); }
 .row-wrap { flex-wrap: wrap; }
 .spacer { flex: 1 1 auto; }
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4) var(--s5); }
-.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s4) var(--s5); }
+/* align-items:end richtet die Eingabefelder einer Zeile an ihrer
+   Unterkante aus. Ohne das schiebt eine Beschriftung, die auf zwei
+   oder drei Zeilen umbricht, ihr Feld nach unten aus der Reihe —
+   und die Zeile sieht aus, als wäre sie kaputt. */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4) var(--s5); align-items: end; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s4) var(--s5); align-items: end; }
 .span-all { grid-column: 1 / -1; }
 .muted { color: var(--reed); }
 .small { font-size: var(--t-sm); }

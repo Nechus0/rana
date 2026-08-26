@@ -64,6 +64,8 @@ pub struct CaseSummary {
     pub chiffre: String,
     pub antrag_nr: String,
     pub updated_at: i64,
+    /// Wann der Fall angelegt wurde. Die Oberfläche sortiert danach.
+    pub created_at: i64,
     pub deleted_at: Option<i64>,
     pub has_report: bool,
     /// Tage bis zur endgültigen Entfernung, nur im Papierkorb gesetzt.
@@ -272,6 +274,7 @@ impl Store {
                 chiffre,
                 antrag_nr: nr,
                 updated_at: c.updated_at,
+                created_at: c.created_at,
                 deleted_at: c.deleted_at,
                 has_report: !c.report.trim().is_empty(),
                 purge_in_days,

@@ -86,12 +86,23 @@ function zeichneGeruest(): void {
       ${railHtml()}
       <main class="work">
         <header class="work-head">
-          <div class="work-title">
-            <span class="work-eyebrow" id="workEyebrow"></span>
-            <h2 id="workTitel"></h2>
+          <nav class="stepbar" role="tablist" aria-label="Arbeitsschritte">
+            ${SCHRITTE.map((s, i) => `
+              <button class="stepbar-step" role="tab" data-schritt="${i}" aria-selected="false"
+                      title="${esc(s.titel)}">
+                <span class="stepbar-node">${i + 1}</span>
+                <span class="stepbar-label">${esc(s.kurz)}</span>
+                <span class="stepbar-flag" aria-hidden="true"></span>
+              </button>`).join("")}
+          </nav>
+          <div class="work-head-titel">
+            <div class="work-title">
+              <span class="work-eyebrow" id="workEyebrow"></span>
+              <h2 id="workTitel"></h2>
+            </div>
+            <span class="spacer"></span>
+            <span class="record" id="speicherStand"></span>
           </div>
-          <span class="spacer"></span>
-          <span class="record" id="speicherStand"></span>
         </header>
         <div class="work-body" id="work-body" tabindex="-1">
           <div class="work-inner" id="workInner"></div>
@@ -135,16 +146,19 @@ function railHtml(): string {
         <input type="search" id="fallSuche" placeholder="Suchen …" aria-label="Fälle durchsuchen">
       </div>
 
-      <ul class="case-list" id="fallListe" role="list"></ul>
-
-      <div class="spine" id="spine" role="tablist" aria-label="Arbeitsschritte">
-        ${SCHRITTE.map((s, i) => `
-          <button class="spine-step" role="tab" data-schritt="${i}" aria-selected="false">
-            <span class="spine-node">${i + 1}</span>
-            <span class="spine-label">${esc(s.kurz)}</span>
-            <span class="spine-flag" aria-hidden="true"></span>
-          </button>`).join("")}
+      <div class="rail-sort">
+        <span class="record">Ordnen</span>
+        <select id="fallSort" aria-label="Fälle ordnen nach">
+          ${(Object.keys(S.SORT_NAMEN) as S.SortSchluessel[]).map((k) => `
+            <option value="${k}" ${S.state.sortierung === k ? "selected" : ""}>${esc(S.SORT_NAMEN[k])}</option>`).join("")}
+        </select>
+        <button id="fallSortRichtung" type="button"
+                data-richtung="${S.state.sortAuf ? "auf" : "ab"}"
+                title="Reihenfolge umkehren"
+                aria-label="Reihenfolge umkehren">${icon.sortDown}</button>
       </div>
+
+      <ul class="case-list" id="fallListe" role="list"></ul>
 
       <div class="rail-foot">
         <button class="rail-link" id="lnkVerbrauch">${icon.chart} Verbrauch <span class="spacer"></span>
@@ -171,6 +185,16 @@ function bindeRail(): void {
     on(b, "click", () => geheZu(parseInt(b.dataset.schritt!, 10)));
   }
 
+  on(el("fallSort"), "change", () => {
+    S.setzeSortierung(el<HTMLSelectElement>("fallSort").value as S.SortSchluessel, S.state.sortAuf);
+    zeichneFallListe();
+  });
+  on(el("fallSortRichtung"), "click", () => {
+    S.setzeSortierung(S.state.sortierung, !S.state.sortAuf);
+    el("fallSortRichtung").dataset.richtung = S.state.sortAuf ? "auf" : "ab";
+    zeichneFallListe();
+  });
+
   on(el("lnkVerbrauch"),     "click", () => { void zeigeVerbrauch(); });
   on(el("lnkSicherung"),     "click", () => { void zeigeSicherung(neuZeichnen); });
   on(el("lnkPapierkorb"),    "click", () => { void zeigePapierkorb(neuZeichnen); });
@@ -184,7 +208,7 @@ function bindeRail(): void {
 
 function zeichneFallListe(): void {
   const box = el("fallListe");
-  const cases = S.state.cases;
+  const cases = S.sortiereFaelle(S.state.cases);
 
   if (!cases.length) {
     box.innerHTML = `<li class="case-empty">${
@@ -193,11 +217,25 @@ function zeichneFallListe(): void {
     return;
   }
 
+  // Die zweite Zeile zeigt, wonach gerade geordnet ist. So sieht man
+  // die Sortierung an den Einträgen selbst und nicht nur am Auswahlfeld.
+  const zusatz = (c: api.CaseSummary): string => {
+    switch (S.state.sortierung) {
+      case "angelegt": return `angelegt ${relDate(c.created_at)}`;
+      case "nummer":   return c.antrag_nr ? `${c.antrag_nr}. Antrag` : "ohne Nummer";
+      case "name":     return c.chiffre || "";
+      default:         return relDate(c.updated_at);
+    }
+  };
+
   box.innerHTML = cases.map((c) => `
     <li>
       <button class="case-item" data-fall="${esc(c.id)}"
               aria-current="${c.id === S.state.activeId}">
-        <span class="case-item-name">${esc(c.label)}</span>
+        <span class="case-item-text">
+          <span class="case-item-name">${esc(c.label)}</span>
+          <span class="case-item-meta">${esc(zusatz(c))}</span>
+        </span>
         ${c.antrag_nr ? `<span class="case-item-nr">#${esc(c.antrag_nr)}</span>` : ""}
       </button>
     </li>`).join("");
@@ -281,12 +319,12 @@ function bindeFuss(): void {
 // ---------------------------------------------------------------
 
 function aktualisiereRand(): void {
-  aktualisiereSpur();
+  aktualisiereSchrittleiste();
   aktualisiereKontext();
   aktualisiereSpeicherstand();
 }
 
-function aktualisiereSpur(): void {
+function aktualisiereSchrittleiste(): void {
   const schritte = qsa<HTMLElement>("[data-schritt]");
   if (!schritte.length) return;
 
@@ -298,13 +336,8 @@ function aktualisiereSpur(): void {
     b.setAttribute("aria-selected", String(aktuell));
   });
 
-  // Die Spur füllt sich bis zum aktuellen Knoten.
-  const spine = document.getElementById("spine");
-  if (spine && schritte.length > 1) {
-    const anteil = S.state.step / (schritte.length - 1);
-    const hoehe = (schritte[schritte.length - 1].offsetTop - schritte[0].offsetTop) * anteil;
-    spine.style.setProperty("--spine-progress", `${Math.max(0, hoehe)}px`);
-  }
+  // Die Verbindungslinien färben sich allein über die Klassen
+  // is-done und is-current — es braucht keine gerechnete Länge mehr.
 }
 
 function aktualisiereKontext(): void {

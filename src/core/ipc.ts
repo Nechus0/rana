@@ -53,6 +53,7 @@ export interface CaseSummary {
   chiffre: string;
   antrag_nr: string;
   updated_at: number;
+  created_at: number;
   deleted_at: number | null;
   has_report: boolean;
   purge_in_days: number | null;

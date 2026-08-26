@@ -321,3 +321,44 @@ const gefunden = await check({ target: "windows-x86_64-nsis" });
 Bitte beim ersten Update darauf achten und diesen Abschnitt danach mit dem
 Ergebnis ergänzen, statt es beim nächsten Mal wieder herausfinden zu
 müssen.
+
+### 5.9 PowerShell schreibt ein BOM — und JSON.parse stirbt daran
+
+`Set-Content -Encoding UTF8` schreibt in Windows PowerShell 5.1 ein
+**Byte Order Mark** an den Dateianfang. Bei `.ts` und `.css` fällt das
+nicht auf, bei `package.json` und `tauri.conf.json` schon:
+
+```
+[vite:css] Failed to load PostCSS config:
+[SyntaxError] Unexpected token '﻿', "﻿{ "name"... is not valid JSON
+```
+
+Die Meldung nennt dabei eine **CSS-Datei** als Ort, obwohl das kaputte
+JSON die Ursache ist — das führt zuverlässig auf die falsche Fährte.
+
+**Konfigurationsdateien nie mit PowerShell schreiben.** Node nehmen:
+
+```js
+import { readFileSync, writeFileSync } from "node:fs";
+writeFileSync(pfad, inhalt, "utf8");   // schreibt kein BOM
+```
+
+Zum Aufräumen, falls es doch passiert ist:
+
+```js
+const b = readFileSync(f);
+if (b[0] === 0xEF && b[1] === 0xBB && b[2] === 0xBF) writeFileSync(f, b.slice(3));
+```
+
+Ebenso gilt: **Regex-haltige Node-Einzeiler nicht über `node -e` in
+PowerShell** — die Anführungszeichen werden zerlegt. Skript in eine
+`.mjs`-Datei schreiben und die aufrufen.
+
+### 5.10 Lokal bauen geht auf diesem Rechner nicht
+
+`npm run tauri build` bricht mit `linker 'link.exe' not found` ab. Die
+Visual-Studio-Buildwerkzeuge sind nicht installiert, weil bewusst der
+GitHub-Weg gewählt wurde. Der lokale Bau ist also **keine** Kontrolle
+vor dem Schieben; es bleiben `npx tsc --noEmit` und `npx vite build`.
+Rust-Änderungen fallen damit erst in der CI auf — bei grösseren
+Eingriffen ins Rust-Backend entsprechend vorsichtig sein.

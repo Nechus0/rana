@@ -84,7 +84,7 @@ function schritt1(): string {
     <div class="grid-3">
       ${input("f_name", "Patient:in", { span: 3, note: "Klarname, nur zur Fallauswahl und für den Dateinamen. Steht nie im Bericht und geht nie an die Schnittstelle." })}
       ${input("f_chiffre", "Chiffre / Pseudonym", { ph: "A.M.-1974" })}
-      ${input("f_nr", "Lfd. Nr. des Fortführungsantrags", { typ: "number", ph: "1", note: "je Antrag hochzählen, steht so im Berichtskopf" })}
+      ${input("f_nr", "Lfd. Nr. des Fortführungsantrags", { typ: "number", ph: "1", note: "je Antrag hochzählen" })}
       ${input("f_gebdatum", "Geburtsdatum", { typ: "date" })}
       ${input("f_beginn", "Therapiebeginn", { typ: "date", note: "Datum der ersten Sitzung" })}
       <div class="field">

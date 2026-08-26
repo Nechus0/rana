@@ -76,6 +76,7 @@ export const icon = {
   check:   svg('<path d="M4.5 10.5l3.5 3.5 7.5-8"/>'),
   warn:    svg('<path d="M10 3.5l7 12.5H3z"/><path d="M10 8v3.4M10 13.6v.1"/>'),
   info:    svg('<circle cx="10" cy="10" r="7"/><path d="M10 9v4.5M10 6.6v.1"/>'),
+  sortDown: svg('<path d="M10 4v12M6 12l4 4 4-4"/>'),
   key:     svg('<circle cx="7" cy="10" r="3"/><path d="M10 10h7M14.5 10v2.4M16.6 10v1.8"/>'),
 };
 

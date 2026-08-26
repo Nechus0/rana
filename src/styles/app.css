@@ -55,6 +55,42 @@
 }
 .rail-head .record { flex: 1; }
 
+/* ---- Sortierung ------------------------------------------
+   Sitzt zwischen Suche und Liste, damit beide Werkzeuge für die
+   Fallauswahl beieinanderstehen. Gleiche Formensprache wie die
+   übrigen Bedienelemente: Aktenebene, klein, versal, gesperrt. */
+.rail-sort {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin: 0 var(--s3) var(--s2);
+}
+.rail-sort > .record { flex: none; }
+.rail-sort select {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 26px 5px 8px;
+  font-family: var(--face-record);
+  font-size: var(--t-xs);
+  letter-spacing: .04em;
+  background-color: var(--paper);
+  background-position: right 7px center;
+}
+.rail-sort button {
+  flex: none;
+  width: 27px; height: 27px;
+  display: grid; place-items: center;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r);
+  background: var(--paper);
+  color: var(--reed);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+.rail-sort button:hover { color: var(--peat); border-color: var(--reed-faint); }
+.rail-sort button svg { width: 14px; height: 14px; transition: transform var(--dur) var(--ease); }
+.rail-sort button[data-richtung="auf"] svg { transform: rotate(180deg); }
+
 .case-search {
   margin: 0 var(--s3) var(--s2);
   position: relative;
@@ -71,9 +107,10 @@
 
 .case-list {
   list-style: none; margin: 0; padding: 0 var(--s3);
+  /* Nimmt den Platz, den die Schrittfolge frei gemacht hat. */
   overflow-y: auto;
-  max-height: 32vh;
-  flex: 0 1 auto;
+  flex: 1 1 auto;
+  min-height: 60px;
 }
 .case-item {
   display: flex; align-items: center; gap: var(--s2);
@@ -96,7 +133,16 @@
   color: var(--peat);
   font-weight: 550;
 }
-.case-item-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.case-item { align-items: flex-start; }
+.case-item-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.case-item-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.case-item-meta {
+  font-family: var(--face-record);
+  font-size: 10.5px;
+  color: var(--reed-faint);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.case-item[aria-current="true"] .case-item-meta { color: var(--reed); }
 .case-item-nr {
   font-family: var(--face-record);
   font-size: var(--t-xs);
@@ -106,73 +152,80 @@
 .case-empty { padding: var(--s3) var(--s3); font-size: var(--t-sm); color: var(--reed-faint); }
 
 /* ============================================================
-   Die Schrittfolge als senkrechte Spur
+   Die Schrittfolge als waagerechte Leiste
    ------------------------------------------------------------
-   Eine durchgehende Linie verbindet die fünf Schritte. Sie ist
-   hier berechtigt, weil die Schritte tatsächlich eine Folge
-   sind: ohne Stammdaten kein Bericht, ohne Bericht keine
-   Ausgabe. Der Fortschritt füllt die Linie von oben.
+   Sie sass zuvor senkrecht in der Seitenschiene. Dort kostete sie
+   rund zweihundert Pixel Höhe — bei kleinen Fenstern so viel, dass
+   die Fallliste auf wenige Zeilen zusammenschrumpfte.
+
+   Oben rechts hat sie Platz, steht dort, wo der Blick zuerst
+   hinfällt, und die Schiene gehört wieder ganz den Fällen.
+
+   Die verbindende Linie bleibt: die fünf Schritte sind eine echte
+   Folge, keine beliebige Auswahl. Ohne Stammdaten kein Bericht,
+   ohne Bericht keine Ausgabe. Der zurückgelegte Teil ist gefüllt.
    ============================================================ */
-.spine {
-  position: relative;
-  padding: var(--s4) var(--s3) var(--s4) 0;
-  margin-top: var(--s2);
-  border-top: 1px solid var(--line);
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
+.stepbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
 }
 
-/* Die ruhende Spur */
-.spine::before {
-  content: "";
-  position: absolute;
-  left: 27px; top: 34px; bottom: 34px;
-  width: 1px;
-  background: var(--line-strong);
-}
-/* Der zurückgelegte Teil */
-.spine::after {
-  content: "";
-  position: absolute;
-  left: 27px; top: 34px;
-  width: 1px;
-  height: var(--spine-progress, 0px);
-  background: var(--arvalis);
-  transition: height var(--dur-slow) var(--ease), background var(--dur-fade) var(--ease);
-}
-
-.spine-step {
+.stepbar-step {
   position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: var(--s3);
-  width: 100%;
-  padding: 9px var(--s3) 9px 16px;
+  gap: 7px;
+  width: 96px;
+  padding: 0;
   border: none;
   background: transparent;
   font: inherit;
-  font-size: var(--t-sm);
+  font-family: var(--face-record);
+  font-size: var(--t-xs);
+  letter-spacing: .02em;
   color: var(--reed);
   cursor: pointer;
-  text-align: left;
-  border-radius: var(--r);
-  transition: color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+  transition: color var(--dur-fast) var(--ease);
 }
-.spine-step:hover { color: var(--peat); background: var(--paper); }
+.stepbar-step:hover { color: var(--peat); }
+.stepbar-step:focus-visible { outline-offset: 4px; }
 
-.spine-node {
+/* Die Verbindungslinie. Je Schritt eine Hälfte nach links und eine
+   nach rechts, damit sie an den Knoten sauber endet. */
+.stepbar-step::before,
+.stepbar-step::after {
+  content: "";
+  position: absolute;
+  top: 13px;
+  height: 1px;
+  background: var(--line-strong);
+  transition: background var(--dur-fade) var(--ease);
+}
+.stepbar-step::before { left: 0;   right: 50%; margin-right: 17px; }
+.stepbar-step::after  { left: 50%; right: 0;   margin-left: 17px; }
+.stepbar-step:first-child::before { display: none; }
+.stepbar-step:last-child::after   { display: none; }
+
+/* Zurückgelegte Strecke */
+.stepbar-step.is-done::before,
+.stepbar-step.is-done::after,
+.stepbar-step.is-current::before { background: var(--arvalis); }
+
+.stepbar-node {
   position: relative;
   z-index: 1;
-  width: 23px; height: 23px;
+  width: 27px; height: 27px;
   flex: none;
   border-radius: 50%;
-  background: var(--sphagnum-deep);
+  background: var(--sphagnum);
   border: 1px solid var(--line-strong);
   display: grid;
   place-items: center;
   font-family: var(--face-record);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--reed);
@@ -181,30 +234,47 @@
               color var(--dur) var(--ease),
               box-shadow var(--dur-fade) var(--ease);
 }
-.spine-step:hover .spine-node { border-color: var(--reed-faint); }
+.stepbar-step:hover .stepbar-node { border-color: var(--reed-faint); }
 
-.spine-step.is-done .spine-node {
+.stepbar-step.is-done .stepbar-node {
   background: var(--arvalis-wash);
   border-color: var(--arvalis-line);
   color: var(--arvalis);
 }
-.spine-step.is-current { color: var(--peat); font-weight: 600; }
-.spine-step.is-current .spine-node {
+.stepbar-step.is-current { color: var(--peat); font-weight: 600; }
+.stepbar-step.is-current .stepbar-node {
   background: var(--arvalis);
   border-color: var(--arvalis);
   color: #fff;
 }
-.spine-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* Offene Pflichtangabe in diesem Schritt */
-.spine-flag {
-  width: 5px; height: 5px; border-radius: 50%;
+.stepbar-label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* Offene Pflichtangabe: ein kleiner Punkt an der Schulter des Knotens. */
+.stepbar-flag {
+  position: absolute;
+  top: -1px; left: calc(50% + 9px);
+  width: 7px; height: 7px;
+  border-radius: 50%;
   background: var(--amber);
-  flex: none;
+  border: 1.5px solid var(--sphagnum);
   opacity: 0;
   transition: opacity var(--dur) var(--ease);
 }
-.spine-step.has-gap .spine-flag { opacity: 1; }
+.stepbar-step.has-gap .stepbar-flag { opacity: 1; }
+
+/* Enges Fenster: Beschriftungen weglassen, Knoten zusammenrücken. */
+@media (max-width: 1180px) {
+  .stepbar-step { width: 54px; }
+  .stepbar-label { display: none; }
+}
+
 
 /* ---- Fuss der Schiene -------------------------------------- */
 .rail-foot {
@@ -234,18 +304,33 @@
    ============================================================ */
 .work {
   min-width: 0;
+  /* Ohne min-height:0 nimmt dieses Rasterfeld als Mindesthöhe die Höhe
+     seines Inhalts an. Es wächst dann über die Zeile hinaus, .work-body
+     kommt nie zum Scrollen, und die Fussleiste rutscht unter den
+     Fensterrand. Genau das war der Fehler. */
+  min-height: 0;
   display: flex;
   flex-direction: column;
   background: var(--sphagnum);
 }
 
+/* Kopf und Fuss behalten ihre Höhe; nur der Rumpf gibt nach und scrollt. */
+.work-head, .work-foot { flex: none; }
+
 .work-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+  padding: var(--s4) var(--s6);
+  border-bottom: 1px solid var(--line);
+  background: var(--sphagnum);
+}
+
+/* Die Titelzeile sitzt jetzt unter der Schrittleiste. */
+.work-head-titel {
   display: flex;
   align-items: flex-end;
   gap: var(--s4);
-  padding: var(--s5) var(--s6) var(--s4);
-  border-bottom: 1px solid var(--line);
-  background: var(--sphagnum);
 }
 .work-title { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .work-eyebrow {
@@ -429,11 +514,12 @@ details.fold > summary:hover { background: var(--sphagnum); }
 }
 
 /* Die Spur färbt sich und glimmt */
-:root[data-transmitting="true"] .spine::after {
+:root[data-transmitting="true"] .stepbar-step.is-done::before,
+:root[data-transmitting="true"] .stepbar-step.is-done::after,
+:root[data-transmitting="true"] .stepbar-step.is-current::before {
   background: var(--bloom);
-  box-shadow: 0 0 10px var(--bloom-glow);
 }
-:root[data-transmitting="true"] .spine-step.is-current .spine-node {
+:root[data-transmitting="true"] .stepbar-step.is-current .stepbar-node {
   background: var(--bloom);
   border-color: var(--bloom);
   box-shadow: 0 0 0 4px var(--bloom-glow);
@@ -468,22 +554,22 @@ details.fold > summary:hover { background: var(--sphagnum); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :root[data-transmitting="true"] .spine-step.is-current .spine-node { animation: none; }
+  :root[data-transmitting="true"] .stepbar-step.is-current .stepbar-node { animation: none; }
   :root[data-transmitting="true"] .transmit-thread { animation: none; }
 }
 
 /* ============================================================
-   Anlauf beim Öffnen: die Schiene baut sich von oben auf
+   Anlauf beim Öffnen: die Schrittleiste baut sich von links auf
    ============================================================ */
 @media (prefers-reduced-motion: no-preference) {
-  .spine-step { animation: rise var(--dur-slow) var(--ease) backwards; }
-  .spine-step:nth-child(1) { animation-delay: .04s; }
-  .spine-step:nth-child(2) { animation-delay: .08s; }
-  .spine-step:nth-child(3) { animation-delay: .12s; }
-  .spine-step:nth-child(4) { animation-delay: .16s; }
-  .spine-step:nth-child(5) { animation-delay: .20s; }
+  .stepbar-step { animation: rise var(--dur-slow) var(--ease) backwards; }
+  .stepbar-step:nth-child(1) { animation-delay: .04s; }
+  .stepbar-step:nth-child(2) { animation-delay: .08s; }
+  .stepbar-step:nth-child(3) { animation-delay: .12s; }
+  .stepbar-step:nth-child(4) { animation-delay: .16s; }
+  .stepbar-step:nth-child(5) { animation-delay: .20s; }
   @keyframes rise {
-    from { opacity: 0; transform: translateY(5px); }
+    from { opacity: 0; transform: translateX(-6px); }
     to   { opacity: 1; transform: none; }
   }
 }

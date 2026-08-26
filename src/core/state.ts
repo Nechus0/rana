@@ -50,6 +50,26 @@ export const PFLICHT: { feld: FeldName; label: string; schritt: number }[] = [
   { feld: "f_abschluss",   label: "Planung des Therapieabschlusses", schritt: 2 },
 ];
 
+/**
+ * Wonach die Fallliste geordnet wird.
+ *
+ * „zuletzt“ ist die Vorgabe, weil man beim Öffnen fast immer da
+ * weitermacht, wo man aufgehört hat. Die übrigen sind zum Suchen:
+ * nach Namen, wenn man jemanden bestimmten sucht; nach Anlage,
+ * wenn man wissen will was neu ist; nach Antragsnummer, wenn man
+ * sehen will, wer beim ersten und wer beim dritten Antrag steht.
+ */
+export type SortSchluessel = "zuletzt" | "name" | "angelegt" | "nummer";
+
+export const SORT_NAMEN: Record<SortSchluessel, string> = {
+  zuletzt:  "Zuletzt bearbeitet",
+  name:     "Name",
+  angelegt: "Angelegt",
+  nummer:   "Antragsnummer",
+};
+
+const SORT_KEY = "rana-sortierung";
+
 export interface State {
   profile: Profile | null;
   cases: CaseSummary[];
@@ -64,6 +84,9 @@ export interface State {
   showTrash: boolean;
   query: string;
   dirty: boolean;
+  sortierung: SortSchluessel;
+  /** true = aufsteigend (A–Z, ältestes zuerst, 1 zuerst). */
+  sortAuf: boolean;
 }
 
 export const state: State = {
@@ -78,7 +101,49 @@ export const state: State = {
   showTrash: false,
   query: "",
   dirty: false,
+  sortierung: (localStorage.getItem(SORT_KEY) as SortSchluessel) || "zuletzt",
+  sortAuf: localStorage.getItem(SORT_KEY + "-auf") === "1",
 };
+
+/**
+ * Ordnet die Fallliste. Läuft in der Oberfläche und nicht in der
+ * Datenbank: die Übersichten liegen ohnehin alle im Speicher, und so
+ * lässt sich die Reihenfolge ohne neue Abfrage umstellen.
+ */
+export function sortiereFaelle(liste: CaseSummary[]): CaseSummary[] {
+  const richtung = state.sortAuf ? 1 : -1;
+  const zahl = (v: string) => {
+    const n = parseInt(v, 10);
+    return isNaN(n) ? 0 : n;
+  };
+
+  const sortiert = [...liste].sort((a, b) => {
+    switch (state.sortierung) {
+      case "name":
+        // Nach deutschem Alphabet, damit Ö nicht hinter Z landet.
+        return a.label.localeCompare(b.label, "de", { sensitivity: "base" }) * richtung;
+      case "angelegt":
+        return (a.created_at - b.created_at) * richtung;
+      case "nummer": {
+        const d = zahl(a.antrag_nr) - zahl(b.antrag_nr);
+        // Bei gleicher Nummer nach Namen, sonst springt die Liste.
+        return d !== 0 ? d * richtung
+                       : a.label.localeCompare(b.label, "de", { sensitivity: "base" });
+      }
+      default:
+        return (a.updated_at - b.updated_at) * richtung;
+    }
+  });
+  return sortiert;
+}
+
+export function setzeSortierung(s: SortSchluessel, auf: boolean): void {
+  state.sortierung = s;
+  state.sortAuf = auf;
+  localStorage.setItem(SORT_KEY, s);
+  localStorage.setItem(SORT_KEY + "-auf", auf ? "1" : "0");
+  notify();
+}
 
 // ---------------------------------------------------------------
 // Beobachter
