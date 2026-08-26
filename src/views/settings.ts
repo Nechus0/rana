@@ -89,9 +89,35 @@ export async function zeigeEinstellungen(neuZeichnen: () => void): Promise<void>
           ${num("e_soll", "Zielwert", p.layout.ziel_soll)}
           ${num("e_max", "Höchstens", p.layout.ziel_max)}
         </div>
+      </div>
+
+      <div class="group">
+        <div class="group-head"><span class="group-title">Erscheinungsbild & System</span></div>
+        <div class="grid-2" style="align-items: center; gap: 16px;">
+          <label class="switch" style="grid-column: span 2;">
+            <input type="checkbox" id="e_theme">
+            <span class="switch-track"></span>
+            <span>Dunkler Modus</span>
+          </label>
+          <button class="btn btn-sm" id="e_btnUpdate" type="button" style="justify-self: start;">Nach Aktualisierung suchen</button>
+          <button class="btn btn-sm" id="e_btnUeber" type="button" style="justify-self: start;">Über Rana</button>
+        </div>
       </div>`,
 
     onOpen: (root) => {
+      const themeToggle = qs<HTMLInputElement>("#e_theme", root)!;
+      themeToggle.checked = document.documentElement.dataset.theme === "dark";
+      on(themeToggle, "change", () => {
+        const THEMA_KEY = "rana-thema";
+        const dunkel = themeToggle.checked;
+        if (!dunkel) delete document.documentElement.dataset.theme;
+        else document.documentElement.dataset.theme = "dark";
+        localStorage.setItem(THEMA_KEY, dunkel ? "dark" : "light");
+      });
+
+      on(qs<HTMLElement>("#e_btnUpdate", root)!, "click", () => { void zeigeAktualisierung(); });
+      on(qs<HTMLElement>("#e_btnUeber", root)!, "click", () => { void zeigeUeber(); });
+
       on(qs<HTMLElement>("#e_console", root)!, "click", (e) => {
         e.preventDefault();
         void openUrl(CONSOLE_LIMITS);

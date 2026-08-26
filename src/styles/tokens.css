@@ -17,15 +17,15 @@
   color-scheme: light;
 
   /* ---- Palette ------------------------------------------- */
-  --peat:            #23282a;   /* Text. Fast schwarz, kühl-grüner Unterton */
-  --peat-soft:       #414a4c;   /* Text zweiter Ordnung */
-  --reed:            #6b7671;   /* Beschriftungen, Hilfetext */
-  --reed-faint:      #939e98;   /* Platzhalter, abgeschaltet */
-  --sphagnum:        #e9ede9;   /* Anwendungshintergrund, blasses Moos */
-  --sphagnum-deep:   #dce2dc;   /* Vertiefungen, Leisten */
-  --paper:           #ffffff;   /* Karten und Dokument */
-  --line:            #d3dad5;   /* Haarlinien */
-  --line-strong:     #bcc5bf;   /* Feldränder */
+  --peat:            #212529;   /* Text. Neutral dark gray */
+  --peat-soft:       #495057;   /* Secondary text */
+  --reed:            #6c757d;   /* Labels, hints */
+  --reed-faint:      #adb5bd;   /* Placeholders, disabled */
+  --sphagnum:        #f8f9fa;   /* App background */
+  --sphagnum-deep:   #e9ecef;   /* Sidebar, darker background */
+  --paper:           #ffffff;   /* Cards and document */
+  --line:            #dee2e6;   /* Borders */
+  --line-strong:     #ced4da;   /* Stronger borders */
 
   --arvalis:         #3a6faf;   /* Akzent. Das gedeckte Moorfroschblau */
   --arvalis-deep:    #2d5a92;   /* gedrückter Zustand */
@@ -81,10 +81,10 @@
   --ctx-w:  296px;
   --work-max: 780px;
 
-  /* Kleine Radien. Dies ist ein Werkzeug, keine Anwendung fürs Telefon. */
-  --r-sm: 3px;
-  --r:    5px;
-  --r-lg: 8px;
+  /* Moderne Radien */
+  --r-sm: 4px;
+  --r:    6px;
+  --r-lg: 12px;
 
   /* Eine einzige Erhebungsstufe. Mehr braucht es nicht. */
   --lift: 0 1px 2px rgba(35, 40, 42, .06), 0 6px 20px rgba(35, 40, 42, .05);
@@ -104,15 +104,15 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --peat:            #e7ece8;
-  --peat-soft:       #b9c2bc;
-  --reed:            #8e9a93;
-  --reed-faint:      #6a756e;
-  --sphagnum:        #171b1a;
-  --sphagnum-deep:   #101413;
-  --paper:           #1e2322;
-  --line:            #2f3835;
-  --line-strong:     #414b47;
+  --peat:            #f8f9fa;
+  --peat-soft:       #ced4da;
+  --reed:            #adb5bd;
+  --reed-faint:      #6c757d;
+  --sphagnum:        #212529;
+  --sphagnum-deep:   #191b1d;
+  --paper:           #2b3035;
+  --line:            #495057;
+  --line-strong:     #6c757d;
 
   --arvalis:         #6ba3e2;
   --arvalis-deep:    #8bb9ea;

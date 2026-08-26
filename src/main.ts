@@ -72,8 +72,17 @@ async function starteArbeitsansicht(): Promise<void> {
 
   zeichneGeruest();
   S.subscribe(() => { aktualisiereRand(); });
-  // Bewusst KEINE Prüfung beim Start: Rana ruft GitHub nur an, wenn es
-  // ausdrücklich verlangt wird (Seitenschiene → Aktualisierung).
+  // Check for updates on startup
+  import("@tauri-apps/plugin-updater").then(async ({ check }) => {
+    try {
+      const gefunden = await check();
+      if (gefunden) {
+        toast(`Update auf ${gefunden.version} verfügbar!`, "ok", 5000);
+      }
+    } catch (e) {
+      // Ignore errors silently on startup
+    }
+  });
 }
 
 // ===============================================================
@@ -161,14 +170,9 @@ function railHtml(): string {
       <ul class="case-list" id="fallListe" role="list"></ul>
 
       <div class="rail-foot">
-        <button class="rail-link" id="lnkVerbrauch">${icon.chart} Verbrauch <span class="spacer"></span>
-          <span class="record-num small" id="railVerbrauch"></span></button>
         <button class="rail-link" id="lnkSicherung">${icon.save} Sicherung</button>
         <button class="rail-link" id="lnkPapierkorb">${icon.trash} Papierkorb</button>
         <button class="rail-link" id="lnkEinstellungen">${icon.gear} Einstellungen</button>
-        <button class="rail-link" id="lnkThema">${icon.moon} Dunkler Modus</button>
-        <button class="rail-link" id="lnkUpdate">${icon.restore} Aktualisierung</button>
-        <button class="rail-link" id="lnkUeber">${icon.info} Über Rana</button>
       </div>
     </nav>`;
 }
@@ -195,13 +199,9 @@ function bindeRail(): void {
     zeichneFallListe();
   });
 
-  on(el("lnkVerbrauch"),     "click", () => { void zeigeVerbrauch(); });
   on(el("lnkSicherung"),     "click", () => { void zeigeSicherung(neuZeichnen); });
   on(el("lnkPapierkorb"),    "click", () => { void zeigePapierkorb(neuZeichnen); });
   on(el("lnkEinstellungen"), "click", () => { void zeigeEinstellungen(neuZeichnen); });
-  on(el("lnkUpdate"),        "click", () => { void zeigeAktualisierung(); });
-  on(el("lnkUeber"),         "click", () => { void zeigeUeber(); });
-  on(el("lnkThema"),         "click", wechsleThema);
 
   zeichneFallListe();
 }
@@ -410,8 +410,7 @@ function aktualisiereKontext(): void {
 function aktualisiereSpeicherstand(): void {
   const n = document.getElementById("speicherStand");
   if (!n) return;
-  n.textContent = S.state.dirty ? "nicht gespeichert" : "gespeichert";
-  n.style.color = S.state.dirty ? "var(--amber)" : "var(--reed)";
+  n.innerHTML = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${S.state.dirty ? 'var(--amber)' : 'var(--moss)'};" title="${S.state.dirty ? 'Änderungen noch nicht gespeichert' : 'Alles gespeichert'}"></span>`;
 }
 
 // ---------------------------------------------------------------
@@ -465,14 +464,15 @@ function stelleThemaHer(): void {
   }
 }
 
-function wechsleThema(): void {
-  const dunkel = document.documentElement.dataset.theme === "dark";
+export function istDunklesThema(): boolean {
+  return document.documentElement.dataset.theme === "dark";
+}
+
+export function wechsleThema(): void {
+  const dunkel = istDunklesThema();
   if (dunkel) delete document.documentElement.dataset.theme;
   else document.documentElement.dataset.theme = "dark";
   localStorage.setItem(THEMA_KEY, dunkel ? "light" : "dark");
-
-  const l = document.getElementById("lnkThema");
-  if (l) l.innerHTML = `${icon.moon} ${dunkel ? "Dunkler" : "Heller"} Modus`;
 }
 
 // ---------------------------------------------------------------

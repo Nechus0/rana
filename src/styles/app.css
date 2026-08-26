@@ -133,17 +133,18 @@
   color: var(--peat);
   font-weight: 550;
 }
-.case-item { align-items: flex-start; }
-.case-item-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.case-item-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.case-item { align-items: flex-start; justify-content: space-between; }
+.case-item-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 1px; margin-right: var(--s2); }
+.case-item-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .case-item-meta {
   font-family: var(--face-record);
   font-size: 10.5px;
   color: var(--reed-faint);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
 }
 .case-item[aria-current="true"] .case-item-meta { color: var(--reed); }
 .case-item-nr {
+  flex: 0 0 auto;
   font-family: var(--face-record);
   font-size: var(--t-xs);
   color: var(--reed-faint);
