@@ -124,10 +124,10 @@ a { color: var(--arvalis); text-decoration-thickness: 1px; text-underline-offset
 
 .field > label,
 .field-label {
-  font-family: var(--face-record);
-  font-size: var(--t-xs);
-  font-weight: 500;
-  letter-spacing: var(--record-track);
+  font-family: var(--face-ui);
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--reed);
   display: flex;
@@ -239,6 +239,7 @@ select {
    oder drei Zeilen umbricht, ihr Feld nach unten aus der Reihe —
    und die Zeile sieht aus, als wäre sie kaputt. */
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4) var(--s5); align-items: end; }
+.grid-1-2 { display: grid; grid-template-columns: 1fr 2.5fr; gap: var(--s4) var(--s5); align-items: end; }
 .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s4) var(--s5); align-items: end; }
 .span-all { grid-column: 1 / -1; }
 .muted { color: var(--reed); }

@@ -30,9 +30,11 @@ export async function zeigeEinstellungen(neuZeichnen: () => void): Promise<void>
     body: `
       <div class="group">
         <div class="group-head"><span class="group-title">Praxis und Behandler:in</span></div>
-        <div class="grid-2">
+        <div class="grid-1-2" style="margin-bottom:var(--s4)">
           ${txt("e_titel", "Titel", p.behandler.titel)}
           ${txt("e_name", "Name", p.behandler.name)}
+        </div>
+        <div class="grid-2">
           <div class="span-all">${txt("e_funktion", "Funktion", p.behandler.funktion)}</div>
           <div class="span-all">${txt("e_strasse", "Strasse", p.praxis.strasse)}</div>
           ${txt("e_plz", "PLZ", p.praxis.plz)}
@@ -51,9 +53,9 @@ export async function zeigeEinstellungen(neuZeichnen: () => void): Promise<void>
               ${key.vorhanden ? esc(key.maskiert ?? "") : "keiner hinterlegt"}
             </code>
             <span class="spacer"></span>
-            <button class="btn btn-sm" id="e_keyNeu" type="button">Ersetzen</button>
-            <button class="btn btn-sm" id="e_keyTest" type="button" ${key.vorhanden ? "" : "disabled"}>Testen</button>
-            <button class="btn btn-sm btn-danger" id="e_keyWeg" type="button" ${key.vorhanden ? "" : "disabled"}>Entfernen</button>
+            <button class="btn" id="e_keyNeu" type="button">Ersetzen</button>
+            <button class="btn" id="e_keyTest" type="button" ${key.vorhanden ? "" : "disabled"}>Testen</button>
+            <button class="btn btn-danger" id="e_keyWeg" type="button" ${key.vorhanden ? "" : "disabled"}>Entfernen</button>
           </div>
           <div class="key-state" id="e_keyState"></div>
         </div>
@@ -99,8 +101,8 @@ export async function zeigeEinstellungen(neuZeichnen: () => void): Promise<void>
             <span class="switch-track"></span>
             <span>Dunkler Modus</span>
           </label>
-          <button class="btn btn-sm" id="e_btnUpdate" type="button" style="justify-self: start;">Nach Aktualisierung suchen</button>
-          <button class="btn btn-sm" id="e_btnUeber" type="button" style="justify-self: start;">Über Rana</button>
+          <button class="btn" id="e_btnUpdate" type="button">Nach Aktualisierung suchen</button>
+          <button class="btn" id="e_btnUeber" type="button">Über Rana</button>
         </div>
       </div>`,
 

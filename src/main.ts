@@ -366,6 +366,14 @@ function aktualisiereKontext(): void {
       : `<p class="hint">Alle Pflichtangaben liegen vor.</p>`}
     </section>
 
+    <section class="ctx-block">
+      <span class="record">Dieser Fall</span>
+      <p class="hint">
+        ${S.state.fields.f_chiffre ? `Chiffre ${esc(S.state.fields.f_chiffre)}<br>` : ""}
+        Zuletzt geändert ${esc(relDate(Date.now()))}
+      </p>
+    </section>
+    
     ${b ? `
       <section class="ctx-block">
         <span class="record">Verbrauch</span>
@@ -380,15 +388,7 @@ function aktualisiereKontext(): void {
           </div>
           <p class="hint">${b.today_reports} von ${b.daily_limit} Berichten heute</p>
         </div>
-      </section>` : ""}
-
-    <section class="ctx-block">
-      <span class="record">Dieser Fall</span>
-      <p class="hint">
-        ${S.state.fields.f_chiffre ? `Chiffre ${esc(S.state.fields.f_chiffre)}<br>` : ""}
-        Zuletzt geändert ${esc(relDate(Date.now()))}
-      </p>
-    </section>`;
+      </section>` : ""}`;
 
   // Ein Klick auf eine Lücke springt genau dorthin.
   for (const g of qsa<HTMLButtonElement>("[data-luecke]", box)) {
