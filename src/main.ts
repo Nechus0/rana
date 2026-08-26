@@ -519,7 +519,7 @@ void main().catch((e) => {
   // Kommt der Start nicht durch, darf kein leeres Fenster stehen bleiben.
   el("app").innerHTML = `
     <div style="max-width:520px;margin:14vh auto;padding:0 24px">
-      <h1 style="font-size:24px;margin-bottom:12px">Rana konnte nicht starten</h1>
+      <h1 style="font-size:var(--t-xl);margin-bottom:12px">Rana konnte nicht starten</h1>
       <div class="notice notice-danger">${esc(api.errorText(e))}</div>
       <p class="hint" style="margin-top:16px">
         Läuft Rana bereits in einem anderen Fenster? Dann bitte dieses schliessen.

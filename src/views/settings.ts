@@ -24,10 +24,32 @@ export async function zeigeEinstellungen(neuZeichnen: () => void): Promise<void>
   const p = await api.getProfile();
   const key = await api.apiKeyStatus();
 
+  const bereiche: { id: string; name: string; zeichen: string }[] = [
+    { id: "praxis",  name: "Praxis",         zeichen: icon.gear },
+    { id: "zugang",  name: "Claude-Zugang",  zeichen: icon.key },
+    { id: "grenzen", name: "Grenzen",        zeichen: icon.chart },
+    { id: "bericht", name: "Bericht",        zeichen: icon.word },
+    { id: "ansicht", name: "Erscheinungsbild", zeichen: icon.moon },
+    { id: "daten",   name: "Daten",          zeichen: icon.save },
+    { id: "update",  name: "Aktualisierung", zeichen: icon.restore },
+    { id: "ueber",   name: "Über Rana",      zeichen: icon.info },
+  ];
+
   await dialog({
+    breit: true,
     title: "Einstellungen",
     confirm: "Übernehmen",
     body: `
+      <div class="settings">
+        <nav class="settings-nav" aria-label="Bereiche">
+          ${bereiche.map((b, i) => `
+            <button type="button" data-bereich="${b.id}" aria-current="${i === 0}">
+              ${b.zeichen}<span>${esc(b.name)}</span>
+            </button>`).join("")}
+        </nav>
+        <div class="settings-pane">
+
+      <section data-bereich="praxis" data-offen="ja">
       <div class="group">
         <div class="group-head"><span class="group-title">Praxis und Behandler:in</span></div>
         <div class="grid-1-2" style="margin-bottom:var(--s4)">
@@ -44,6 +66,9 @@ export async function zeigeEinstellungen(neuZeichnen: () => void): Promise<void>
         </div>
       </div>
 
+      </section>
+
+      <section data-bereich="zugang">
       <div class="group">
         <div class="group-head"><span class="group-title">Claude-Zugang</span></div>
         <div class="field">
@@ -68,6 +93,9 @@ export async function zeigeEinstellungen(neuZeichnen: () => void): Promise<void>
         </div>
       </div>
 
+      </section>
+
+      <section data-bereich="grenzen">
       <div class="group">
         <div class="group-head"><span class="group-title">Grenzen</span></div>
         <div class="grid-2">
@@ -80,6 +108,12 @@ export async function zeigeEinstellungen(neuZeichnen: () => void): Promise<void>
         </p>
       </div>
 
+        <p class="hint" style="margin-top:14px">
+          <button class="btn btn-sm" id="e_btnVerbrauch" type="button">Verbrauch der letzten Monate</button>
+        </p>
+      </section>
+
+      <section data-bereich="bericht">
       <div class="group">
         <div class="group-head"><span class="group-title">Bericht</span></div>
         <div class="field">
@@ -93,20 +127,80 @@ export async function zeigeEinstellungen(neuZeichnen: () => void): Promise<void>
         </div>
       </div>
 
+      </section>
+
+      <section data-bereich="ansicht">
       <div class="group">
-        <div class="group-head"><span class="group-title">Erscheinungsbild & System</span></div>
-        <div class="grid-2" style="align-items: center; gap: 16px;">
-          <label class="switch" style="grid-column: span 2;">
-            <input type="checkbox" id="e_theme">
-            <span class="switch-track"></span>
-            <span>Dunkler Modus</span>
-          </label>
-          <button class="btn" id="e_btnUpdate" type="button">Nach Aktualisierung suchen</button>
-          <button class="btn" id="e_btnUeber" type="button">Über Rana</button>
+        <div class="group-head"><span class="group-title">Erscheinungsbild</span></div>
+        <label class="switch">
+          <input type="checkbox" id="e_theme">
+          <span class="switch-track"></span>
+          <span>Dunkler Modus</span>
+        </label>
+        <p class="hint" style="margin-top:10px">
+          Berichte entstehen oft abends. Der dunkle Modus färbt die
+          Oberfläche — das Blatt in Schritt 5 bleibt weiss, weil es
+          gedruckt wird.
+        </p>
+      </div>
+      </section>
+
+      <section data-bereich="daten">
+      <div class="group">
+        <div class="group-head"><span class="group-title">Sicherung und Papierkorb</span></div>
+        <p class="hint" style="margin-bottom:12px">
+          Alle Fälle liegen verschlüsselt auf diesem Gerät. Rana legt
+          täglich einen Stand an und hält die letzten sieben.
+        </p>
+        <div class="row row-wrap">
+          <button class="btn" id="e_btnSicherung" type="button">Sicherung verwalten</button>
+          <button class="btn" id="e_btnPapierkorb" type="button">Papierkorb öffnen</button>
+        </div>
+      </div>
+      </section>
+
+      <section data-bereich="update">
+      <div class="group">
+        <div class="group-head"><span class="group-title">Aktualisierung</span></div>
+        <p class="hint" style="margin-bottom:12px">
+          Rana fragt bei GitHub <b>nie von selbst</b> nach — auch nicht
+          beim Start. Nur wenn Sie es hier auslösen.
+        </p>
+        <button class="btn btn-primary" id="e_btnUpdate" type="button">Nach Aktualisierung suchen</button>
+      </div>
+      </section>
+
+      <section data-bereich="ueber">
+      <div class="group">
+        <div class="group-head"><span class="group-title">Über Rana</span></div>
+        <button class="btn" id="e_btnUeber" type="button">Angaben zum Programm</button>
+      </div>
+      </section>
+
         </div>
       </div>`,
 
     onOpen: (root) => {
+      // Das Verzeichnis schaltet die Bereiche. Ein einziger Zuhörer
+      // am Behälter, damit nichts hängenbleibt, wenn der Dialog
+      // neu gezeichnet wird.
+      const nav = qs<HTMLElement>(".settings-nav", root)!;
+      const pane = qs<HTMLElement>(".settings-pane", root)!;
+      on(nav, "click", (e) => {
+        const b = (e.target as HTMLElement).closest<HTMLElement>("[data-bereich]");
+        if (!b) return;
+        const ziel = b.dataset.bereich!;
+        qsa<HTMLElement>("[data-bereich]", nav).forEach((n) =>
+          n.setAttribute("aria-current", String(n.dataset.bereich === ziel)));
+        qsa<HTMLElement>("section[data-bereich]", pane).forEach((n) =>
+          n.dataset.offen = n.dataset.bereich === ziel ? "ja" : "nein");
+        pane.scrollTop = 0;
+      });
+
+      on(qs<HTMLElement>("#e_btnVerbrauch", root)!, "click", () => { void zeigeVerbrauch(); });
+      on(qs<HTMLElement>("#e_btnSicherung", root)!, "click", () => { void zeigeSicherung(neuZeichnen); });
+      on(qs<HTMLElement>("#e_btnPapierkorb", root)!, "click", () => { void zeigePapierkorb(neuZeichnen); });
+
       const themeToggle = qs<HTMLInputElement>("#e_theme", root)!;
       themeToggle.checked = document.documentElement.dataset.theme === "dark";
       on(themeToggle, "change", () => {
@@ -279,7 +373,7 @@ export async function zeigeVerbrauch(): Promise<void> {
       <div class="group">
         <div class="group-head"><span class="group-title">Letzte Monate</span></div>
         ${monate.length ? `
-          <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <table style="width:100%;border-collapse:collapse;font-size:var(--t-sm)">
             <tbody>
               ${monate.map(([m, kosten, n]) => `
                 <tr style="border-bottom:1px solid var(--line)">
@@ -536,7 +630,7 @@ export async function zeigeUeber(): Promise<void> {
     body: `
       <div style="display:flex;gap:20px;align-items:flex-start">
         <div style="flex:1">
-          <p style="font-family:var(--face-display);font-size:24px;font-weight:600;letter-spacing:-.02em">Rana</p>
+          <p style="font-family:var(--face-display);font-size:var(--t-lg);font-weight:600;letter-spacing:-.02em">Rana</p>
           <p style="font-family:var(--face-display);font-style:italic;color:var(--reed);margin-top:2px">arvalis · 1.0.0</p>
           <p class="hint" style="margin-top:16px">
             Rana arvalis, der Moorfrosch, ist ein unauffälliges braunes Tier, das sich

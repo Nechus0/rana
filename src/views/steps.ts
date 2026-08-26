@@ -56,7 +56,7 @@ function textarea(id: string, label: string, opts: {
       <label for="${id}" style="align-items: center;">
         ${esc(label)}${opts.note ? ` <span class="field-note">${esc(opts.note)}</span>` : ""}
         <span class="spacer"></span>
-        ${opts.icd10 ? `<input type="text" list="icd10-list" id="${id}_search" class="icd10-search" placeholder="Suche (z.B. F32)..." style="width:160px; padding:4px 8px; font-size:11px; margin-right:8px;">` : ""}
+        ${opts.icd10 ? `<input type="text" list="icd10-list" id="${id}_search" class="icd10-search" placeholder="Suche (z.B. F32)...">` : ""}
         ${opts.bausteine !== false
           ? `<button class="btn btn-sm btn-quiet" data-bausteine="${id}" type="button"
                      title="Eigene Textbausteine für dieses Feld">Bausteine</button>`
@@ -326,11 +326,11 @@ function schritt5(): string {
           oder Kopieren beisammen, damit nichts doppelt getippt werden muss.
         </p>
         <div class="paper-tray" style="padding:16px">
-          <table style="width:100%;border-collapse:collapse;font-size:13px" class="selectable">
+          <table style="width:100%;border-collapse:collapse;font-size:var(--t-sm)" class="selectable">
             ${ptv2bZeilen().map(([k, v]) => `
               <tr>
                 <td style="padding:6px 14px 6px 0;color:var(--reed);white-space:nowrap;vertical-align:top;
-                           font-family:var(--face-record);font-size:11px;letter-spacing:.06em;text-transform:uppercase">${esc(k)}</td>
+                           font-family:var(--face-record);font-size:var(--t-xs);letter-spacing:.06em;text-transform:uppercase">${esc(k)}</td>
                 <td style="padding:6px 0;vertical-align:top">${esc(v)}</td>
               </tr>`).join("")}
           </table>

@@ -682,3 +682,69 @@ details.fold > summary:hover { background: var(--sphagnum); }
   .rail.is-open { transform: none; }
   .work-head, .work-body, .work-foot { padding-left: var(--s4); padding-right: var(--s4); }
 }
+
+
+/* ============================================================
+   Einstellungen mit seitlichem Verzeichnis
+   ------------------------------------------------------------
+   Vorher war es ein einziger langer Bildlauf: Praxis, Zugang,
+   Grenzen, Bericht, Erscheinungsbild hintereinander weg. Man
+   suchte, statt zu finden, und der Dialog wusste selbst nicht,
+   wie lang er war.
+
+   Jetzt links ein Verzeichnis, rechts ein Bereich. Dieselbe
+   Formensprache wie die Seitenschiene der Anwendung — wer die
+   kennt, kennt auch diese.
+   ============================================================ */
+.dialog.dialog-breit { width: min(880px, 100%); }
+
+.settings {
+  display: grid;
+  grid-template-columns: 208px minmax(0, 1fr);
+  min-height: 420px;
+  max-height: 62vh;
+}
+
+.settings-nav {
+  border-right: 1px solid var(--line);
+  padding: 0 var(--s2) var(--s4) 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+}
+.settings-nav button {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  border-radius: var(--r);
+  padding: 9px var(--s3);
+  font: inherit;
+  font-size: var(--t-sm);
+  color: var(--peat-soft);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.settings-nav button:hover { background: var(--sphagnum); color: var(--peat); }
+.settings-nav button[aria-current="true"] {
+  background: var(--arvalis-wash);
+  color: var(--peat);
+  font-weight: 600;
+}
+.settings-nav button svg { width: 16px; height: 16px; flex: none; opacity: .75; }
+
+.settings-pane {
+  padding: 0 var(--s2) var(--s4) var(--s5);
+  overflow-y: auto;
+}
+.settings-pane > section { display: none; }
+.settings-pane > section[data-offen="ja"] { display: block; }
+.settings-pane .group:first-child { margin-top: 0; }
+
+/* Innerhalb eines Bereichs braucht es keine zweite Überschriftenebene
+   mehr — der Bereichsname steht ja links. */
+.settings-pane .group-head { margin-bottom: var(--s3); }

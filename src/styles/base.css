@@ -346,3 +346,14 @@ textarea.input-record {
   font-size: var(--t-sm);
   letter-spacing: 0;
 }
+
+
+/* Das Suchfeld fuer die ICD-10-Liste. Sitzt in der Beschriftungszeile
+   und muss dort schmal bleiben, ohne aus der Formensprache zu fallen. */
+.icd10-search {
+  width: 170px;
+  flex: none;
+  padding: 4px 8px;
+  font-size: var(--t-xs);
+  margin-right: var(--s2);
+}
