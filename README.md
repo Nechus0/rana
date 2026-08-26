@@ -1,4 +1,4 @@
-# Rana
+﻿# Rana
 
 **Version Arvalis · 1.1.0**
 
@@ -106,6 +106,14 @@ gesendet und kosten ab dem zweiten Bericht nur noch ein Zehntel.
 3. **Bei Anthropic.** Die Ersteinrichtung führt ausdrücklich zur
    Ausgabengrenze in der Console. Das ist die einzige Grenze, die auch dann
    greift, wenn der Schlüssel abhandenkommt.
+
+---
+
+## Weiterentwickeln
+
+Wer an Rana arbeitet oder ein Update ausliefert: **[ENTWICKLUNG.md](ENTWICKLUNG.md)**.
+Dort stehen der Ablauf, die Fallstricke und was beim Ändern leicht
+kaputtgeht.
 
 ---
 
