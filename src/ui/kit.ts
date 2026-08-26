@@ -114,6 +114,8 @@ export function toast(text: string, kind: ToastKind = "info", ms = 5200): void {
 export interface DialogOpts {
   title: string;
   body: string;
+  /** Breiter Dialog für Ansichten mit seitlichem Verzeichnis. */
+  breit?: boolean;
   /** Beschriftung des bestätigenden Knopfes. */
   confirm?: string;
   cancel?: string;
@@ -133,7 +135,7 @@ export function dialog(opts: DialogOpts): Promise<boolean> {
     scrim.setAttribute("aria-label", opts.title);
 
     scrim.innerHTML = `
-      <div class="dialog">
+      <div class="dialog${opts.breit ? " dialog-breit" : ""}">
         <div class="dialog-head"><h3>${esc(opts.title)}</h3></div>
         <div class="dialog-body">${opts.body}</div>
         <div class="dialog-foot">

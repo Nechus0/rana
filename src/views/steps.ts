@@ -56,7 +56,7 @@ function textarea(id: string, label: string, opts: {
       <label for="${id}" style="align-items: center;">
         ${esc(label)}${opts.note ? ` <span class="field-note">${esc(opts.note)}</span>` : ""}
         <span class="spacer"></span>
-        ${opts.icd10 ? `<input type="text" list="icd10-list" id="${id}_search" class="icd10-search" placeholder="Suche (z.B. F32)..." style="width:160px; padding:4px 8px; font-size:11px; margin-right:8px;">` : ""}
+        ${opts.icd10 ? `<input type="text" list="icd10-list" id="${id}_search" class="icd10-search" placeholder="Suche (z.B. F32)...">` : ""}
         ${opts.bausteine !== false
           ? `<button class="btn btn-sm btn-quiet" data-bausteine="${id}" type="button"
                      title="Eigene Textbausteine für dieses Feld">Bausteine</button>`
@@ -64,7 +64,10 @@ function textarea(id: string, label: string, opts: {
       </label>
       <textarea id="${id}" data-feld="${id}" placeholder="${esc(opts.ph ?? "")}"
                 ${opts.hoch ? `style="min-height:${opts.hoch}px"` : ""}>${esc(f(id))}</textarea>
-      <div class="record-num small muted" data-zaehler="${id}"></div>
+      <div class="field-fuss">
+        <span class="field-balken" data-balken="${id}"><i></i></span>
+        <span class="field-zaehler" data-zaehler="${id}"></span>
+      </div>
     </div>`;
 }
 
@@ -117,7 +120,14 @@ function schritt1(): string {
         ph: "Lehrerin, in Partnerschaft, keine Kinder",
       })}
     </div>
-    <div id="warnungen"></div>`);
+    <div id="warnungen"></div>
+    <div class="row" style="margin-top:20px">
+      <button class="btn" id="btnFolgeantrag" type="button"
+              title="Legt den nächsten Antrag derselben Patientin an und übernimmt, was gleich bleibt">
+        ${icon.plus} Folgeantrag aus diesem Fall
+      </button>
+      <span class="hint">Stammdaten, Ausgangslage und Psychodynamik werden übernommen.</span>
+    </div>`);
 }
 
 // ===============================================================
@@ -323,11 +333,11 @@ function schritt5(): string {
           oder Kopieren beisammen, damit nichts doppelt getippt werden muss.
         </p>
         <div class="paper-tray" style="padding:16px">
-          <table style="width:100%;border-collapse:collapse;font-size:13px" class="selectable">
+          <table style="width:100%;border-collapse:collapse;font-size:var(--t-sm)" class="selectable">
             ${ptv2bZeilen().map(([k, v]) => `
               <tr>
                 <td style="padding:6px 14px 6px 0;color:var(--reed);white-space:nowrap;vertical-align:top;
-                           font-family:var(--face-record);font-size:11px;letter-spacing:.06em;text-transform:uppercase">${esc(k)}</td>
+                           font-family:var(--face-record);font-size:var(--t-xs);letter-spacing:.06em;text-transform:uppercase">${esc(k)}</td>
                 <td style="padding:6px 0;vertical-align:top">${esc(v)}</td>
               </tr>`).join("")}
           </table>
@@ -415,19 +425,59 @@ export function bindeSchritt(n: number, neuZeichnen: () => void): void {
     });
   }
 
-  if (n === 0) zeigeWarnungen();
+  if (n === 0) {
+    zeigeWarnungen();
+    const fa = document.getElementById("btnFolgeantrag");
+    if (fa) on(fa, "click", () => { void folgeAntragAnlegen(neuZeichnen); });
+  }
   if (n === 1) bindeSchritt2();
   if (n === 3) bindeSchritt4(neuZeichnen);
   if (n === 4) bindeSchritt5();
 }
 
+/**
+ * Der Zähler unter einem Schreibfeld.
+ *
+ * Zeigt nicht nur, wie viel dasteht, sondern auch wie viel erwartet
+ * wird. Ohne den Zielwert schreibt man entweder zu knapp — dann fehlt
+ * Claude das Material — oder ins Uferlose.
+ */
 function aktualisiereZaehler(node: HTMLElement): void {
   const id = (node as HTMLInputElement).dataset.feld;
   if (!id) return;
   const z = qs<HTMLElement>(`[data-zaehler="${id}"]`);
   if (!z) return;
+
   const len = (node as HTMLTextAreaElement).value.length;
-  z.textContent = len ? `${len.toLocaleString("de-DE")} Zeichen` : "";
+  const ziel = S.ZIELUMFANG[id];
+
+  if (!ziel) {
+    z.textContent = len ? `${len.toLocaleString("de-DE")} Zeichen` : "";
+    z.className = "field-zaehler";
+    return;
+  }
+
+  const stand = S.fuellstand(id, len);
+  const spanne = ziel.von > 0
+    ? `${ziel.von}–${ziel.bis}`
+    : `bis ${ziel.bis}`;
+
+  const wort =
+    stand === "leer"      ? (ziel.hinweis ?? `etwa ${spanne} Zeichen`)
+    : stand === "kurz"    ? `${len} von etwa ${spanne} — noch etwas knapp`
+    : stand === "reichlich" ? `${len} Zeichen — reichlich, das ist in Ordnung`
+    : `${len} von etwa ${spanne} Zeichen`;
+
+  z.textContent = wort;
+  z.className = `field-zaehler ist-${stand ?? "neutral"}`;
+
+  // Ein schmaler Balken macht das Verhältnis auf einen Blick sichtbar.
+  const balken = qs<HTMLElement>(`[data-balken="${id}"]`);
+  if (balken) {
+    const anteil = Math.min(100, Math.round((len / Math.max(1, ziel.bis)) * 100));
+    balken.style.setProperty("--fuell", `${anteil}%`);
+    balken.dataset.stand = stand ?? "neutral";
+  }
 }
 
 function zeigeWarnungen(): void {
@@ -578,11 +628,11 @@ async function zeigePrompt(): Promise<void> {
       </p>
       <div class="field">
         <label>Regeln <span class="field-note">${system.length.toLocaleString("de-DE")} Zeichen, zwischengespeichert</span></label>
-        <textarea readonly spellcheck="false" style="min-height:170px;font-family:var(--face-record);font-size:11.5px">${esc(system)}</textarea>
+        <textarea readonly spellcheck="false" style="min-height:170px;font-family:var(--face-record);font-size:var(--t-xs)">${esc(system)}</textarea>
       </div>
       <div class="field">
         <label>Falldaten <span class="field-note">${user.length.toLocaleString("de-DE")} Zeichen</span></label>
-        <textarea readonly spellcheck="false" style="min-height:170px;font-family:var(--face-record);font-size:11.5px">${esc(user)}</textarea>
+        <textarea readonly spellcheck="false" style="min-height:170px;font-family:var(--face-record);font-size:var(--t-xs)">${esc(user)}</textarea>
       </div>`,
   });
 }
@@ -728,6 +778,31 @@ async function bausteinDialog(feldId: string, neuZeichnen: () => void): Promise<
 // ---------------------------------------------------------------
 // Fall löschen — mit Frist
 // ---------------------------------------------------------------
+
+/**
+ * Fragt vor dem Anlegen nach — der laufende Fall bleibt erhalten,
+ * aber ein unbeabsichtigter Sprung in einen neuen Fall ist trotzdem
+ * verwirrend.
+ */
+async function folgeAntragAnlegen(neuZeichnen: () => void): Promise<void> {
+  const name = (S.state.fields.f_name ?? "").trim();
+  const nr = parseInt(S.state.fields.f_nr ?? "", 10);
+  const naechste = isNaN(nr) ? 2 : nr + 1;
+
+  const ok = await confirmDialog(
+    "Folgeantrag anlegen",
+    `Es entsteht der ${naechste}. Fortführungsantrag${name ? ` für ${name}` : ""}. `
+      + "Stammdaten, Ausgangslage und Psychodynamik werden übernommen, "
+      + "das bisher bewilligte Kontingent um die zuletzt beantragten Stunden erhöht. "
+      + "Der jetzige Bericht wandert in das Vorbericht-Feld. Der laufende Fall bleibt unverändert.",
+    "Anlegen"
+  );
+  if (!ok) return;
+
+  await S.folgeAntrag();
+  neuZeichnen();
+  toast(`${naechste}. Fortführungsantrag angelegt — Verlauf und Befund sind leer.`, "ok", 6000);
+}
 
 export async function fallInPapierkorb(id: string, label: string): Promise<boolean> {
   const ok = await confirmDialog(

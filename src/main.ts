@@ -35,7 +35,7 @@ import { bindeSchritt, fallInPapierkorb, renderSchritt, SCHRITTE } from "./views
 import {
   zeigeEinstellungen, zeigePapierkorb, zeigeSicherung
 } from "./views/settings";
-import { debounce, el, esc, eur, icon, on, qsa, relDate, toast } from "./ui/kit";
+import { el, esc, eur, icon, on, qsa, relDate, toast } from "./ui/kit";
 
 // ===============================================================
 // Start
@@ -145,6 +145,7 @@ function railHtml(): string {
 
       <div class="rail-head">
         <span class="record">Fälle</span>
+        <span class="record-num small muted" id="fallZaehler"></span>
         <button class="btn btn-sm btn-quiet btn-icon" id="btnNeuerFall"
                 title="Neuen Fall anlegen (Strg+N)" aria-label="Neuen Fall anlegen">${icon.plus}</button>
       </div>
@@ -179,10 +180,22 @@ function railHtml(): string {
 function bindeRail(): void {
   on(el("btnNeuerFall"), "click", () => { void neuerFall(); });
 
-  on(el("fallSuche"), "input", debounce(() => {
+  // Kein Umweg über Rust mehr: die Übersichten liegen bereits im
+  // Speicher, gefiltert wird hier. Damit entfällt auch die Verzögerung
+  // — die Liste folgt dem Tippen unmittelbar.
+  on(el("fallSuche"), "input", () => {
     S.state.query = el<HTMLInputElement>("fallSuche").value;
-    void S.refreshCases().then(zeichneFallListe);
-  }, 220));
+    zeichneFallListe();
+  });
+  // Escape leert die Suche, ohne dass man das Feld erst markieren muss.
+  on(el("fallSuche"), "keydown", (e) => {
+    if ((e as KeyboardEvent).key !== "Escape") return;
+    const feld = el<HTMLInputElement>("fallSuche");
+    if (!feld.value) return;
+    feld.value = "";
+    S.state.query = "";
+    zeichneFallListe();
+  });
 
   for (const b of qsa<HTMLButtonElement>("[data-schritt]")) {
     on(b, "click", () => geheZu(parseInt(b.dataset.schritt!, 10)));
@@ -207,7 +220,17 @@ function bindeRail(): void {
 
 function zeichneFallListe(): void {
   const box = el("fallListe");
-  const cases = S.sortiereFaelle(S.state.cases);
+  const cases = S.sichtbareFaelle();
+
+  // Trefferzeile: bei aktiver Suche sieht man, wie viele von wie vielen
+  // übrig sind — sonst rät man, ob die Liste vollständig ist.
+  const zaehler = document.getElementById("fallZaehler");
+  if (zaehler) {
+    const gesamt = S.state.cases.length;
+    zaehler.textContent = S.state.query.trim()
+      ? `${cases.length} von ${gesamt}`
+      : (gesamt ? String(gesamt) : "");
+  }
 
   if (!cases.length) {
     box.innerHTML = `<li class="case-empty">${
@@ -239,13 +262,24 @@ function zeichneFallListe(): void {
       </button>
     </li>`).join("");
 
-  for (const b of qsa<HTMLButtonElement>("[data-fall]", box)) {
-    on(b, "click", () => { void wechsleFall(b.dataset.fall!); });
-    // Rechtsklick auf einen Fall bietet das Löschen an.
-    b.addEventListener("contextmenu", (e) => {
+  // Ein Zuhörer am Behälter statt einer je Eintrag. Bei fünfzig
+  // Patientinnen sind das fünfzig Anmeldungen weniger — und sie
+  // überleben das Neuzeichnen der Liste.
+  if (!box.dataset.gebunden) {
+    box.dataset.gebunden = "ja";
+
+    on(box, "click", (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLElement>("[data-fall]");
+      if (b) void wechsleFall(b.dataset.fall!);
+    });
+
+    box.addEventListener("contextmenu", (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLElement>("[data-fall]");
+      if (!b) return;
       e.preventDefault();
-      const c = cases.find((x) => x.id === b.dataset.fall);
-      if (c) void fallInPapierkorb(c.id, c.label).then((weg) => {
+      const c = S.state.cases.find((x) => x.id === b.dataset.fall);
+      if (!c) return;
+      void fallInPapierkorb(c.id, c.label).then((weg) => {
         if (weg && c.id === S.state.activeId) void naechstenFallOeffnen();
         else zeichneFallListe();
       });
@@ -375,7 +409,7 @@ function aktualisiereKontext(): void {
     </section>
     
     ${b ? `
-      <section class="ctx-block">
+      <section class="ctx-block ctx-unten">
         <span class="record">Verbrauch</span>
         <div class="budget">
           <div class="budget-row">
@@ -485,7 +519,7 @@ void main().catch((e) => {
   // Kommt der Start nicht durch, darf kein leeres Fenster stehen bleiben.
   el("app").innerHTML = `
     <div style="max-width:520px;margin:14vh auto;padding:0 24px">
-      <h1 style="font-size:24px;margin-bottom:12px">Rana konnte nicht starten</h1>
+      <h1 style="font-size:var(--t-xl);margin-bottom:12px">Rana konnte nicht starten</h1>
       <div class="notice notice-danger">${esc(api.errorText(e))}</div>
       <p class="hint" style="margin-top:16px">
         Läuft Rana bereits in einem anderen Fenster? Dann bitte dieses schliessen.

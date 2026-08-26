@@ -25,7 +25,7 @@
 .setup-brand { margin-bottom: var(--s7); }
 .setup-brand .name {
   font-family: var(--face-display);
-  font-size: 30px;
+  font-size: var(--t-2xl);
   font-weight: 600;
   letter-spacing: -.02em;
   line-height: 1;
@@ -72,7 +72,7 @@
   border: 1px solid var(--line-strong);
   display: grid; place-items: center;
   font-family: var(--face-record);
-  font-size: 11px; font-weight: 600;
+  font-size: var(--t-xs); font-weight: 600;
   color: var(--reed-faint);
   transition: all var(--dur) var(--ease);
 }

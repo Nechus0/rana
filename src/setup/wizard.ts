@@ -596,13 +596,13 @@ export async function runSetup(onFertig: () => void): Promise<void> {
         <ol class="hint" style="padding-left:18px;display:flex;flex-direction:column;gap:6px">
           <li>Das alte Artefakt öffnen.</li>
           <li>Mit <b>F12</b> die Entwicklerwerkzeuge öffnen, Reiter <b>Console</b>.</li>
-          <li>Dort eingeben: <code style="font-family:var(--face-record);font-size:12px">copy(localStorage.ptv3_cases_v1)</code></li>
+          <li>Dort eingeben: <code style="font-family:var(--face-record);font-size:var(--t-sm)">copy(localStorage.ptv3_cases_v1)</code></li>
           <li>Der Inhalt liegt jetzt in der Zwischenablage. Unten einfügen.</li>
         </ol>
         <div class="field">
           <label for="legacyJson">Inhalt einfügen</label>
           <textarea id="legacyJson" placeholder='{"cases":{…}}' spellcheck="false"
-                    style="font-family:var(--face-record);font-size:12px;min-height:150px"></textarea>
+                    style="font-family:var(--face-record);font-size:var(--t-sm);min-height:150px"></textarea>
         </div>
         <div class="notice">Das alte Artefakt wird dabei nicht verändert. Hier wird nur gelesen.</div>`,
       onConfirm: async (r) => {

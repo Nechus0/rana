@@ -56,7 +56,11 @@
   --face-doc:     Cambria, "Times New Roman", serif;      /* nur im Bericht */
   --face-doc-alt: Calibri, "Segoe UI", sans-serif;        /* nur im Bericht */
 
-  /* Typenskala. Schrittweite 1.2, verankert auf 15px. */
+  /* Typenskala. Schrittweite 1.2, verankert auf 15px.
+     Ausserhalb des gedruckten Berichts steht KEINE Schriftgrösse
+     als feste Zahl im Code — alles greift auf diese Stufen zu.
+     Wer eine neue Grösse braucht, ergänzt hier eine Stufe. */
+  --t-2xs:  10.5px;
   --t-xs:   11.5px;
   --t-sm:   12.5px;
   --t-base: 15px;
