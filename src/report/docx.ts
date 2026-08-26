@@ -15,7 +15,7 @@
 
 import type { Felder, Profile } from "../core/ipc";
 import {
-  ABSCHNITTE, dateLong, esc, parseSections, sozioText,
+  ABSCHNITTE, dateLong, esc, fmtDate, parseSections, sozioText,
   splitLabel, splitParas, toList,
 } from "./render";
 import { verfahrenZeile } from "./prompt";
@@ -309,6 +309,8 @@ const gf = (f: Felder, k: string) => (f[k] ?? "").trim();
 function wVerfahrenText(f: Felder, p: Profile): string {
   let base = verfahrenZeile(p);
   if (gf(f, "f_kasse")) base += ` · ${gf(f, "f_kasse")}`;
+  // Gleicher Aufbau wie in der Vorschau, damit beide nie auseinanderlaufen.
+  if (gf(f, "f_beginn")) base += ` · Beginn ${fmtDate(gf(f, "f_beginn"))}`;
   return base;
 }
 

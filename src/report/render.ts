@@ -22,11 +22,17 @@ const MONATE = [
   "Juli", "August", "September", "Oktober", "November", "Dezember",
 ];
 
-/** Die Überschriften im fertigen Bericht. */
+/**
+ * Die Überschriften im fertigen Bericht.
+ *
+ * Wortlaut nach dem Leitfaden (Muster PTV 3, Version 4.2017). Sie
+ * muessen mit den Überschriften uebereinstimmen, die der Prompt vom
+ * Modell verlangt — siehe PROMPT_TITLES weiter unten.
+ */
 export const ABSCHNITTE = [
-  "Behandlungsverlauf und Erreichung der Therapieziele",
-  "Diagnosen und psychischer Befund",
-  "Begründung der Fortführung, Therapieplanung und Prognose",
+  "Behandlungsverlauf seit dem letzten Bericht und Erreichung der Therapieziele",
+  "Aktuelle Diagnosen gemäß ICD-10 und aktueller psychischer Befund",
+  "Begründung der Fortführung, weitere Therapieplanung und Prognose",
 ];
 
 // ---------------------------------------------------------------
@@ -325,10 +331,28 @@ function numberGoals(raw: string): string {
 // Die drei Abschnitte herauslösen
 // ---------------------------------------------------------------
 
-const PROMPT_TITLES = [
-  "Bisheriger Behandlungsverlauf seit dem letzten Bericht",
-  "Aktuelle Diagnose(n) und aktueller psychischer Befund",
-  "Begründung der Notwendigkeit der Fortführung, weitere Planung und Prognose",
+/**
+ * Die Überschriften, die das Modell ausgibt — je Abschnitt mehrere
+ * Schreibweisen.
+ *
+ * Der erste Eintrag ist der aktuelle Wortlaut aus dem Prompt. Die
+ * weiteren sind die Fassungen bis Version 1.0.0: Berichte, die davor
+ * gespeichert wurden, sollen sich unveraendert oeffnen lassen, ohne
+ * dass ihre alte Überschrift als Text im Absatz stehen bleibt.
+ */
+const PROMPT_TITLES: string[][] = [
+  [
+    "Behandlungsverlauf seit dem letzten Bericht und Erreichung der Therapieziele",
+    "Bisheriger Behandlungsverlauf seit dem letzten Bericht",
+  ],
+  [
+    "Aktuelle Diagnosen gemäß ICD-10 und aktueller psychischer Befund",
+    "Aktuelle Diagnose(n) und aktueller psychischer Befund",
+  ],
+  [
+    "Begründung der Fortführung, weitere Therapieplanung und Prognose",
+    "Begründung der Notwendigkeit der Fortführung, weitere Planung und Prognose",
+  ],
 ];
 
 export function parseSections(raw: string): [string, string, string] {
@@ -352,10 +376,12 @@ export function parseSections(raw: string): [string, string, string] {
   r = numberGoals(ungluelines(r));
 
   const stripTitle = (rest: string, idx: number): string => {
-    const t = PROMPT_TITLES[idx];
-    if (!t) return rest;
-    const e = t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    return rest.replace(new RegExp(`^\\s*${e}\\s*[:.]?\\s*`), "");
+    for (const t of PROMPT_TITLES[idx] ?? []) {
+      const e = t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const nach = rest.replace(new RegExp(`^\\s*${e}\\s*[:.]?\\s*`), "");
+      if (nach !== rest) return nach;
+    }
+    return rest;
   };
 
   const lines = r.split(/\n/);
@@ -428,6 +454,9 @@ function sozioLine(f: Felder): string {
 function verfahrenLine(f: Felder, p: Profile): string {
   let base = verfahrenZeile(p);
   if (g(f, "f_kasse")) base += ` · ${esc(g(f, "f_kasse"))}`;
+  // Der Therapiebeginn gehoert in den Kopf, weil der Gutachter den
+  // Behandlungszeitraum sonst nur aus dem Fliesstext erschliessen kann.
+  if (g(f, "f_beginn")) base += ` · Beginn ${esc(fmtDate(g(f, "f_beginn")))}`;
   return base;
 }
 

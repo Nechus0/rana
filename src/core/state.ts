@@ -24,6 +24,10 @@ export const FELDER = [
   "f_vorbericht", "f_lastreport", "f_diag_alt", "f_psychodyn", "f_ziele_alt",
   // Verlauf
   "f_verlauf", "f_befund", "f_diag_neu", "f_begruendung", "f_prognose",
+  // Nachgezogen fuer die Leitfadenkonformitaet (PTV 3, Muster 4.2017).
+  // Bewusst HINTEN angehaengt: aeltere Faelle kennen diese Schluessel
+  // nicht und werden von leererFall() einfach leer vorbelegt.
+  "f_beginn", "f_ausgangslage", "f_zielstatus", "f_methoden", "f_abschluss",
 ] as const;
 
 export type FeldName = (typeof FELDER)[number];
@@ -36,11 +40,14 @@ export const PFLICHT: { feld: FeldName; label: string; schritt: number }[] = [
   { feld: "f_verbraucht",  label: "Davon verbraucht",        schritt: 0 },
   { feld: "f_beantragt",   label: "Jetzt beantragt",         schritt: 0 },
   { feld: "f_frequenz",    label: "Frequenz",                schritt: 0 },
+  { feld: "f_ausgangslage", label: "Ausgangslage bei Therapiebeginn", schritt: 2 },
   { feld: "f_verlauf",     label: "Behandlungsverlauf",      schritt: 2 },
+  { feld: "f_zielstatus",  label: "Stand der zuletzt vereinbarten Therapieziele", schritt: 2 },
   { feld: "f_befund",      label: "Psychischer Befund",      schritt: 2 },
   { feld: "f_diag_neu",    label: "Aktuelle Diagnose(n)",    schritt: 2 },
   { feld: "f_begruendung", label: "Begründung der Fortführung", schritt: 2 },
   { feld: "f_prognose",    label: "Prognose",                schritt: 2 },
+  { feld: "f_abschluss",   label: "Planung des Therapieabschlusses", schritt: 2 },
 ];
 
 export interface State {

@@ -84,8 +84,9 @@ function schritt1(): string {
     <div class="grid-3">
       ${input("f_name", "Patient:in", { span: 3, note: "Klarname, nur zur Fallauswahl und für den Dateinamen. Steht nie im Bericht und geht nie an die Schnittstelle." })}
       ${input("f_chiffre", "Chiffre / Pseudonym", { ph: "A.M.-1974" })}
-      ${input("f_nr", "Lfd. Nr. des Fortführungsantrags", { typ: "number", ph: "1" })}
+      ${input("f_nr", "Lfd. Nr. des Fortführungsantrags", { typ: "number", ph: "1", note: "je Antrag hochzählen, steht so im Berichtskopf" })}
       ${input("f_gebdatum", "Geburtsdatum", { typ: "date" })}
+      ${input("f_beginn", "Therapiebeginn", { typ: "date", note: "Datum der ersten Sitzung" })}
       <div class="field">
         <label for="f_geschlecht">Geschlecht</label>
         <select id="f_geschlecht" data-feld="f_geschlecht">
@@ -184,10 +185,21 @@ function schritt3(): string {
       des fertigen Berichts der Text einfliesst.
     </p>
 
-    ${gruppe("1", "Behandlungsverlauf seit dem letzten Bericht", textarea(
-      "f_verlauf", "Verlauf und Erreichung der Therapieziele",
-      { hoch: 190, ph: "Was wurde bearbeitet? Symptomveränderung. Stand je Therapieziel (erreicht / teilweise / offen) …" }
-    ))}
+    ${gruppe("1", "Behandlungsverlauf seit dem letzten Bericht", `
+      ${textarea("f_ausgangslage", "Ausgangslage bei Therapiebeginn", {
+        note: "auslösende Situation, Symptomatik, Psychodynamik",
+        hoch: 150,
+        ph: "Wodurch wurde die Behandlung ausgelöst? Symptomatik und Funktionsniveau zu Beginn, zugrunde liegender Konflikt …",
+      })}
+      ${textarea("f_verlauf", "Verlauf seit dem letzten Bericht", {
+        hoch: 190,
+        ph: "Was wurde bearbeitet? Symptomveränderung im Behandlungszeitraum …",
+      })}
+      ${textarea("f_zielstatus", "Stand der zuletzt vereinbarten Therapieziele", {
+        note: "je Ziel: erreicht / teilweise erreicht / noch offen",
+        hoch: 150,
+        ph: "Ziel 1 … erreicht. Ziel 2 … teilweise, weil … Ziel 3 … noch offen, weil …",
+      })}`)}
 
     ${gruppe("2", "Aktuelle Diagnose(n) und psychischer Befund", `
       ${textarea("f_befund", "Aktueller psychischer Befund", { ph: "Antrieb, Affekt, Denken, Suizidalität soweit relevant …" })}
@@ -195,7 +207,15 @@ function schritt3(): string {
 
     ${gruppe("3", "Begründung, Planung und Prognose", `
       ${textarea("f_begruendung", "Begründung und weitere Planung", { note: "Ziele, Methoden", ph: "Warum ist die Fortführung nötig? Weitere Planung, angepasste Ziele …" })}
-      ${textarea("f_prognose", "Prognose und geplanter Abschluss", { ph: "Günstige Faktoren, Veränderungshindernisse, Abschluss …" })}`)}`;
+      ${textarea("f_methoden", "Geänderte Behandlungsmethoden und -techniken", {
+        note: "darf leer bleiben, dann gilt „unverändert“",
+        ph: "Nur ausfüllen, wenn sich an Methoden oder Techniken etwas geändert hat …",
+      })}
+      ${textarea("f_prognose", "Prognose und geplanter Abschluss", { ph: "Günstige Faktoren, Veränderungshindernisse …" })}
+      ${textarea("f_abschluss", "Planung des Therapieabschlusses", {
+        note: "ggf. weiterführende Maßnahmen danach",
+        ph: "Woran wird der Abschluss festgemacht? Was ist danach vorgesehen …",
+      })}`)}`;
 }
 
 // ===============================================================

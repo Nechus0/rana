@@ -5,3 +5,9 @@ src-tauri/gen/
 .DS_Store
 *.local
 _port/
+
+# Erzeugnisse der Abnahmeprüfung (_test/abnahme.mjs, _test/seiten.mjs)
+_test/bundle.mjs
+_test/abnahme.docx
+_test/abnahme.pdf
+_test/seite-*.png
