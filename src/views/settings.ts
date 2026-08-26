@@ -28,7 +28,6 @@ export async function zeigeEinstellungen(neuZeichnen: () => void): Promise<void>
     { id: "praxis",  name: "Praxis",         zeichen: icon.gear },
     { id: "zugang",  name: "Claude-Zugang",  zeichen: icon.key },
     { id: "grenzen", name: "Grenzen",        zeichen: icon.chart },
-    { id: "bericht", name: "Bericht",        zeichen: icon.word },
     { id: "ansicht", name: "Erscheinungsbild", zeichen: icon.moon },
     { id: "daten",   name: "Daten",          zeichen: icon.save },
     { id: "update",  name: "Aktualisierung", zeichen: icon.restore },
@@ -52,17 +51,25 @@ export async function zeigeEinstellungen(neuZeichnen: () => void): Promise<void>
       <section data-bereich="praxis" data-offen="ja">
       <div class="group">
         <div class="group-head"><span class="group-title">Praxis und Behandler:in</span></div>
-        <div class="grid-1-2" style="margin-bottom:var(--s4)">
-          ${txt("e_titel", "Titel", p.behandler.titel)}
-          ${txt("e_name", "Name", p.behandler.name)}
-        </div>
-        <div class="grid-2">
-          <div class="span-all">${txt("e_funktion", "Funktion", p.behandler.funktion)}</div>
-          <div class="span-all">${txt("e_strasse", "Strasse", p.praxis.strasse)}</div>
-          ${txt("e_plz", "PLZ", p.praxis.plz)}
-          ${txt("e_ort", "Ort", p.praxis.ort)}
-          ${txt("e_tel", "Telefon", p.praxis.telefon)}
-          ${txt("e_mail", "E-Mail", p.praxis.email)}
+        <!-- Jedes Feld bekommt die Breite, die sein Inhalt braucht.
+             Vorher standen PLZ und Ort gleich breit nebeneinander —
+             fünf Ziffern in einem Feld für zwanzig Zeichen sieht
+             falsch aus und lässt den Ort zu eng wirken. -->
+        <div class="feldsatz">
+          <div class="grid-1-2">
+            ${txt("e_titel", "Titel", p.behandler.titel)}
+            ${txt("e_name", "Name", p.behandler.name)}
+          </div>
+          ${txt("e_funktion", "Funktion", p.behandler.funktion)}
+          ${txt("e_strasse", "Strasse und Hausnummer", p.praxis.strasse)}
+          <div class="grid-1-3">
+            ${txt("e_plz", "PLZ", p.praxis.plz)}
+            ${txt("e_ort", "Ort", p.praxis.ort)}
+          </div>
+          <div class="grid-2">
+            ${txt("e_tel", "Telefon", p.praxis.telefon)}
+            ${txt("e_mail", "E-Mail", p.praxis.email)}
+          </div>
         </div>
       </div>
 
@@ -111,22 +118,6 @@ export async function zeigeEinstellungen(neuZeichnen: () => void): Promise<void>
         <p class="hint" style="margin-top:14px">
           <button class="btn btn-sm" id="e_btnVerbrauch" type="button">Verbrauch der letzten Monate</button>
         </p>
-      </section>
-
-      <section data-bereich="bericht">
-      <div class="group">
-        <div class="group-head"><span class="group-title">Bericht</span></div>
-        <div class="field">
-          <label for="e_untertitel">Untertitel</label>
-          <input id="e_untertitel" value="${esc(p.layout.untertitel)}">
-        </div>
-        <div class="grid-3" style="margin-top:12px">
-          ${num("e_min", "Mindestens", p.layout.ziel_min)}
-          ${num("e_soll", "Zielwert", p.layout.ziel_soll)}
-          ${num("e_max", "Höchstens", p.layout.ziel_max)}
-        </div>
-      </div>
-
       </section>
 
       <section data-bereich="ansicht">
@@ -268,19 +259,12 @@ export async function zeigeEinstellungen(neuZeichnen: () => void): Promise<void>
           monthly_eur: n("e_budget", p.budget.monthly_eur),
           daily_reports: Math.max(1, Math.round(n("e_daily", p.budget.daily_reports))),
         },
-        layout: {
-          ...p.layout,
-          untertitel: v("e_untertitel"),
-          ziel_min: Math.round(n("e_min", p.layout.ziel_min)),
-          ziel_soll: Math.round(n("e_soll", p.layout.ziel_soll)),
-          ziel_max: Math.round(n("e_max", p.layout.ziel_max)),
-        },
+        // Untertitel und Zeichenkorridor bleiben, wie sie sind. Der
+        // Bereich, in dem sie einstellbar waren, ist entfallen — die
+        // Werte stehen weiter im Profil und werden hier unverändert
+        // durchgereicht, damit sie beim Übernehmen nicht verloren gehen.
+        layout: { ...p.layout },
       };
-
-      if (neu.layout.ziel_min >= neu.layout.ziel_max) {
-        toast("Der Mindestwert muss unter dem Höchstwert liegen.", "danger");
-        return false;
-      }
 
       await api.saveProfile(neu);
       S.patch({ profile: neu });
@@ -695,7 +679,11 @@ export async function zeigeAktualisierung(): Promise<void> {
 
         try {
           const { check } = await import("@tauri-apps/plugin-updater");
-          const gefunden = await check();
+          // Ohne diese Angabe zieht der Updater die MSI-Fassung. Die
+          // installiert für alle Benutzer und löst deshalb jedes Mal
+          // die Rückfrage der Benutzerkontensteuerung aus. Der
+          // NSIS-Installer läuft im Benutzerprofil und kommt ohne aus.
+          const gefunden = await check({ target: "windows-x86_64-nsis" });
 
           if (!gefunden) {
             status.className = "key-state ok";

@@ -78,6 +78,10 @@ export const icon = {
   info:    svg('<circle cx="10" cy="10" r="7"/><path d="M10 9v4.5M10 6.6v.1"/>'),
   sortDown: svg('<path d="M10 4v12M6 12l4 4 4-4"/>'),
   key:     svg('<circle cx="7" cy="10" r="3"/><path d="M10 10h7M14.5 10v2.4M16.6 10v1.8"/>'),
+  // Zeigt nach rechts; aufgeklappt dreht ihn die Formatvorlage.
+  caret:   svg('<path d="M8 5.5l4.5 4.5L8 14.5"/>'),
+  person:  svg('<circle cx="10" cy="7" r="3"/><path d="M4.5 16.5a5.5 5.5 0 0 1 11 0"/>'),
+  merge:   svg('<path d="M5 4v4a4 4 0 0 0 4 4h6"/><path d="M5 16v-2"/><path d="M12.5 9.5L15 12l-2.5 2.5"/>'),
 };
 
 // ---------------------------------------------------------------

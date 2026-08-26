@@ -32,6 +32,7 @@ import * as api from "./core/ipc";
 import * as S from "./core/state";
 import { runSetup } from "./setup/wizard";
 import { bindeSchritt, fallInPapierkorb, renderSchritt, SCHRITTE } from "./views/steps";
+import { offeneZuordnungen, zeigeZuordnung } from "./views/patients";
 import {
   zeigeEinstellungen, zeigePapierkorb, zeigeSicherung
 } from "./views/settings";
@@ -71,17 +72,11 @@ async function starteArbeitsansicht(): Promise<void> {
 
   zeichneGeruest();
   S.subscribe(() => { aktualisiereRand(); });
-  // Check for updates on startup
-  import("@tauri-apps/plugin-updater").then(async ({ check }) => {
-    try {
-      const gefunden = await check();
-      if (gefunden) {
-        toast(`Update auf ${gefunden.version} verfügbar!`, "ok", 5000);
-      }
-    } catch (e) {
-      // Ignore errors silently on startup
-    }
-  });
+  // Hier stand einmal eine Abfrage bei GitHub beim Start. Sie ist
+  // entfernt: das README sagt zu, dass Rana von sich aus nichts ins
+  // Netz schickt, und eine Zusage, die nur meistens gilt, ist keine.
+  // Die Prüfung läuft ausschliesslich über Einstellungen →
+  // Aktualisierung, auf Klick und sichtbar.
 }
 
 // ===============================================================
@@ -170,6 +165,9 @@ function railHtml(): string {
       <ul class="case-list" id="fallListe" role="list"></ul>
 
       <div class="rail-foot">
+        <button class="rail-link rail-link-hinweis" id="lnkZuordnen" hidden>
+          ${icon.merge} <span id="zuordnenText">Berichte zuordnen</span>
+        </button>
         <button class="rail-link" id="lnkSicherung">${icon.save} Sicherung</button>
         <button class="rail-link" id="lnkPapierkorb">${icon.trash} Papierkorb</button>
         <button class="rail-link" id="lnkEinstellungen">${icon.gear} Einstellungen</button>
@@ -211,16 +209,45 @@ function bindeRail(): void {
     zeichneFallListe();
   });
 
+  on(el("lnkZuordnen"), "click", () => {
+    void zeigeZuordnung().then(async (n) => {
+      if (n) await S.refreshCases();
+      await pruefeZuordnung();
+      zeichneFallListe();
+    });
+  });
+
   on(el("lnkSicherung"),     "click", () => { void zeigeSicherung(neuZeichnen); });
   on(el("lnkPapierkorb"),    "click", () => { void zeigePapierkorb(neuZeichnen); });
   on(el("lnkEinstellungen"), "click", () => { void zeigeEinstellungen(neuZeichnen); });
 
+  void pruefeZuordnung();
   zeichneFallListe();
+}
+
+/**
+ * Blendet den Hinweis auf unzugeordnete Berichte ein oder aus.
+ *
+ * Bewusst kein Dialog beim Start: nach dem Umstieg von 1.2 auf 2.0
+ * sind zunächst alle Berichte unzugeordnet, und wer dann zuerst
+ * arbeiten will, soll das dürfen. Der Hinweis wartet in der Schiene.
+ */
+async function pruefeZuordnung(): Promise<void> {
+  const knopf = document.getElementById("lnkZuordnen");
+  const text = document.getElementById("zuordnenText");
+  if (!knopf || !text) return;
+
+  const n = await offeneZuordnungen();
+  knopf.hidden = n === 0;
+  text.textContent = n === 1
+    ? "1 Bericht zuordnen"
+    : `${n} Berichte zuordnen`;
 }
 
 function zeichneFallListe(): void {
   const box = el("fallListe");
-  const cases = S.sichtbareFaelle();
+  const gruppen = S.sichtbareGruppen();
+  const cases = gruppen.flatMap((g) => g.berichte);
 
   // Trefferzeile: bei aktiver Suche sieht man, wie viele von wie vielen
   // übrig sind — sonst rät man, ob die Liste vollständig ist.
@@ -250,17 +277,51 @@ function zeichneFallListe(): void {
     }
   };
 
-  box.innerHTML = cases.map((c) => `
-    <li>
-      <button class="case-item" data-fall="${esc(c.id)}"
-              aria-current="${c.id === S.state.activeId}">
-        <span class="case-item-text">
-          <span class="case-item-name">${esc(c.label)}</span>
-          <span class="case-item-meta">${esc(zusatz(c))}</span>
-        </span>
-        ${c.antrag_nr ? `<span class="case-item-nr">#${esc(c.antrag_nr)}</span>` : ""}
-      </button>
-    </li>`).join("");
+  // Zwei Ebenen: oben die Person, darunter ihre Berichte. Aufgeklappt
+  // wird, wo der offene Bericht liegt oder wo die Suche einen Treffer
+  // hat — sonst müsste man bei jeder Suche erst klicken, um zu sehen,
+  // was gefunden wurde.
+  const suche = !!S.state.query.trim();
+
+  box.innerHTML = gruppen.map((g) => {
+    const pid = g.patient?.id ?? "__ohne__";
+    const auf = suche || S.state.offen.has(pid) || g.berichte.some((c) => c.id === S.state.activeId);
+    const zahl = g.patient ? g.patient.report_count : g.berichte.length;
+
+    // Der Folgeantrag sitzt an der Person, nicht am Bericht. Das ist
+    // der häufigste Vorgang überhaupt und kostet so einen Klick
+    // statt vier.
+    const kopf = `
+      <div class="pat-zeile">
+        <button class="pat-item" data-pat="${esc(pid)}"
+                aria-expanded="${auf}"
+                ${g.patient ? "" : 'data-lose="ja"'}>
+          <span class="pat-caret" aria-hidden="true">${icon.caret}</span>
+          <span class="pat-name">${esc(g.label)}</span>
+          <span class="pat-zahl">${zahl}</span>
+        </button>
+        ${g.patient && g.patient.report_count
+          ? `<button class="pat-plus" data-folge="${esc(g.patient.id)}"
+                     title="Nächsten Fortführungsantrag für ${esc(g.label)} anlegen"
+                     aria-label="Nächsten Fortführungsantrag für ${esc(g.label)} anlegen"
+                     >${icon.plus}</button>`
+          : ""}
+      </div>`;
+
+    const kinder = auf ? g.berichte.map((c) => `
+      <li>
+        <button class="case-item" data-fall="${esc(c.id)}"
+                aria-current="${c.id === S.state.activeId}">
+          <span class="case-item-text">
+            <span class="case-item-name">${c.antrag_nr ? `${esc(c.antrag_nr)}. Fortführungsantrag` : "Antrag ohne Nummer"}</span>
+            <span class="case-item-meta">${esc(zusatz(c))}</span>
+          </span>
+          ${c.has_report ? `<span class="case-item-fertig" title="Bericht formuliert">${icon.check}</span>` : ""}
+        </button>
+      </li>`).join("") : "";
+
+    return `<li class="pat-gruppe">${kopf}<ul class="case-sub" role="list">${kinder}</ul></li>`;
+  }).join("");
 
   // Ein Zuhörer am Behälter statt einer je Eintrag. Bei fünfzig
   // Patientinnen sind das fünfzig Anmeldungen weniger — und sie
@@ -269,6 +330,19 @@ function zeichneFallListe(): void {
     box.dataset.gebunden = "ja";
 
     on(box, "click", (e) => {
+      const f = (e.target as HTMLElement).closest<HTMLElement>("[data-folge]");
+      if (f) {
+        void S.folgeAntragFuerPatientin(f.dataset.folge!).then((id) => {
+          if (id) { neuZeichnen(); toast("Nächster Fortführungsantrag angelegt.", "ok", 2500); }
+        }).catch((err) => toast(api.errorText(err), "danger"));
+        return;
+      }
+      const p = (e.target as HTMLElement).closest<HTMLElement>("[data-pat]");
+      if (p) {
+        S.klappe(p.dataset.pat!);
+        zeichneFallListe();
+        return;
+      }
       const b = (e.target as HTMLElement).closest<HTMLElement>("[data-fall]");
       if (b) void wechsleFall(b.dataset.fall!);
     });

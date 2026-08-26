@@ -150,6 +150,165 @@
 }
 .case-empty { padding: var(--s3) var(--s3); font-size: var(--t-sm); color: var(--reed-faint); }
 
+/* ------------------------------------------------------------
+   Die Personenebene
+
+   Die Liste hat seit Fassung 2.0 zwei Ebenen: oben die Patientin,
+   darunter ihre Fortführungsanträge. Der Unterschied wird nicht
+   über Rahmen oder Flächen gemacht, sondern über Schriftgewicht
+   und Einzug — bei fünfzig Einträgen wäre alles andere unruhig.
+   ------------------------------------------------------------ */
+
+.pat-gruppe { margin-bottom: 1px; }
+
+.pat-zeile { display: flex; align-items: center; gap: 2px; }
+
+/* Der Folgeantrag zeigt sich erst beim Überfahren der Zeile — sonst
+   stünden bei fünfzig Patientinnen fünfzig Pluszeichen da. */
+.pat-plus {
+  flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px;
+  border: 1px solid transparent;
+  border-radius: var(--r);
+  background: transparent;
+  color: var(--reed-faint);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.pat-plus svg { width: 14px; height: 14px; }
+.pat-zeile:hover .pat-plus,
+.pat-plus:focus-visible { opacity: 1; }
+.pat-plus:hover { color: var(--arvalis); border-color: var(--line); }
+
+.pat-item {
+  display: flex; align-items: center; gap: var(--s2);
+  width: 100%;
+  text-align: left;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: var(--r);
+  padding: 6px 9px;
+  font: inherit;
+  font-size: var(--t-sm);
+  font-weight: 550;
+  color: var(--peat);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease);
+}
+.pat-item:hover { background: var(--paper); }
+
+.pat-caret {
+  flex: none;
+  display: inline-flex;
+  color: var(--reed-faint);
+  transition: transform var(--dur-fast) var(--ease);
+}
+.pat-caret svg { width: 13px; height: 13px; }
+.pat-item[aria-expanded="true"] .pat-caret { transform: rotate(90deg); }
+
+.pat-name {
+  flex: 1 1 auto; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* Die Zahl der Anträge. Ruhig gesetzt — sie ist eine Angabe,
+   keine Meldung. */
+.pat-zahl {
+  flex: none;
+  font-family: var(--face-record);
+  font-size: var(--t-2xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--reed-faint);
+  background: var(--paper);
+  border-radius: 999px;
+  min-width: 18px;
+  padding: 1px 6px;
+  text-align: center;
+}
+
+/* Berichte ohne Patientin: erkennbar, aber nicht alarmierend. */
+.pat-item[data-lose] .pat-name { color: var(--reed); font-weight: 500; font-style: italic; }
+
+.case-sub { list-style: none; margin: 0 0 var(--s2); padding: 0 0 0 18px; }
+.case-sub:empty { margin: 0; }
+
+.case-item-fertig {
+  flex: none;
+  display: inline-flex;
+  color: var(--reed-faint);
+}
+.case-item-fertig svg { width: 13px; height: 13px; }
+.case-item[aria-current="true"] .case-item-fertig { color: var(--arvalis); }
+
+/* ------------------------------------------------------------
+   Der Zuordnungs-Vorschlag
+   ------------------------------------------------------------ */
+
+/* Der einzige Eintrag in der Fussleiste, der um Aufmerksamkeit
+   bittet — deshalb bekommt nur sein Zeichen Farbe, nicht die Zeile. */
+.rail-link-hinweis svg { opacity: 1; color: var(--amber); }
+
+.merge-liste {
+  list-style: none;
+  margin: var(--s3) 0 0;
+  padding: 0;
+  max-height: 46vh;
+  overflow-y: auto;
+}
+
+.merge-gruppe {
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: var(--s2) var(--s3);
+  margin-bottom: var(--s2);
+  background: var(--card, transparent);
+}
+.merge-gruppe.is-aus { opacity: .45; }
+
+.merge-kopf { display: flex; align-items: center; gap: var(--s2); }
+.merge-an { display: inline-flex; align-items: center; }
+
+.merge-name {
+  flex: 1 1 auto; min-width: 0;
+  font: inherit;
+  font-size: var(--t-sm);
+  font-weight: 550;
+  color: var(--peat);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm, 4px);
+  padding: 3px 6px;
+}
+.merge-name:hover  { border-color: var(--line); }
+.merge-name:focus  { border-color: var(--arvalis); outline: none; background: var(--paper); }
+
+.merge-zahl {
+  flex: none;
+  font-family: var(--face-record);
+  font-size: var(--t-2xs);
+  color: var(--reed-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Die vorgefundenen Schreibweisen. Sie stehen da, damit sichtbar
+   ist, was hier zusammengelegt werden soll — das ist die eigentliche
+   Entscheidungsgrundlage. */
+.merge-schreibweisen {
+  margin: 4px 0 0 26px;
+  font-family: var(--face-record);
+  font-size: var(--t-2xs);
+  color: var(--reed-faint);
+}
+
+.merge-berichte { margin: var(--s2) 0 0 26px; display: flex; flex-direction: column; gap: 2px; }
+.merge-bericht {
+  display: flex; align-items: center; gap: var(--s2);
+  font-size: var(--t-xs);
+  color: var(--peat-soft);
+}
+
 /* ============================================================
    Die Schrittfolge als waagerechte Leiste
    ------------------------------------------------------------

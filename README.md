@@ -1,6 +1,6 @@
 # Rana
 
-**Version Arvalis · 1.2.0**
+**Version Arvalis · 2.0.0**
 
 Assistent für Berichte an den Gutachter zu Anträgen auf Psychotherapie
 (Formblatt PTV 3). Windows-Anwendung. Alle Falldaten bleiben verschlüsselt
@@ -12,7 +12,42 @@ von Rana nie verändert.
 
 ---
 
-## Was neu ist
+## Was in 2.0 neu ist
+
+**Eine Patientin, mehrere Berichte.** Bis 1.2 war ein „Fall" gleich einem
+Bericht. Wer für dieselbe Person einen zweiten Fortführungsantrag
+schrieb, legte einen zweiten Fall an — mit denselben Stammdaten,
+doppelt gepflegt, und in der Liste standen zwei Einträge, die dieselbe
+Person meinten. Jetzt hängen die Berichte unter der Patientin.
+
+Die Aufteilung folgt einer Frage: *ändert sich das zwischen zwei
+Anträgen?* Der Therapiebeginn nicht, die Ausgangslage bei
+Therapiebeginn nicht, die Psychodynamik nicht — die stehen bei der
+Person. Verlauf, Befund, Prognose und die Stundenzahlen stehen beim
+Bericht.
+
+**Doppelte Einträge können nicht mehr entstehen.** Die Zuordnung
+geschieht beim Speichern, nicht beim Anlegen: Rana bringt den Namen auf
+eine Vergleichsform — Titel weg, Umlaute aufgelöst, Bestandteile
+sortiert — und findet dadurch „Pauer, Katrin" und „Katrin Pauer" als
+dieselbe Person. „Berg" und „Bergmann" bleiben getrennt.
+
+**Der Altbestand wird vorgeschlagen, nicht umsortiert.** Ob zwei
+ähnliche Namen dieselbe Person meinen, weiss nur die Behandlerin. Rana
+rechnet einen Vorschlag aus und legt ihn vor; jede Gruppe, jeder Name
+und jeder einzelne Bericht lässt sich vorher ändern oder abwählen.
+Wird nichts bestätigt, ändert sich nichts.
+
+**Der Folgeantrag kostet einen Klick.** Er sitzt an der Zeile der
+Patientin. Rana übernimmt die Stammdaten, zählt die laufende Nummer
+hoch, rechnet das zuletzt beantragte Kontingent zum bewilligten hinzu,
+legt den alten Bericht als Vorbericht ab und zieht die zuletzt
+vereinbarten Therapieziele daraus — die der Leitfaden im nächsten
+Bericht bilanziert sehen will.
+
+---
+
+## Was in 1.x neu war
 
 **Der Bericht entsteht auf Knopfdruck.** Bisher musste der Prompt kopiert,
 das Fenster gewechselt, das Modell umgestellt, die Antwort als Datei
@@ -186,11 +221,13 @@ src/                     Oberfläche (TypeScript, kein Rahmenwerk)
 ├─ report/render.ts      Rohtext → gesetztes Dokument
 ├─ report/docx.ts        OOXML von Hand
 ├─ views/steps.ts        die fünf Arbeitsschritte
+├─ views/patients.ts     der Zuordnungs-Vorschlag
 └─ styles/tokens.css     das Design-System
 
 src-tauri/src/           Rust — alles Vertrauliche
 ├─ secrets.rs            Windows Credential Manager
 ├─ store.rs              verschlüsselte SQLite
+├─ patients.rs           Zuordnung, Namensvergleich, Zusammenführung
 ├─ claude.rs             Netzzugriff, Klarnamensperre, Streaming
 ├─ budget.rs             Kostenwächter
 ├─ backup.rs             Sicherung und Wiederherstellung
@@ -207,9 +244,16 @@ nicht umgehen.
 
 ## Prüfungen
 
-`cargo test` sichert die beiden Stellen, an denen ein Fehler wirklich weh
-täte:
+`cargo test` sichert die Stellen, an denen ein Fehler wirklich weh täte:
 
+* **Das Datenmodell** — 21 Prüfungen gegen eine echte, verschlüsselte
+  SQLite-Datei: dass zwei Schreibweisen desselben Namens eine Patientin
+  ergeben und zwei verschiedene Namen zwei; dass beim Zusammenführen
+  kein Bericht verloren geht; dass ein zweiter Durchlauf keine zweite
+  Patientin anlegt; dass ein leeres Feld im neuen Antrag kein gefülltes
+  im alten überschreibt; dass eine entfernte Patientin ihre Berichte
+  stehen lässt. Nur der Datenbankschlüssel kommt dabei aus einer
+  Testquelle statt aus dem Windows-Tresor — sonst läuft alles echt.
 * **Klarnamensperre** — erkennt Vor- und Nachnamen an Wortgrenzen,
   unabhängig von Gross- und Kleinschreibung und mit Satzzeichen daneben;
   schlägt nicht bei zusammengesetzten Wörtern an („Roesickstrasse“) und
@@ -219,7 +263,7 @@ täte:
   fünfzehn Cent, und ein unbekanntes Modell wird zum teuersten Satz
   gerechnet.
 
-Beide laufen bei jedem Bau auf GitHub mit. Schlagen sie fehl, entsteht kein
+Alle laufen bei jedem Bau auf GitHub mit. Schlagen sie fehl, entsteht kein
 Installer.
 
 ---
@@ -241,6 +285,9 @@ Installer.
 ## Was noch nicht drin ist
 
 * **Erstantrag PTV 3** — andere Gliederung, im Profil vorgesehen, folgt.
+* **Untertitel und Zeichenkorridor** stehen seit 2.0 nicht mehr im
+  Einstellungsdialog. Die Werte bleiben im Profil und wirken unverändert
+  weiter; verstellen lassen sie sich dort nicht mehr.
 * **Diktat** für die Verlaufsnotizen in Schritt 3.
 * **Bildschirmsperre** nach Untätigkeit.
 * **PDF ohne Systemdialog.** Rana setzt das fertige Dokument in ein eigenes

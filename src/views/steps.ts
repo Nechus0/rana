@@ -56,12 +56,23 @@ function textarea(id: string, label: string, opts: {
       <label for="${id}" style="align-items: center;">
         ${esc(label)}${opts.note ? ` <span class="field-note">${esc(opts.note)}</span>` : ""}
         <span class="spacer"></span>
-        ${opts.icd10 ? `<input type="text" list="icd10-list" id="${id}_search" class="icd10-search" placeholder="Suche (z.B. F32)...">` : ""}
         ${opts.bausteine !== false
           ? `<button class="btn btn-sm btn-quiet" data-bausteine="${id}" type="button"
                      title="Eigene Textbausteine für dieses Feld">Bausteine</button>`
           : ""}
       </label>
+      ${opts.icd10
+        // Das Suchfeld stand vorher im Etikett und erbte von dort
+        // Versalien, Sperrung und Schriftgrad — es sah aus wie ein
+        // Fehler. Es steht jetzt in einer eigenen Zeile darüber, mit
+        // eigener Beschriftung.
+        ? `<div class="icd10-zeile">
+             <label class="icd10-marke" for="${id}_search">ICD-10 suchen</label>
+             <input type="search" list="icd10-list" id="${id}_search"
+                    class="icd10-search" placeholder="z. B. F32 oder Depression"
+                    autocomplete="off">
+           </div>`
+        : ""}
       <textarea id="${id}" data-feld="${id}" placeholder="${esc(opts.ph ?? "")}"
                 ${opts.hoch ? `style="min-height:${opts.hoch}px"` : ""}>${esc(f(id))}</textarea>
       <div class="field-fuss">
@@ -318,7 +329,13 @@ function schritt5(): string {
       <div class="notice notice-warn">
         Noch kein Bericht formuliert. Bitte zu Schritt 4 zurückgehen.
       </div>` : `
-      <div class="paper-tray">${renderDocHTML(S.state.report, S.state.fields, p)}</div>
+      <!-- Das Blatt fehlte hier: das Dokument lag ohne Rand direkt in
+           der Ablage und sah dadurch nicht wie eine Seite aus. Die
+           Ränder entsprechen jetzt denen der Word-Datei (1247 Twips,
+           siehe sectPr in report/docx.ts). -->
+      <div class="paper-tray">
+        <div class="paper-sheet paper-doc">${renderDocHTML(S.state.report, S.state.fields, p)}</div>
+      </div>
 
       <div class="notice notice-info" style="margin-top:20px">
         <b>Einreichung (Umschlag PTV 8):</b> dieser Bericht · PTV 2b

@@ -14,7 +14,9 @@
  */
 
 import * as api from "./ipc";
-import type { BudgetState, Case, CaseSummary, Felder, Profile } from "./ipc";
+import type {
+  BudgetState, Case, CaseSummary, Felder, PatientSummary, Profile,
+} from "./ipc";
 
 export const FELDER = [
   // Stammdaten
@@ -98,6 +100,12 @@ function merkeSchreiben(schluessel: string, wert: string): void {
 export interface State {
   profile: Profile | null;
   cases: CaseSummary[];
+  /** Die Personen. Jeder Bericht hängt an genau einer von ihnen. */
+  patients: PatientSummary[];
+  /** Zu welcher Patientin der offene Bericht gehört. */
+  patientId: string | null;
+  /** Welche Patientinnen in der Liste aufgeklappt sind. */
+  offen: Set<string>;
   activeId: string | null;
   fields: Felder;
   report: string;
@@ -117,6 +125,9 @@ export interface State {
 export const state: State = {
   profile: null,
   cases: [],
+  patients: [],
+  patientId: null,
+  offen: new Set<string>(),
   activeId: null,
   fields: {},
   report: "",
@@ -209,7 +220,102 @@ export function patch(p: Partial<State>): void {
  */
 export async function refreshCases(): Promise<void> {
   state.cases = await api.listCases("", state.showTrash);
+  state.patients = await api.listPatients();
   notify();
+}
+
+// ---------------------------------------------------------------
+// Zwei Ebenen: die Person, darunter ihre Berichte
+// ---------------------------------------------------------------
+
+export interface Gruppe {
+  /** Fehlt bei den noch nicht zugeordneten Berichten. */
+  patient: PatientSummary | null;
+  label: string;
+  berichte: CaseSummary[];
+}
+
+/**
+ * Stellt die Liste her, wie sie in der Seitenschiene steht: je Person
+ * eine Zeile, darunter ihre Berichte.
+ *
+ * Gefiltert wird über beide Ebenen zugleich. Wer „pau" tippt, sieht
+ * die Patientin Pauer mit allen ihren Berichten; wer „3" tippt, sieht
+ * jede Patientin, die einen dritten Antrag hat — aber nur diesen.
+ * Deshalb wird erst je Bericht geprüft und die Person zusätzlich als
+ * Ganzes: passt sie selbst, bleiben alle ihre Berichte stehen.
+ */
+export function sichtbareGruppen(): Gruppe[] {
+  const q = state.query.trim().toLowerCase();
+  const woerter = q ? q.split(/\s+/).filter(Boolean) : [];
+
+  const passt = (heu: string): boolean =>
+    woerter.every((w) => heu.toLowerCase().includes(w));
+
+  const nachPatient = new Map<string, CaseSummary[]>();
+  const ohne: CaseSummary[] = [];
+  for (const c of state.cases) {
+    if (c.patient_id) {
+      const liste = nachPatient.get(c.patient_id) ?? [];
+      liste.push(c);
+      nachPatient.set(c.patient_id, liste);
+    } else {
+      ohne.push(c);
+    }
+  }
+
+  const gruppen: Gruppe[] = [];
+
+  for (const p of state.patients) {
+    const alle = nachPatient.get(p.id) ?? [];
+    const personPasst = !woerter.length || passt(`${p.label} ${p.chiffre}`);
+    const berichte = personPasst
+      ? alle
+      : alle.filter((c) => passt(`${c.label} ${c.chiffre} ${c.antrag_nr}`));
+
+    // Eine Patientin ohne sichtbaren Bericht verschwindet aus der
+    // Liste — es sei denn, sie selbst ist der Treffer und hat noch
+    // gar keinen Bericht.
+    if (!berichte.length && !(personPasst && !alle.length)) continue;
+
+    gruppen.push({ patient: p, label: p.label, berichte: sortiereFaelle(berichte) });
+  }
+
+  gruppen.sort((a, b) => vergleicheGruppen(a, b));
+
+  const ohneGefiltert = woerter.length
+    ? ohne.filter((c) => passt(`${c.label} ${c.chiffre} ${c.antrag_nr}`))
+    : ohne;
+  if (ohneGefiltert.length) {
+    gruppen.push({
+      patient: null,
+      label: "Ohne Zuordnung",
+      berichte: sortiereFaelle(ohneGefiltert),
+    });
+  }
+
+  return gruppen;
+}
+
+/** Ordnet die Personenzeilen nach derselben Regel wie die Berichte. */
+function vergleicheGruppen(a: Gruppe, b: Gruppe): number {
+  const r = state.sortAuf ? 1 : -1;
+  switch (state.sortierung) {
+    case "name":
+      return a.label.localeCompare(b.label, "de") * (state.sortAuf ? 1 : -1);
+    case "angelegt":
+      return ((a.patient?.created_at ?? 0) - (b.patient?.created_at ?? 0)) * r;
+    case "nummer":
+      return ((a.patient?.hoechste_nr ?? 0) - (b.patient?.hoechste_nr ?? 0)) * r;
+    default:
+      return ((a.patient?.updated_at ?? 0) - (b.patient?.updated_at ?? 0)) * r;
+  }
+}
+
+/** Klappt eine Patientin auf oder zu. */
+export function klappe(patientId: string): void {
+  if (state.offen.has(patientId)) state.offen.delete(patientId);
+  else state.offen.add(patientId);
 }
 
 /**
@@ -247,6 +353,7 @@ export async function neuerFall(): Promise<string> {
     id,
     fields: leererFall(state.profile),
     report: "",
+    patient_id: null,
     updated_at: 0,
     created_at: 0,
     deleted_at: null,
@@ -279,9 +386,33 @@ export async function neuerFall(): Promise<string> {
  */
 export async function folgeAntrag(): Promise<string> {
   await speichereJetzt();
-  const alt = { ...state.fields };
-  const altBericht = state.report;
+  return folgeAntragAus({ ...state.fields }, state.report, state.patientId);
+}
 
+/**
+ * Derselbe Vorgang, aber für eine Patientin, deren letzter Bericht
+ * gerade nicht offen ist.
+ *
+ * Damit lässt sich der nächste Antrag unmittelbar aus der Liste
+ * anlegen — ohne den alten Bericht erst zu suchen, zu öffnen und
+ * dann den Knopf zu drücken. Drei Schritte weniger, und der häufigste
+ * Vorgang in Rana überhaupt.
+ */
+export async function folgeAntragFuerPatientin(patientId: string): Promise<string | null> {
+  await speichereJetzt();
+  const berichte = await api.reportsForPatient(patientId);
+  if (!berichte.length) return null;
+
+  // reports_for_patient liefert den jüngsten Antrag zuerst.
+  const letzter = await api.getCase(berichte[0].id);
+  return folgeAntragAus(letzter.fields, letzter.report, patientId);
+}
+
+async function folgeAntragAus(
+  alt: Felder,
+  altBericht: string,
+  patientId: string | null,
+): Promise<string> {
   const bleibt = [
     "f_name", "f_chiffre", "f_gebdatum", "f_geschlecht", "f_sozio",
     "f_kasse", "f_beginn", "f_therapiebeginn", "f_ausgangslage",
@@ -315,6 +446,9 @@ export async function folgeAntrag(): Promise<string> {
   const id = crypto.randomUUID();
   await api.saveCase({
     id, fields: neu, report: "",
+    // Rust hängt den Bericht anhand des Namens ohnehin an dieselbe
+    // Patientin; die Angabe hier spart den Umweg über den Namen.
+    patient_id: patientId,
     updated_at: 0, created_at: 0, deleted_at: null,
   });
   await refreshCases();
@@ -351,8 +485,12 @@ export async function ladeFall(id: string): Promise<void> {
   // gehen — deshalb zuerst sichern, dann wechseln.
   await speichereJetzt();
   const c = await api.getCase(id);
+  // Die Patientin des offenen Berichts wird aufgeklappt, sonst sähe
+  // man nach dem Wechsel nicht, wo man gelandet ist.
+  if (c.patient_id) state.offen.add(c.patient_id);
   patch({
     activeId: c.id,
+    patientId: c.patient_id,
     fields: { ...leererFall(state.profile), ...c.fields },
     report: c.report,
     step: 0,
@@ -396,11 +534,18 @@ export async function speichereJetzt(): Promise<void> {
   saving = true;
   try {
     const alt = await api.getCase(state.activeId);
-    await api.saveCase({
+    // Rust kann beim Speichern eine Patientin angelegt oder den
+    // Bericht einer vorhandenen zugeordnet haben — etwa, sobald der
+    // Name eingetragen wird. Das kommt hier zurück.
+    const gespeichert = await api.saveCase({
       ...alt,
       fields: state.fields,
       report: state.report,
     });
+    if (gespeichert.patient_id) {
+      state.patientId = gespeichert.patient_id;
+      state.offen.add(gespeichert.patient_id);
+    }
     state.dirty = false;
     notify();
     // Die Beschriftung in der Fallliste kann sich geändert haben.

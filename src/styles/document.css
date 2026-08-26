@@ -34,6 +34,20 @@
   padding: 42pt 46pt;
   min-height: 300px;
 }
+/* Die Seitenvorschau in Schritt 5.
+   Breite und Rand sind aus report/docx.ts übernommen: A4 sind
+   11906 Twips breit, der Rand steht dort auf 1247 Twips ringsum.
+   Zwanzig Twips ergeben ein Punkt — also 595pt Blattbreite und
+   62pt Rand. So zeigt die Vorschau denselben Satzspiegel wie die
+   Datei, die beim Gutachter ankommt. */
+.paper-sheet.paper-doc {
+  max-width: 595pt;
+  padding: 62pt;
+}
+@media (max-width: 820px) {
+  .paper-sheet.paper-doc { padding: 40pt 34pt; }
+}
+
 /* Der bearbeitbare Entwurf in Schritt 4 */
 .paper-sheet[contenteditable="true"] {
   font-family: "Cambria", Georgia, "Times New Roman", serif;

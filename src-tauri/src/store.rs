@@ -15,6 +15,7 @@
 //! und verrät nichts an die Datei.
 
 use crate::error::{RanaError, Result};
+use crate::patients::Patient;
 use crate::secrets;
 use aes_gcm::{
     aead::{Aead, KeyInit, OsRng},
@@ -47,6 +48,15 @@ pub struct Case {
     /// Der formulierte Bericht.
     #[serde(default)]
     pub report: String,
+    /// An welcher Patientin dieser Bericht hängt. Seit Fassung 2.0.
+    ///
+    /// Steht bewusst **im verschlüsselten Block** und nicht in einer
+    /// eigenen Spalte: die Kennung selbst verrät zwar nichts, ihre
+    /// Wiederholung über mehrere Zeilen aber sehr wohl — nämlich,
+    /// welche Berichte dieselbe Person betreffen. Bei einigen Dutzend
+    /// Fällen kostet das Filtern im Arbeitsspeicher nichts.
+    #[serde(default)]
+    pub patient_id: Option<String>,
     #[serde(default)]
     pub updated_at: i64,
     #[serde(default)]
@@ -63,6 +73,8 @@ pub struct CaseSummary {
     pub label: String,
     pub chiffre: String,
     pub antrag_nr: String,
+    /// Leer, solange der Bericht noch keiner Patientin zugeordnet ist.
+    pub patient_id: Option<String>,
     pub updated_at: i64,
     /// Wann der Fall angelegt wurde. Die Oberfläche sortiert danach.
     pub created_at: i64,
@@ -78,6 +90,22 @@ pub struct CaseSummary {
 
 impl Store {
     pub fn open(dir: &PathBuf) -> Result<Self> {
+        let key = secrets::ensure_db_key()?;
+        Self::open_mit_schluessel(dir, key)
+    }
+
+    /// Nur für den Prüfstand: gleiche Datenbank, fester Schlüssel.
+    ///
+    /// Ohne diesen Einstieg liesse sich die Zuordnung von Berichten zu
+    /// Patientinnen nicht auf dem Bauserver prüfen — dort gibt es
+    /// keinen Windows-Tresor. Die Funktion existiert ausschliesslich
+    /// im Testbau und ist im ausgelieferten Programm nicht vorhanden.
+    #[cfg(test)]
+    pub fn open_fuer_test(dir: &PathBuf) -> Result<Self> {
+        Self::open_mit_schluessel(dir, [7u8; 32])
+    }
+
+    fn open_mit_schluessel(dir: &PathBuf, key: [u8; 32]) -> Result<Self> {
         std::fs::create_dir_all(dir)?;
         let path = dir.join("rana.db");
         let conn = Connection::open(&path).map_err(|_| RanaError::StoreLocked)?;
@@ -87,6 +115,10 @@ impl Store {
              PRAGMA synchronous = FULL;
              PRAGMA foreign_keys = ON;
 
+             -- Ein Bericht. Hiess frueher „Fall\", weil ein Fall genau
+             -- einen Bericht hatte. Seit Fassung 2.0 haengen mehrere
+             -- Berichte an einer Patientin; die Tabelle behaelt ihren
+             -- Namen, damit gespeicherte Daten unberuehrt bleiben.
              CREATE TABLE IF NOT EXISTS cases (
                id          TEXT PRIMARY KEY,
                nonce       BLOB NOT NULL,
@@ -95,7 +127,27 @@ impl Store {
                deleted_at  INTEGER
              );
 
-             CREATE TABLE IF NOT EXISTS settings (
+             -- Die Patientin. Traegt, was ueber alle Berichte gleich
+             -- bleibt: Klarname, Chiffre, Geburtsdatum, Kostentraeger,
+             -- Therapiebeginn, Ausgangslage, Psychodynamik.
+             CREATE TABLE IF NOT EXISTS patients (
+               id          TEXT PRIMARY KEY,
+               nonce       BLOB NOT NULL,
+               payload     BLOB NOT NULL,
+               created_at  INTEGER NOT NULL,
+               updated_at  INTEGER NOT NULL,
+               deleted_at  INTEGER
+             );",
+        )?;
+
+        // Eine Zwischenfassung von 2.0 legte hier eine Klartextspalte
+        // „patient_id\" an. Sie wird nicht mehr beschrieben — die
+        // Zugehoerigkeit steht im verschluesselten Block. Vorhandene
+        // Datenbanken behalten die leere Spalte; ein Umbau der Tabelle
+        // waere ein Risiko ohne Gegenwert.
+
+        conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS settings (
                key   TEXT PRIMARY KEY,
                value TEXT NOT NULL
              );
@@ -126,7 +178,6 @@ impl Store {
              CREATE INDEX IF NOT EXISTS usage_at ON usage(at);",
         )?;
 
-        let key = secrets::ensure_db_key()?;
         let store = Store { conn: Mutex::new(conn), key };
         store.purge_expired()?;
         Ok(store)
@@ -273,6 +324,7 @@ impl Store {
                 label,
                 chiffre,
                 antrag_nr: nr,
+                patient_id: c.patient_id.clone(),
                 updated_at: c.updated_at,
                 created_at: c.created_at,
                 deleted_at: c.deleted_at,
@@ -316,6 +368,84 @@ impl Store {
             params![cutoff],
         )?;
         Ok(n)
+    }
+
+    // -----------------------------------------------------------
+    // Patientinnen
+    // -----------------------------------------------------------
+    //
+    // Gleiche Bauart wie die Fälle: ein verschlüsselter Block je
+    // Datensatz. Die Verschlüsselung bleibt in diesem Modul; das
+    // Patientenmodul kommt an `seal` und `unseal` bewusst nicht heran.
+
+    pub fn patient_schreiben(&self, p: &Patient) -> Result<()> {
+        let json = serde_json::to_vec(p)?;
+        let (nonce, payload) = self.seal(&json)?;
+
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "INSERT INTO patients (id, nonce, payload, created_at, updated_at, deleted_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+             ON CONFLICT(id) DO UPDATE SET
+               nonce = excluded.nonce,
+               payload = excluded.payload,
+               updated_at = excluded.updated_at,
+               deleted_at = excluded.deleted_at",
+            params![p.id, nonce, payload, p.created_at, p.updated_at, p.deleted_at],
+        )?;
+        Ok(())
+    }
+
+    pub fn patient_lesen(&self, id: &str) -> Result<Patient> {
+        let conn = self.conn.lock().unwrap();
+        let (nonce, payload): (Vec<u8>, Vec<u8>) = conn
+            .query_row(
+                "SELECT nonce, payload FROM patients WHERE id = ?1",
+                params![id],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .map_err(|_| RanaError::Message("Diese Patientin ist nicht mehr vorhanden.".into()))?;
+        drop(conn);
+        Ok(serde_json::from_slice(&self.unseal(&nonce, &payload)?)?)
+    }
+
+    /// Alle nicht gelöschten Patientinnen, jüngste Änderung zuerst.
+    pub fn alle_patienten(&self) -> Result<Vec<Patient>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT nonce, payload FROM patients
+             WHERE deleted_at IS NULL ORDER BY updated_at DESC",
+        )?;
+        let rows: Vec<(Vec<u8>, Vec<u8>)> = stmt
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?
+            .collect::<std::result::Result<_, _>>()?;
+        drop(stmt);
+        drop(conn);
+
+        let mut out = Vec::with_capacity(rows.len());
+        for (nonce, payload) in rows {
+            if let Ok(plain) = self.unseal(&nonce, &payload) {
+                if let Ok(p) = serde_json::from_slice::<Patient>(&plain) {
+                    out.push(p);
+                }
+            }
+        }
+        Ok(out)
+    }
+
+    /// Entfernt eine Patientin endgültig. Ihre Berichte bleiben
+    /// bestehen und werden nur wieder zuordnungslos — ein Bericht darf
+    /// niemals mit der Person verschwinden.
+    pub fn patient_entfernen(&self, id: &str) -> Result<()> {
+        for mut c in self.export_all()? {
+            if c.patient_id.as_deref() == Some(id) {
+                c.patient_id = None;
+                self.save_case(c)?;
+            }
+        }
+        let conn = self.conn.lock().unwrap();
+        conn.execute("DELETE FROM patients WHERE id = ?1", params![id])?;
+        Ok(())
     }
 
     // -----------------------------------------------------------
