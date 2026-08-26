@@ -70,6 +70,31 @@ export const SORT_NAMEN: Record<SortSchluessel, string> = {
 
 const SORT_KEY = "rana-sortierung";
 
+/**
+ * Liest eine gemerkte Einstellung — abgesichert.
+ *
+ * `localStorage` gibt es nur im Fenster. Die Abnahmeprüfungen laden
+ * dieses Modul aber in Node, und ein Zugriff beim Laden des Moduls
+ * liess sie mit „localStorage is not defined“ scheitern. Ausserdem
+ * wirft der Zugriff in manchen Browserlagen selbst dann, wenn es das
+ * Objekt gibt. Beides fängt diese Hülle ab.
+ */
+function merkeLesen(schluessel: string, vorgabe: string): string {
+  try {
+    return globalThis.localStorage?.getItem(schluessel) ?? vorgabe;
+  } catch {
+    return vorgabe;
+  }
+}
+
+function merkeSchreiben(schluessel: string, wert: string): void {
+  try {
+    globalThis.localStorage?.setItem(schluessel, wert);
+  } catch {
+    /* Eine nicht gemerkte Voreinstellung ist kein Grund zu scheitern. */
+  }
+}
+
 export interface State {
   profile: Profile | null;
   cases: CaseSummary[];
@@ -101,8 +126,8 @@ export const state: State = {
   showTrash: false,
   query: "",
   dirty: false,
-  sortierung: (localStorage.getItem(SORT_KEY) as SortSchluessel) || "zuletzt",
-  sortAuf: localStorage.getItem(SORT_KEY + "-auf") === "1",
+  sortierung: merkeLesen(SORT_KEY, "zuletzt") as SortSchluessel,
+  sortAuf: merkeLesen(SORT_KEY + "-auf", "0") === "1",
 };
 
 /**
@@ -140,8 +165,8 @@ export function sortiereFaelle(liste: CaseSummary[]): CaseSummary[] {
 export function setzeSortierung(s: SortSchluessel, auf: boolean): void {
   state.sortierung = s;
   state.sortAuf = auf;
-  localStorage.setItem(SORT_KEY, s);
-  localStorage.setItem(SORT_KEY + "-auf", auf ? "1" : "0");
+  merkeSchreiben(SORT_KEY, s);
+  merkeSchreiben(SORT_KEY + "-auf", auf ? "1" : "0");
   notify();
 }
 
