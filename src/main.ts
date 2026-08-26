@@ -409,7 +409,12 @@ function aktualisiereKontext(): void {
 function aktualisiereSpeicherstand(): void {
   const n = document.getElementById("speicherStand");
   if (!n) return;
-  n.innerHTML = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${S.state.dirty ? 'var(--amber)' : 'var(--moss)'};" title="${S.state.dirty ? 'Änderungen noch nicht gespeichert' : 'Alles gespeichert'}"></span>`;
+  
+  if (S.state.dirty) {
+    n.innerHTML = `<span style="color:var(--amber)">● Ungespeichert</span>`;
+  } else {
+    n.innerHTML = `<span style="color:var(--reed)">✔ Gespeichert</span>`;
+  }
 }
 
 // ---------------------------------------------------------------

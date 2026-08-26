@@ -11,6 +11,7 @@
  */
 
 import * as api from "../core/ipc";
+import { F_DIAGNOSEN } from "../core/icd10";
 import { buildDocx } from "../report/docx";
 import { expandPrompt, klarnamen, systemPrompt, userPrompt } from "../report/prompt";
 import { fileBase, metrik, renderDocHTML } from "../report/render";
@@ -47,14 +48,15 @@ function input(id: string, label: string, opts: {
 }
 
 function textarea(id: string, label: string, opts: {
-  ph?: string; note?: string; hoch?: number; bausteine?: boolean;
+  ph?: string; note?: string; hoch?: number; bausteine?: boolean; icd10?: boolean;
 } = {}): string {
   const fehlt = S.PFLICHT.some((p) => p.feld === id) && !f(id).trim();
   return `
     <div class="field ${fehlt ? "is-missing" : ""}">
-      <label for="${id}">
+      <label for="${id}" style="align-items: center;">
         ${esc(label)}${opts.note ? ` <span class="field-note">${esc(opts.note)}</span>` : ""}
         <span class="spacer"></span>
+        ${opts.icd10 ? `<input type="text" list="icd10-list" id="${id}_search" class="icd10-search" placeholder="Suche (z.B. F32)..." style="width:160px; padding:4px 8px; font-size:11px; margin-right:8px;">` : ""}
         ${opts.bausteine !== false
           ? `<button class="btn btn-sm btn-quiet" data-bausteine="${id}" type="button"
                      title="Eigene Textbausteine für dieses Feld">Bausteine</button>`
@@ -152,7 +154,7 @@ function schritt2(): string {
         <p class="hint">
           Freiwillig. Dient als Hintergrund für die Formulierung und wird nicht wörtlich übernommen.
         </p>
-        ${textarea("f_diag_alt", "Bisherige ICD-10-Diagnose(n)", { ph: "F33.1 rezidivierende depressive Störung, gegenwärtig mittelgradig …" })}
+        ${textarea("f_diag_alt", "Bisherige ICD-10-Diagnose(n)", { ph: "F33.1 rezidivierende depressive Störung, gegenwärtig mittelgradig …", icd10: true })}
         ${textarea("f_psychodyn", psychodynLabel(), { ph: psychodynPh() })}
         ${textarea("f_ziele_alt", "Zuletzt formulierte Therapieziele", { note: "Bezugspunkt für den Verlauf", ph: "Je Ziel eine Zeile …" })}`)}
     </div>`;
@@ -203,7 +205,7 @@ function schritt3(): string {
 
     ${gruppe("2", "Aktuelle Diagnose(n) und psychischer Befund", `
       ${textarea("f_befund", "Aktueller psychischer Befund", { ph: "Antrieb, Affekt, Denken, Suizidalität soweit relevant …" })}
-      ${textarea("f_diag_neu", "Aktuelle ICD-10-Diagnose(n)", { ph: "Mit Code und Diagnosesicherheit …" })}`)}
+      ${textarea("f_diag_neu", "Aktuelle ICD-10-Diagnose(n)", { ph: "Mit Code und Diagnosesicherheit …", icd10: true })}`)}
 
     ${gruppe("3", "Begründung, Planung und Prognose", `
       ${textarea("f_begruendung", "Begründung und weitere Planung", { note: "Ziele, Methoden", ph: "Warum ist die Fortführung nötig? Weitere Planung, angepasste Ziele …" })}
@@ -359,13 +361,22 @@ function ptv2bZeilen(): [string, string][] {
 // ===============================================================
 
 export function renderSchritt(n: number): string {
+  let html = "";
   switch (n) {
-    case 0: return schritt1();
-    case 1: return schritt2();
-    case 2: return schritt3();
-    case 3: return schritt4();
-    default: return schritt5();
+    case 0: html = schritt1(); break;
+    case 1: html = schritt2(); break;
+    case 2: html = schritt3(); break;
+    case 3: html = schritt4(); break;
+    default: html = schritt5(); break;
   }
+  
+  if (n === 1 || n === 2) {
+    html += `\n<datalist id="icd10-list">
+      ${F_DIAGNOSEN.map(d => `<option value="${d.code} ${d.name}"></option>`).join("")}
+    </datalist>`;
+  }
+  
+  return html;
 }
 
 // ---------------------------------------------------------------
@@ -383,6 +394,25 @@ export function bindeSchritt(n: number, neuZeichnen: () => void): void {
 
   for (const btn of qsa<HTMLButtonElement>("[data-bausteine]")) {
     on(btn, "click", () => { void bausteinDialog(btn.dataset.bausteine!, neuZeichnen); });
+  }
+
+  for (const search of qsa<HTMLInputElement>(".icd10-search")) {
+    on(search, "input", () => {
+      if (!search.value) return;
+      const targetId = search.id.replace("_search", "");
+      const target = qs<HTMLTextAreaElement>(`#${targetId}`);
+      if (target) {
+        const matched = F_DIAGNOSEN.some(d => `${d.code} ${d.name}` === search.value);
+        if (matched) {
+          const val = target.value.trim();
+          target.value = val ? val + "\n" + search.value : search.value;
+          search.value = "";
+          S.setzeFeld(targetId, target.value);
+          aktualisiereZaehler(target);
+          target.focus();
+        }
+      }
+    });
   }
 
   if (n === 0) zeigeWarnungen();
