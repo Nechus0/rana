@@ -120,7 +120,14 @@ function schritt1(): string {
         ph: "Lehrerin, in Partnerschaft, keine Kinder",
       })}
     </div>
-    <div id="warnungen"></div>`);
+    <div id="warnungen"></div>
+    <div class="row" style="margin-top:20px">
+      <button class="btn" id="btnFolgeantrag" type="button"
+              title="Legt den nächsten Antrag derselben Patientin an und übernimmt, was gleich bleibt">
+        ${icon.plus} Folgeantrag aus diesem Fall
+      </button>
+      <span class="hint">Stammdaten, Ausgangslage und Psychodynamik werden übernommen.</span>
+    </div>`);
 }
 
 // ===============================================================
@@ -418,7 +425,11 @@ export function bindeSchritt(n: number, neuZeichnen: () => void): void {
     });
   }
 
-  if (n === 0) zeigeWarnungen();
+  if (n === 0) {
+    zeigeWarnungen();
+    const fa = document.getElementById("btnFolgeantrag");
+    if (fa) on(fa, "click", () => { void folgeAntragAnlegen(neuZeichnen); });
+  }
   if (n === 1) bindeSchritt2();
   if (n === 3) bindeSchritt4(neuZeichnen);
   if (n === 4) bindeSchritt5();
@@ -767,6 +778,31 @@ async function bausteinDialog(feldId: string, neuZeichnen: () => void): Promise<
 // ---------------------------------------------------------------
 // Fall löschen — mit Frist
 // ---------------------------------------------------------------
+
+/**
+ * Fragt vor dem Anlegen nach — der laufende Fall bleibt erhalten,
+ * aber ein unbeabsichtigter Sprung in einen neuen Fall ist trotzdem
+ * verwirrend.
+ */
+async function folgeAntragAnlegen(neuZeichnen: () => void): Promise<void> {
+  const name = (S.state.fields.f_name ?? "").trim();
+  const nr = parseInt(S.state.fields.f_nr ?? "", 10);
+  const naechste = isNaN(nr) ? 2 : nr + 1;
+
+  const ok = await confirmDialog(
+    "Folgeantrag anlegen",
+    `Es entsteht der ${naechste}. Fortführungsantrag${name ? ` für ${name}` : ""}. `
+      + "Stammdaten, Ausgangslage und Psychodynamik werden übernommen, "
+      + "das bisher bewilligte Kontingent um die zuletzt beantragten Stunden erhöht. "
+      + "Der jetzige Bericht wandert in das Vorbericht-Feld. Der laufende Fall bleibt unverändert.",
+    "Anlegen"
+  );
+  if (!ok) return;
+
+  await S.folgeAntrag();
+  neuZeichnen();
+  toast(`${naechste}. Fortführungsantrag angelegt — Verlauf und Befund sind leer.`, "ok", 6000);
+}
 
 export async function fallInPapierkorb(id: string, label: string): Promise<boolean> {
   const ok = await confirmDialog(

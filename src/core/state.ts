@@ -257,6 +257,95 @@ export async function neuerFall(): Promise<string> {
   return id;
 }
 
+/**
+ * Legt den nächsten Fortführungsantrag derselben Patientin an.
+ *
+ * Bisher hiess das: neuen Fall anlegen und Name, Chiffre,
+ * Geburtsdatum, Kostenträger, Therapiebeginn, Ausgangslage und
+ * Psychodynamik von Hand erneut eintragen — bei jedem Antrag. Genau
+ * daher stammen die Doppeleinträge in der Fallliste.
+ *
+ * Was übernommen wird, folgt der Frage: ändert sich das zwischen zwei
+ * Anträgen? Der Name nicht. Die Ausgangslage bei Therapiebeginn nicht.
+ * Der Verlauf sehr wohl — der beginnt leer.
+ *
+ * Drei Dinge werden dabei mitgedacht, die sonst leicht untergehen:
+ *   · die laufende Nummer zählt hoch,
+ *   · das bisher bewilligte Kontingent wächst um das zuletzt
+ *     beantragte — denn was beantragt war, ist inzwischen bewilligt,
+ *   · der alte Bericht wandert in das Vorbericht-Feld und seine
+ *     Diagnose in „bisherige Diagnose", damit der neue Bericht einen
+ *     Bezugspunkt hat.
+ */
+export async function folgeAntrag(): Promise<string> {
+  await speichereJetzt();
+  const alt = { ...state.fields };
+  const altBericht = state.report;
+
+  const bleibt = [
+    "f_name", "f_chiffre", "f_gebdatum", "f_geschlecht", "f_sozio",
+    "f_kasse", "f_beginn", "f_therapiebeginn", "f_ausgangslage",
+    "f_psychodyn", "f_frequenz",
+  ];
+
+  const neu = leererFall(state.profile);
+  for (const k of bleibt) if (alt[k]) neu[k] = alt[k];
+
+  // Laufende Nummer hochzählen.
+  const nr = parseInt(alt.f_nr ?? "", 10);
+  neu.f_nr = String(isNaN(nr) ? 2 : nr + 1);
+
+  // Was beantragt war, ist jetzt bewilligt.
+  const bewilligt = parseInt(alt.f_bewilligt ?? "", 10);
+  const beantragt = parseInt(alt.f_beantragt ?? "", 10);
+  if (!isNaN(bewilligt)) {
+    neu.f_bewilligt = String(bewilligt + (isNaN(beantragt) ? 0 : beantragt));
+  }
+
+  // Der alte Bericht wird zum Vorbericht.
+  if (altBericht.trim()) {
+    neu.f_vorbericht = "ja";
+    neu.f_lastreport = altBericht;
+  }
+  if (alt.f_diag_neu) neu.f_diag_alt = alt.f_diag_neu;
+
+  const zieleAlt = zieleAusBericht(altBericht);
+  if (zieleAlt) neu.f_ziele_alt = zieleAlt;
+
+  const id = crypto.randomUUID();
+  await api.saveCase({
+    id, fields: neu, report: "",
+    updated_at: 0, created_at: 0, deleted_at: null,
+  });
+  await refreshCases();
+  await ladeFall(id);
+  return id;
+}
+
+/**
+ * Zieht die nummerierten Behandlungsziele aus einem fertigen Bericht.
+ *
+ * Sie stehen dort als eigene Zeilen hinter einem Satz, der auf
+ * „Behandlungsziele:" endet. Findet sich nichts, bleibt das Feld leer —
+ * lieber nichts als etwas Falsches.
+ */
+function zieleAusBericht(text: string): string {
+  if (!text) return "";
+  const zeilen = text.split(/\n/);
+  const start = zeilen.findIndex((z) => /behandlungsziele\s*:\s*$/i.test(z.trim()));
+  if (start < 0) return "";
+
+  const ziele: string[] = [];
+  for (const z of zeilen.slice(start + 1)) {
+    const t = z.trim();
+    if (!t) break;
+    const m = t.match(/^\d+[.)]\s+(.*)$/);
+    if (!m) break;
+    ziele.push(m[1]);
+  }
+  return ziele.join("\n");
+}
+
 export async function ladeFall(id: string): Promise<void> {
   // Ein noch nicht gespeicherter Stand darf beim Wechsel nicht verloren
   // gehen — deshalb zuerst sichern, dann wechseln.

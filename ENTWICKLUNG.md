@@ -362,3 +362,98 @@ GitHub-Weg gewählt wurde. Der lokale Bau ist also **keine** Kontrolle
 vor dem Schieben; es bleiben `npx tsc --noEmit` und `npx vite build`.
 Rust-Änderungen fallen damit erst in der CI auf — bei grösseren
 Eingriffen ins Rust-Backend entsprechend vorsichtig sein.
+
+### 5.11 NODE_ENV=production auf diesem Rechner
+
+In der Windows-Umgebung steht `NODE_ENV=production`. npm leitet daraus
+`omit=dev` ab und **überspringt die Entwicklungsabhängigkeiten** —
+TypeScript, Vite und die Tauri-CLI fehlen dann in `node_modules`, und
+`npm install` meldet trotzdem zufrieden „up to date".
+
+Erkennbar daran, dass `npx tsc` plötzlich das fremde Paket `tsc@2.0.4`
+nachladen will. Abhilfe bei jedem Installieren:
+
+```powershell
+npm ci --include=dev
+```
+
+Auf GitHub ist die Variable nicht gesetzt — deshalb baut CI klaglos
+weiter, während es lokal scheitert. Wer das dauerhaft beheben will,
+entfernt die Benutzervariable in den Windows-Systemeinstellungen.
+
+### 5.12 Zeilenenden brechen jede Textersetzung
+
+Die Arbeitskopie hat CRLF (`core.autocrlf=true`), Suchtexte in Node- oder
+Python-Skripten haben LF. `includes()` findet dann nichts, und der Patch
+meldet „FEHLT", obwohl die Stelle dasteht. Beim Einlesen vereinheitlichen:
+
+```js
+const rd = (p) => readFileSync(p, "utf8").replace(/\r\n/g, "\n");
+```
+
+Dasselbe blockiert auch `git merge` und `git checkout --` an einzelnen
+Dateien. Wenn nichts hilft und keine eigene Arbeit im Baum liegt:
+`git reset --hard origin/main`.
+
+### 5.13 Backticks in Patch-Skripten
+
+Ein Backtick in einem Kommentar **innerhalb** eines Template-Literals
+schliesst das Literal. Führt zu `SyntaxError: missing ) after argument
+list` an einer Stelle, die harmlos aussieht. In eingebetteten
+CSS- oder Code-Kommentaren keine Backticks verwenden.
+
+---
+
+## 10 · Stand der Fassung 1.2.0
+
+**Behoben**
+
+- **Suchfilter.** Ging bei jedem Tastendruck nach Rust und liess dort
+  jeden Fall entschlüsseln. Bei schnellem Tippen kamen die Antworten in
+  falscher Reihenfolge zurück; bei fünfzig Patientinnen waren es fünfzig
+  Entschlüsselungen je Anschlag. Jetzt einmal laden, im Fenster filtern.
+- **Ereignisse** hängen am Behälter statt an jedem Listeneintrag.
+- **`localStorage`** wurde beim Laden des Moduls gelesen und brach damit
+  die Abnahmeprüfungen in Node. Jetzt gekapselt.
+- **Version** stand in README und `Cargo.lock` noch auf 1.1.1, während
+  die übrigen Stellen 1.1.3 sagten.
+
+**Neu**
+
+- Zeichenzähler nennen den erwarteten Umfang je Feld, mit Füllbalken.
+  Die Werte stehen in `ZIELUMFANG` (`src/core/state.ts`) und sind aus
+  den Abschnittsbudgets hergeleitet — bewusst rund ein Drittel über dem,
+  was im Bericht landet: ein Modell kann kürzen, aber nichts erfinden.
+- **Folgeantrag aus diesem Fall** (Schritt 1). Übernimmt Stammdaten,
+  Ausgangslage und Psychodynamik, zählt die laufende Nummer hoch,
+  erhöht das bewilligte Kontingent um die zuletzt beantragten Stunden,
+  legt den alten Bericht als Vorbericht ab und zieht dessen Diagnose und
+  Behandlungsziele in die Vorgeschichte.
+- Einstellungen in acht Bereichen mit seitlichem Verzeichnis.
+- Verbrauch am unteren Rand der rechten Spalte.
+- Offene Pflichtangaben färben den Ring des Schrittknotens statt eines
+  schwebenden gelben Punkts.
+- Ausserhalb des gedruckten Berichts steht keine Schriftgrösse mehr als
+  feste Zahl im Code.
+
+**Offen: das Datenmodell**
+
+Der Zweig **`2.0-datenmodell`** trägt die Grundlage für „ein Bericht
+gehört zu einer Patientin":
+
+- `patients`-Tabelle und Spalte `cases.patient_id` — additiv angelegt,
+  vorhandene Daten bleiben lesbar.
+- `src-tauri/src/patients.rs` mit der Aufteilung der Felder und der
+  Namenserkennung für den Zusammenführungs-Vorschlag. Acht Prüfungen
+  bestehen, darunter mit den echten Namen aus dem Bestand: gedrehte
+  Schreibweise fällt zusammen, „Berg" und „Bergmann" bleiben getrennt.
+- **Noch nicht in `lib.rs` eingebunden**, also ohne Wirkung.
+
+Was dort fehlt: die Befehle in `lib.rs`, der Dialog für den
+Zusammenführungs-Vorschlag, die zweistufige Navigation. Anja hat
+entschieden, dass der Vorschlag ihr vorgelegt wird und sie abhakt —
+**nichts wird ohne Bestätigung verschmolzen**.
+
+Der Folgeantrag aus 1.2.0 nimmt einen guten Teil des Nutzens vorweg:
+er verhindert, dass beim nächsten Antrag ein zweiter Eintrag mit
+denselben Stammdaten entsteht.
