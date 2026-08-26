@@ -42,9 +42,38 @@ export interface Case {
   id: string;
   fields: Felder;
   report: string;
+  /** An welcher Patientin der Bericht hängt. Rust setzt das beim Speichern. */
+  patient_id: string | null;
   updated_at: number;
   created_at: number;
   deleted_at: number | null;
+}
+
+export interface Patient {
+  id: string;
+  fields: Felder;
+  created_at: number;
+  updated_at: number;
+  deleted_at: number | null;
+}
+
+export interface PatientSummary {
+  id: string;
+  label: string;
+  chiffre: string;
+  created_at: number;
+  updated_at: number;
+  report_count: number;
+  /** Höchste vergebene laufende Nummer; die nächste ist eins mehr. */
+  hoechste_nr: number;
+}
+
+/** Ein Vorschlag, welche Altberichte zur selben Person gehören. */
+export interface MergeGruppe {
+  name: string;
+  schreibweisen: string[];
+  report_ids: string[];
+  anzahl: number;
 }
 
 export interface CaseSummary {
@@ -52,6 +81,7 @@ export interface CaseSummary {
   label: string;
   chiffre: string;
   antrag_nr: string;
+  patient_id: string | null;
   updated_at: number;
   created_at: number;
   deleted_at: number | null;
@@ -139,6 +169,28 @@ export const saveCase    = (c: Case) => call<Case>("save_case", { case: c });
 export const trashCase   = (id: string) => call<void>("trash_case", { id });
 export const restoreCase = (id: string) => call<void>("restore_case", { id });
 export const purgeCase   = (id: string) => call<void>("purge_case", { id });
+
+// ---------------------------------------------------------------
+// Patientinnen
+// ---------------------------------------------------------------
+
+export const listPatients        = () => call<PatientSummary[]>("list_patients");
+export const getPatient          = (id: string) => call<Patient>("get_patient", { id });
+export const savePatient         = (patient: Patient) => call<Patient>("save_patient", { patient });
+export const reportsForPatient   = (patientId: string) =>
+  call<CaseSummary[]>("reports_for_patient", { patientId });
+export const reportsWithoutPatient = () => call<CaseSummary[]>("reports_without_patient");
+export const assignReport        = (caseId: string, patientId: string) =>
+  call<void>("assign_report", { caseId, patientId });
+/** Entfernt die Patientin, nicht ihre Berichte. */
+export const removePatient       = (id: string) => call<void>("remove_patient", { id });
+
+/** Schlägt vor, welche Altberichte zusammengehören. Ändert nichts. */
+export const mergeProposal = () => call<MergeGruppe[]>("merge_proposal");
+/** Führt aus, was die Nutzerin bestätigt hat. */
+export const mergeApply    = (groups: MergeGruppe[]) => call<number>("merge_apply", { groups });
+/** Wie viele Berichte noch ohne Patientin dastehen. */
+export const mergePending  = () => call<number>("merge_pending");
 
 // ---------------------------------------------------------------
 // Textbausteine

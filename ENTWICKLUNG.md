@@ -457,3 +457,155 @@ entschieden, dass der Vorschlag ihr vorgelegt wird und sie abhakt —
 Der Folgeantrag aus 1.2.0 nimmt einen guten Teil des Nutzens vorweg:
 er verhindert, dass beim nächsten Antrag ein zweiter Eintrag mit
 denselben Stammdaten entsteht.
+
+---
+
+## 11 · Stand der Fassung 2.0.0
+
+### Was 2.0 gebracht hat
+
+**Das Datenmodell.** Berichte hängen an einer Patientin. Neue Datei
+`src-tauri/src/patients.rs`, neue Tabelle `patients`, neues Feld
+`Case.patient_id`.
+
+Die Zugehörigkeit steht **im verschlüsselten Block**, nicht in einer
+eigenen Spalte. Eine Zwischenfassung hatte eine Klartextspalte
+`patient_id` angelegt; sie wird nicht mehr beschrieben, bleibt in
+vorhandenen Datenbanken aber stehen — ein Umbau der Tabelle wäre ein
+Risiko ohne Gegenwert. Begründung für die Verschlüsselung: die Kennung
+selbst verrät nichts, ihre Wiederholung über mehrere Zeilen aber sehr
+wohl, nämlich welche Berichte dieselbe Person betreffen.
+
+**Wo die Zuordnung entsteht:** in `save_case`, nicht beim Anlegen.
+`lib.rs` leitet `get_case` und `save_case` durch
+`patients::bericht_lesen` und `patients::bericht_speichern`. Deshalb
+kann ein zweiter Eintrag zur selben Person gar nicht erst entstehen,
+und deshalb merkt die Oberfläche von der Trennung fast nichts.
+
+**Der Bericht behält alle Felder,** auch die gemeinsamen. Die Patientin
+ist die massgebliche Quelle, nicht die einzige — ein Bericht bleibt für
+sich lesbar, auch wenn die Patientin später entfernt wird.
+
+### 11.1 Rust lässt sich auf diesem Rechner nicht übersetzen
+
+`cargo check` bricht mit `linker link.exe not found` ab: die
+MSVC-Buildwerkzeuge fehlen. Rust ist installiert, der Linker nicht.
+
+**Der Ausweg, der wirklich Zeit spart:** ein Prüfstand in der
+Linux-Umgebung. Er bindet `error.rs`, `store.rs` und `patients.rs`
+unverändert ein und ersetzt nur, was Windows braucht:
+
+```
+/tmp/pruef/
+├─ Cargo.toml          echte Abhängigkeiten: rusqlite, aes-gcm, uuid …
+├─ src/secrets.rs      Ersatz: ensure_db_key() gibt [7u8; 32]
+├─ stub-tauri/         AppHandle, Manager, app_data_dir()
+├─ stub-keyring/       Error::NoEntry
+└─ stub-reqwest/       Error mit is_timeout/is_connect
+```
+
+Die drei Ersatzpakete sind Pfadabhängigkeiten mit den Namen `tauri`,
+`keyring` und `reqwest` — dann greifen die `use`-Zeilen im echten Code
+unverändert. Aus zwanzig Minuten Bauserver werden zwei Sekunden.
+
+Die Prüfungen selbst stehen inzwischen **im Repository**, in
+`patients.rs` unter `mod datenmodell`, und laufen auf dem Bauserver
+mit. Möglich macht das `Store::open_fuer_test`, ein `#[cfg(test)]`-
+Einstieg mit festem Schlüssel; im ausgelieferten Programm existiert er
+nicht.
+
+### 5.14 Schreibrecht wird auch im Repository eingestellt
+
+Der Lauf zur Marke v1.2.0 scheiterte, der Lauf auf `main` mit
+demselben Commit nicht. Die letzte Zeile im Protokoll war:
+
+```
+Couldn't find release with tag v1.2.0. Creating one.
+```
+
+Der Bau war also fehlerfrei, beide Installer lagen fertig und signiert
+vor — es scheiterte erst am **Anlegen der Veröffentlichung**.
+
+`permissions: contents: write` stand im Workflow (§5.4) und war
+gegenüber v1.1.3 unverändert. Der Grund lag woanders:
+
+> Settings → Actions → General → **Workflow permissions**
+
+stand auf *Read repository contents and packages permissions*. Diese
+Repository-Einstellung sticht die Angabe im Workflow. Nachdem sie auf
+*Read and write permissions* umgestellt war, lief dieselbe Marke ohne
+Änderung am Code durch.
+
+**Erkennungsmerkmal:** `main` grün, Marke rot, und das Protokoll endet
+bei „Creating one." Dann ist es diese Einstellung und nichts anderes.
+
+**Das Protokoll bekommt man ohne Anmeldung nicht** — die API gibt nur
+die Anmerkungen heraus, und die sagen bloss „Process completed with
+exit code 1":
+
+```powershell
+Invoke-RestMethod "https://api.github.com/repos/Nechus0/rana/check-runs/<JOB-ID>/annotations"
+```
+
+Schneller ist, die Nutzerin um die letzten Protokollzeilen zu bitten.
+
+### 5.15 Die Selbstaktualisierung zog die MSI
+
+`latest.json` führt drei Ziele: `windows-x86_64`, `-msi` und `-nsis`.
+Das Standardziel zeigt auf die **MSI**, und die installiert für alle
+Benutzer — also Rückfrage der Benutzerkontensteuerung bei jedem Update.
+Der NSIS-Installer läuft im Benutzerprofil und kommt ohne aus.
+
+Behoben in `views/settings.ts`:
+
+```ts
+const gefunden = await check({ target: "windows-x86_64-nsis" });
+```
+
+### 5.16 Eine Abfrage beim Start hatte sich eingeschlichen
+
+In `main.ts` stand ein `check()` beim Programmstart. Das README sagt zu,
+dass Rana von sich aus nichts ins Netz schickt. Entfernt; die Prüfung
+läuft nur noch über Einstellungen → Aktualisierung.
+
+### 5.17 Eingabefelder in einem Etikett erben dessen Schriftbild
+
+Das ICD-10-Suchfeld sass im `<label>` des Textfeldes. Etiketten sind
+in Rana `text-transform: uppercase` mit Sperrung — das Suchfeld hat das
+geerbt und sah nach Fehler aus. Es steht jetzt in einer eigenen Zeile
+(`.icd10-zeile`) mit ausdrücklich gesetztem Schriftbild.
+
+**Regel:** kein Bedienelement in ein `<label>` setzen, das eine
+Schriftverwandlung trägt.
+
+### 5.18 Die Seitenvorschau hatte kein Blatt
+
+Schritt 5 setzte das Dokument direkt in `.paper-tray`, ohne
+`.paper-sheet`. Dadurch fehlten die Ränder und es sah nicht wie eine
+Seite aus. Jetzt liegt es auf `.paper-sheet.paper-doc` mit 595pt Breite
+und 62pt Rand — das sind genau die 11906 und 1247 Twips aus dem
+`sectPr` in `report/docx.ts`. **Ändert sich dort der Rand, muss er hier
+mitgeändert werden.**
+
+### 11.2 Versionsnummer: fünf Stellen, nicht vier
+
+`bump.mjs` im Wurzelverzeichnis erledigt alle auf einmal:
+
+```powershell
+node bump.mjs 2.0.0 2.1.0
+```
+
+Es fasst `package.json`, `src-tauri/Cargo.toml`,
+`src-tauri/tauri.conf.json`, `README.md` und **`src-tauri/Cargo.lock`**
+an. Die Sperrdatei wurde schon einmal vergessen; der Bauserver meldet
+das erst nach zwanzig Minuten.
+
+### 11.3 Der Arbeitsklon
+
+`C:\Users\AnjaR\rana-arbeit` — angelegt, weil im Ordner
+`Desktop\Claude Berichte\…` ein Abgleichdienst mitschreibt. Dort
+tauchen Dateien unmittelbar nach `git reset --hard` wieder als geändert
+auf, und `git merge` scheitert reihenweise. **Nicht im Desktop-Ordner
+arbeiten.**
+
+`git config core.autocrlf false` ist dort gesetzt (§5.5).
