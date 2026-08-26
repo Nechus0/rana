@@ -64,7 +64,10 @@ function textarea(id: string, label: string, opts: {
       </label>
       <textarea id="${id}" data-feld="${id}" placeholder="${esc(opts.ph ?? "")}"
                 ${opts.hoch ? `style="min-height:${opts.hoch}px"` : ""}>${esc(f(id))}</textarea>
-      <div class="record-num small muted" data-zaehler="${id}"></div>
+      <div class="field-fuss">
+        <span class="field-balken" data-balken="${id}"><i></i></span>
+        <span class="field-zaehler" data-zaehler="${id}"></span>
+      </div>
     </div>`;
 }
 
@@ -421,13 +424,49 @@ export function bindeSchritt(n: number, neuZeichnen: () => void): void {
   if (n === 4) bindeSchritt5();
 }
 
+/**
+ * Der Zähler unter einem Schreibfeld.
+ *
+ * Zeigt nicht nur, wie viel dasteht, sondern auch wie viel erwartet
+ * wird. Ohne den Zielwert schreibt man entweder zu knapp — dann fehlt
+ * Claude das Material — oder ins Uferlose.
+ */
 function aktualisiereZaehler(node: HTMLElement): void {
   const id = (node as HTMLInputElement).dataset.feld;
   if (!id) return;
   const z = qs<HTMLElement>(`[data-zaehler="${id}"]`);
   if (!z) return;
+
   const len = (node as HTMLTextAreaElement).value.length;
-  z.textContent = len ? `${len.toLocaleString("de-DE")} Zeichen` : "";
+  const ziel = S.ZIELUMFANG[id];
+
+  if (!ziel) {
+    z.textContent = len ? `${len.toLocaleString("de-DE")} Zeichen` : "";
+    z.className = "field-zaehler";
+    return;
+  }
+
+  const stand = S.fuellstand(id, len);
+  const spanne = ziel.von > 0
+    ? `${ziel.von}–${ziel.bis}`
+    : `bis ${ziel.bis}`;
+
+  const wort =
+    stand === "leer"      ? (ziel.hinweis ?? `etwa ${spanne} Zeichen`)
+    : stand === "kurz"    ? `${len} von etwa ${spanne} — noch etwas knapp`
+    : stand === "reichlich" ? `${len} Zeichen — reichlich, das ist in Ordnung`
+    : `${len} von etwa ${spanne} Zeichen`;
+
+  z.textContent = wort;
+  z.className = `field-zaehler ist-${stand ?? "neutral"}`;
+
+  // Ein schmaler Balken macht das Verhältnis auf einen Blick sichtbar.
+  const balken = qs<HTMLElement>(`[data-balken="${id}"]`);
+  if (balken) {
+    const anteil = Math.min(100, Math.round((len / Math.max(1, ziel.bis)) * 100));
+    balken.style.setProperty("--fuell", `${anteil}%`);
+    balken.dataset.stand = stand ?? "neutral";
+  }
 }
 
 function zeigeWarnungen(): void {

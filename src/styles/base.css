@@ -279,3 +279,57 @@ select {
   border: 3px solid var(--sphagnum);
 }
 ::-webkit-scrollbar-thumb:hover { background: var(--reed-faint); }
+
+
+/* ============================================================
+   Der Fuss eines Schreibfelds: Füllbalken und Zähler
+   ------------------------------------------------------------
+   Beide sagen dasselbe, aber für zwei Arten zu lesen: der Balken
+   fürs Auge im Vorbeigehen, die Zahl zum Nachsehen.
+
+   Die Farben sind zurückhaltend gewählt. „Noch etwas knapp" ist
+   ein Hinweis, kein Fehler — deshalb bernstein und nicht rot. Und
+   „reichlich" bleibt grün: Überhang ist Arbeitsvorrat für Claude,
+   nichts, wovor gewarnt werden müsste.
+   ============================================================ */
+.field-fuss {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  margin-top: 5px;
+  min-height: 15px;
+}
+
+.field-balken {
+  flex: none;
+  width: 56px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--line-strong);
+  overflow: hidden;
+}
+.field-balken i {
+  display: block;
+  height: 100%;
+  width: var(--fuell, 0%);
+  background: var(--reed-faint);
+  transition: width var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.field-balken[data-stand="kurz"] i      { background: var(--amber); }
+.field-balken[data-stand="gut"] i       { background: var(--moss); }
+.field-balken[data-stand="reichlich"] i { background: var(--moss); }
+.field-balken[data-stand="leer"] i      { background: transparent; }
+
+.field-zaehler {
+  font-family: var(--face-record);
+  font-size: var(--t-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--reed-faint);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.field-zaehler.ist-kurz      { color: var(--amber); }
+.field-zaehler.ist-gut       { color: var(--moss); }
+.field-zaehler.ist-reichlich { color: var(--reed); }

@@ -195,9 +195,42 @@ export function patch(p: Partial<State>): void {
 // Fälle
 // ---------------------------------------------------------------
 
+/**
+ * Holt die Fallübersichten — immer vollständig, nie gefiltert.
+ *
+ * Vorher ging die Suche bei jedem Tastendruck nach Rust und liess
+ * dort JEDEN Fall entschlüsseln. Zwei Fehler auf einmal: bei schnellem
+ * Tippen kamen die Antworten in falscher Reihenfolge zurück und die
+ * Liste zeigte Treffer zu einem älteren Suchwort, und bei fünfzig
+ * Patientinnen waren es fünfzig Entschlüsselungen je Anschlag.
+ *
+ * Jetzt wird einmal geladen und im Fenster gefiltert. Das ist sofort,
+ * kann nicht durcheinandergeraten und skaliert.
+ */
 export async function refreshCases(): Promise<void> {
-  state.cases = await api.listCases(state.query, state.showTrash);
+  state.cases = await api.listCases("", state.showTrash);
   notify();
+}
+
+/**
+ * Was in der Liste stehen soll: gefiltert und geordnet.
+ *
+ * Gesucht wird in Name, Chiffre und Antragsnummer. Mehrere Wörter
+ * müssen alle vorkommen, ihre Reihenfolge ist gleichgültig — so
+ * findet „pau kat" auch „Pauer, Katrin".
+ */
+export function sichtbareFaelle(): CaseSummary[] {
+  const q = state.query.trim().toLowerCase();
+  let liste = state.cases;
+
+  if (q) {
+    const woerter = q.split(/\s+/).filter(Boolean);
+    liste = liste.filter((c) => {
+      const heu = `${c.label} ${c.chiffre} ${c.antrag_nr}`.toLowerCase();
+      return woerter.every((w) => heu.includes(w));
+    });
+  }
+  return sortiereFaelle(liste);
 }
 
 export function leererFall(profile: Profile | null): Felder {
@@ -300,6 +333,65 @@ export function speichernBeimBeenden(): void {
 // ---------------------------------------------------------------
 // Vollständigkeit
 // ---------------------------------------------------------------
+
+/**
+ * Wie viel Text ein Feld ungefähr tragen sollte.
+ *
+ * Hergeleitet, nicht geraten: Der fertige Bericht hat einen gemessenen
+ * Korridor von rund 4.950 Zeichen, verteilt auf 2.750 / 750 / 1.450 je
+ * Abschnitt. Daraus ergibt sich, wie viel Rohmaterial ein Feld liefern
+ * muss, damit Claude daraus den zugehörigen Absatz bauen kann.
+ *
+ * Bewusst mit Vorrat: der Zielwert liegt etwa ein Drittel ÜBER dem, was
+ * am Ende im Bericht landet. Ein Modell kann kürzen und verdichten, aber
+ * nichts erfinden — zu wenig Material lässt sich nicht ausgleichen, zu
+ * viel schon. Deshalb ist der obere Rand grosszügig und erst deutlich
+ * darüber wird gewarnt.
+ *
+ * Die Zahlen sind Anhaltspunkte, keine Grenzen. Rana hindert niemanden
+ * am Weiterschreiben.
+ */
+export const ZIELUMFANG: Record<string, { von: number; bis: number; hinweis?: string }> = {
+  // --- Gliederungspunkt 1 --------------------------------------
+  // Die Ausgangslage wird zu einem Absatz von rund 450 Zeichen.
+  f_ausgangslage: { von: 250, bis: 600 },
+  // Der Verlauf trägt drei bis vier Absätze — das grösste Feld.
+  f_verlauf:      { von: 600, bis: 1400 },
+  // Die Zielbilanz wird ein Absatz, je Ziel ein bis zwei Sätze.
+  f_zielstatus:   { von: 200, bis: 550 },
+
+  // --- Gliederungspunkt 2 ---------------------------------------
+  f_befund:       { von: 150, bis: 450 },
+  f_diag_neu:     { von: 40,  bis: 250 },
+
+  // --- Gliederungspunkt 3 ---------------------------------------
+  f_begruendung:  { von: 250, bis: 700 },
+  f_methoden:     { von: 0,   bis: 300, hinweis: "darf leer bleiben" },
+  f_prognose:     { von: 150, bis: 450 },
+  f_abschluss:    { von: 80,  bis: 350 },
+
+  // --- Vorgeschichte, geht nur als Hintergrund in den Prompt -----
+  f_diag_alt:     { von: 0, bis: 300, hinweis: "Hintergrund" },
+  f_psychodyn:    { von: 0, bis: 500, hinweis: "Hintergrund" },
+  f_ziele_alt:    { von: 0, bis: 400, hinweis: "Hintergrund" },
+
+  // --- Stammdaten ------------------------------------------------
+  f_sozio:        { von: 0, bis: 160, hinweis: "eine Zeile" },
+};
+
+/** "kurz" · "gut" · "reichlich" — oder null, wenn kein Ziel hinterlegt ist. */
+export type Fuellstand = "leer" | "kurz" | "gut" | "reichlich" | null;
+
+export function fuellstand(feld: string, laenge: number): Fuellstand {
+  const z = ZIELUMFANG[feld];
+  if (!z) return null;
+  if (laenge === 0) return "leer";
+  if (laenge < z.von) return "kurz";
+  // Erst deutlich über dem oberen Rand wird es „reichlich" — ein
+  // Überhang ist Arbeitsvorrat, kein Fehler.
+  if (laenge > z.bis * 1.5) return "reichlich";
+  return "gut";
+}
 
 export interface Luecke { feld: string; label: string; schritt: number }
 
