@@ -695,7 +695,11 @@ export async function zeigeAktualisierung(): Promise<void> {
 
         try {
           const { check } = await import("@tauri-apps/plugin-updater");
-          const gefunden = await check();
+          // Ohne diese Angabe zieht der Updater die MSI-Fassung. Die
+          // installiert für alle Benutzer und löst deshalb jedes Mal
+          // die Rückfrage der Benutzerkontensteuerung aus. Der
+          // NSIS-Installer läuft im Benutzerprofil und kommt ohne aus.
+          const gefunden = await check({ target: "windows-x86_64-nsis" });
 
           if (!gefunden) {
             status.className = "key-state ok";

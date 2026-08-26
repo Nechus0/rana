@@ -9,6 +9,7 @@ mod backup;
 mod budget;
 mod claude;
 mod error;
+mod patients;
 mod secrets;
 mod settings;
 mod store;
@@ -90,14 +91,21 @@ fn list_cases(app: State<App>, query: Option<String>, trashed: Option<bool>) -> 
         .list_cases(query.unwrap_or_default().as_str(), trashed.unwrap_or(false))
 }
 
+/// Liest einen Bericht **mit** den Stammdaten der Patientin darüber.
+/// Die Oberfläche merkt von der Trennung nichts.
 #[tauri::command]
 fn get_case(app: State<App>, id: String) -> Result<Case> {
-    app.store.get_case(&id)
+    patients::bericht_lesen(&app.store, &id)
 }
 
+/// Speichert einen Bericht und hält die Patientin dabei nach.
+///
+/// Hier — und nur hier — entsteht die Zuordnung. Wer einen Namen
+/// einträgt, der schon vorkommt, landet bei derselben Patientin;
+/// ein zweiter Eintrag zur selben Person kann gar nicht entstehen.
 #[tauri::command]
 fn save_case(app: State<App>, case: Case) -> Result<Case> {
-    app.store.save_case(case)
+    patients::bericht_speichern(&app.store, case)
 }
 
 #[tauri::command]
@@ -114,6 +122,68 @@ fn restore_case(app: State<App>, id: String) -> Result<()> {
 #[tauri::command]
 fn purge_case(app: State<App>, id: String) -> Result<()> {
     app.store.purge_case(&id)
+}
+
+// ===============================================================
+// Patientinnen
+// ===============================================================
+
+#[tauri::command]
+fn list_patients(app: State<App>) -> Result<Vec<patients::PatientSummary>> {
+    patients::list_patients(&app.store)
+}
+
+#[tauri::command]
+fn get_patient(app: State<App>, id: String) -> Result<patients::Patient> {
+    app.store.patient_lesen(&id)
+}
+
+#[tauri::command]
+fn save_patient(app: State<App>, patient: patients::Patient) -> Result<patients::Patient> {
+    app.store.save_patient(patient)
+}
+
+#[tauri::command]
+fn reports_for_patient(app: State<App>, patient_id: String) -> Result<Vec<CaseSummary>> {
+    patients::reports_for_patient(&app.store, &patient_id)
+}
+
+#[tauri::command]
+fn reports_without_patient(app: State<App>) -> Result<Vec<CaseSummary>> {
+    patients::reports_without_patient(&app.store)
+}
+
+#[tauri::command]
+fn assign_report(app: State<App>, case_id: String, patient_id: String) -> Result<()> {
+    patients::bericht_zuordnen(&app.store, &case_id, &patient_id)
+}
+
+/// Entfernt die Patientin, nicht ihre Berichte.
+#[tauri::command]
+fn remove_patient(app: State<App>, id: String) -> Result<()> {
+    app.store.patient_entfernen(&id)
+}
+
+// ---------------------------------------------------------------
+// Zusammenführen
+// ---------------------------------------------------------------
+
+/// Schlägt vor — ändert nichts.
+#[tauri::command]
+fn merge_proposal(app: State<App>) -> Result<Vec<patients::MergeGruppe>> {
+    patients::merge_vorschlag(&app.store)
+}
+
+/// Führt aus, was die Nutzerin bestätigt hat.
+#[tauri::command]
+fn merge_apply(app: State<App>, groups: Vec<patients::MergeGruppe>) -> Result<usize> {
+    patients::merge_anwenden(&app.store, &groups)
+}
+
+/// Wie viele Berichte noch ohne Patientin dastehen.
+#[tauri::command]
+fn merge_pending(app: State<App>) -> Result<usize> {
+    patients::merge_noetig(&app.store)
 }
 
 // ===============================================================
@@ -295,6 +365,16 @@ pub fn run() {
             trash_case,
             restore_case,
             purge_case,
+            list_patients,
+            get_patient,
+            save_patient,
+            reports_for_patient,
+            reports_without_patient,
+            assign_report,
+            remove_patient,
+            merge_proposal,
+            merge_apply,
+            merge_pending,
             add_snippet,
             list_snippets,
             delete_snippet,

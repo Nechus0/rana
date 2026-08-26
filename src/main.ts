@@ -71,17 +71,11 @@ async function starteArbeitsansicht(): Promise<void> {
 
   zeichneGeruest();
   S.subscribe(() => { aktualisiereRand(); });
-  // Check for updates on startup
-  import("@tauri-apps/plugin-updater").then(async ({ check }) => {
-    try {
-      const gefunden = await check();
-      if (gefunden) {
-        toast(`Update auf ${gefunden.version} verfügbar!`, "ok", 5000);
-      }
-    } catch (e) {
-      // Ignore errors silently on startup
-    }
-  });
+  // Hier stand einmal eine Abfrage bei GitHub beim Start. Sie ist
+  // entfernt: das README sagt zu, dass Rana von sich aus nichts ins
+  // Netz schickt, und eine Zusage, die nur meistens gilt, ist keine.
+  // Die Prüfung läuft ausschliesslich über Einstellungen →
+  // Aktualisierung, auf Klick und sichtbar.
 }
 
 // ===============================================================
