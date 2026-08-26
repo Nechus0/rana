@@ -14,3 +14,13 @@ _test/*.docx
 _test/*.pdf
 _test/*.png
 _test/k/
+
+# Der Pruefstand baut in seinen eigenen Zwischenordner.
+_pruefstand/target/
+_pruefstand/Cargo.lock
+_pruefstand/src/error.rs
+_pruefstand/src/store.rs
+_pruefstand/src/patients.rs
+_pruefstand/src/backup.rs
+_pruefstand/src/budget.rs
+_pruefstand/src/settings.rs

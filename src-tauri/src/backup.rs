@@ -20,6 +20,7 @@
 //! Datenbank. Sieben Stände werden rollierend gehalten.
 
 use crate::error::{RanaError, Result};
+use crate::patients::Patient;
 use crate::secrets;
 use crate::store::{Case, Store};
 use aes_gcm::{
@@ -46,6 +47,13 @@ struct Envelope {
 #[derive(Serialize, Deserialize)]
 struct Payload {
     cases: Vec<Case>,
+    /// Seit Fassung 2.0. Fehlt in älteren Sicherungen — dann bleibt
+    /// die Liste leer und die eingelesenen Berichte stehen zunächst
+    /// ohne Patientin da, so wie vor der Umstellung. Ohne dieses Feld
+    /// verwiesen die Berichte nach dem Wiederherstellen auf
+    /// Patientinnen, die es nicht mehr gäbe.
+    #[serde(default)]
+    patients: Vec<Patient>,
     settings: Vec<(String, String)>,
     /// Ohne ihn wären die Fälle auf einem anderen Rechner nicht lesbar.
     db_key: String,
@@ -104,6 +112,7 @@ pub fn write_backup(store: &Store, path: &Path, password: &str) -> Result<usize>
 
     let payload = Payload {
         cases,
+        patients: store.alle_patienten()?,
         settings: collect_settings(store)?,
         db_key: secrets::export_db_key_b64()?,
         app_version: env!("CARGO_PKG_VERSION").to_string(),
@@ -158,6 +167,12 @@ pub fn read_backup(store: &Store, path: &Path, password: &str, replace: bool) ->
         }
     }
 
+    // Erst die Patientinnen, dann die Berichte. Andersherum zeigten
+    // die Berichte für einen Augenblick auf Personen, die es noch
+    // nicht gibt — und bei einem Abbruch dazwischen dauerhaft.
+    for p in payload.patients {
+        store.patient_schreiben(&p)?;
+    }
     let n = store.import_cases(payload.cases, replace)?;
     for (k, v) in payload.settings {
         store.set_setting(&k, &v)?;

@@ -491,22 +491,32 @@ sich lesbar, auch wenn die Patientin später entfernt wird.
 `cargo check` bricht mit `linker link.exe not found` ab: die
 MSVC-Buildwerkzeuge fehlen. Rust ist installiert, der Linker nicht.
 
-**Der Ausweg, der wirklich Zeit spart:** ein Prüfstand in der
-Linux-Umgebung. Er bindet `error.rs`, `store.rs` und `patients.rs`
-unverändert ein und ersetzt nur, was Windows braucht:
+**Der Ausweg, der wirklich Zeit spart:** der Prüfstand im Ordner
+`_pruefstand`. Er liegt seit 2.0 im Repository, damit ihn niemand
+zweimal bauen muss.
 
-```
-/tmp/pruef/
-├─ Cargo.toml          echte Abhängigkeiten: rusqlite, aes-gcm, uuid …
-├─ src/secrets.rs      Ersatz: ensure_db_key() gibt [7u8; 32]
-├─ stub-tauri/         AppHandle, Manager, app_data_dir()
-├─ stub-keyring/       Error::NoEntry
-└─ stub-reqwest/       Error mit is_timeout/is_connect
+```bash
+cd _pruefstand
+./kopieren.sh    # holt error.rs, store.rs, patients.rs, backup.rs,
+cargo test       # budget.rs, settings.rs aus ../src-tauri/src
 ```
 
-Die drei Ersatzpakete sind Pfadabhängigkeiten mit den Namen `tauri`,
-`keyring` und `reqwest` — dann greifen die `use`-Zeilen im echten Code
-unverändert. Aus zwanzig Minuten Bauserver werden zwei Sekunden.
+Er bindet die **echten** Quelldateien ein und ersetzt nur, was Windows
+braucht: `stub-tauri`, `stub-keyring`, `stub-reqwest` und ein
+`secrets.rs`, dessen `ensure_db_key()` einfach `[7u8; 32]` liefert.
+Die drei Ersatzpakete sind Pfadabhängigkeiten mit genau den Namen
+`tauri`, `keyring` und `reqwest` — dann greifen die `use`-Zeilen im
+echten Code unverändert. Aus zwanzig Minuten Bauserver werden zwei
+Sekunden.
+
+**Seine Grenze, und die hat schon einmal Zeit gekostet:** `lib.rs` und
+`claude.rs` sind nicht dabei. Als `Case` das Feld `patient_id` bekam,
+brach ein Struktur-Literal in `lib.rs` (`import_legacy`) — Prüfstand
+grün, Bauserver rot.
+
+> **Regel:** Wer ein Feld zu `Case` oder `Patient` hinzufügt, sucht
+> danach im **ganzen** Ordner `src-tauri/src` nach `Case {` und
+> `Patient {`, `lib.rs` eingeschlossen.
 
 Die Prüfungen selbst stehen inzwischen **im Repository**, in
 `patients.rs` unter `mod datenmodell`, und laufen auf dem Bauserver

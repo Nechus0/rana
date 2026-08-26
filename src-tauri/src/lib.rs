@@ -310,14 +310,22 @@ fn import_legacy(app: State<App>, json: String) -> Result<usize> {
         } else {
             lc.id
         };
-        app.store.save_case(Case {
-            id,
-            fields: lc.data,
-            report: lc.report,
-            updated_at: lc.updated_at,
-            created_at: lc.updated_at,
-            deleted_at: None,
-        })?;
+        // Über patients::bericht_speichern statt direkt in den Speicher:
+        // eingelesene Altfälle bekommen dabei sofort ihre Patientin,
+        // statt hinterher noch einmal von Hand zugeordnet werden zu
+        // müssen. Gleiche Namen fallen dabei zusammen.
+        patients::bericht_speichern(
+            &app.store,
+            Case {
+                id,
+                fields: lc.data,
+                report: lc.report,
+                patient_id: None,
+                updated_at: lc.updated_at,
+                created_at: lc.updated_at,
+                deleted_at: None,
+            },
+        )?;
         n += 1;
     }
     Ok(n)
