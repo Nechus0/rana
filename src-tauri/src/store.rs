@@ -87,6 +87,10 @@ impl Store {
              PRAGMA synchronous = FULL;
              PRAGMA foreign_keys = ON;
 
+             -- Ein Bericht. Hiess frueher „Fall\", weil ein Fall genau
+             -- einen Bericht hatte. Seit Fassung 2.0 haengen mehrere
+             -- Berichte an einer Patientin; die Tabelle behaelt ihren
+             -- Namen, damit gespeicherte Daten unberuehrt bleiben.
              CREATE TABLE IF NOT EXISTS cases (
                id          TEXT PRIMARY KEY,
                nonce       BLOB NOT NULL,
@@ -94,6 +98,27 @@ impl Store {
                updated_at  INTEGER NOT NULL,
                deleted_at  INTEGER
              );
+
+             -- Die Patientin. Traegt, was ueber alle Berichte gleich
+             -- bleibt: Klarname, Chiffre, Geburtsdatum, Kostentraeger,
+             -- Therapiebeginn, Ausgangslage, Psychodynamik.
+             CREATE TABLE IF NOT EXISTS patients (
+               id          TEXT PRIMARY KEY,
+               nonce       BLOB NOT NULL,
+               payload     BLOB NOT NULL,
+               created_at  INTEGER NOT NULL,
+               updated_at  INTEGER NOT NULL,
+               deleted_at  INTEGER
+             );",
+        )?;
+
+        // Die Spalte kam mit Fassung 2.0 dazu. ALTER TABLE laesst sich
+        // nicht mit IF NOT EXISTS schreiben, deshalb wird der Fehler
+        // „duplicate column name\" hier bewusst verschluckt.
+        let _ = conn.execute("ALTER TABLE cases ADD COLUMN patient_id TEXT", []);
+
+        conn.execute_batch(
+            "CREATE INDEX IF NOT EXISTS cases_patient ON cases(patient_id);
 
              CREATE TABLE IF NOT EXISTS settings (
                key   TEXT PRIMARY KEY,
