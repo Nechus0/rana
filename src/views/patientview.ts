@@ -116,7 +116,7 @@ export function renderPatient(d: PatientDaten): string {
                   <button class="btn btn-sm btn-quiet btn-icon" data-antragweg="${esc(c.id)}"
                           data-antragname="${esc(c.antrag_nr ? `${c.antrag_nr}. Fortführungsantrag` : "Antrag ohne Nummer")}"
                           title="In den Papierkorb legen"
-                          aria-label="In den Papierkorb legen">${icon.trash}</button>
+                          aria-label="In den Papierkorb legen">${icon.close}</button>
                 </td>
               </tr>`).join("")}
           </tbody>
@@ -139,7 +139,7 @@ export function renderPatient(d: PatientDaten): string {
       </p>
       <button class="btn btn-danger" data-patientweg="${esc(d.patient.id)}"
               data-patientname="${esc(name)}">
-        ${icon.trash} Patient in den Papierkorb
+        ${icon.close} Patient in den Papierkorb
       </button>
     </section>`;
 }

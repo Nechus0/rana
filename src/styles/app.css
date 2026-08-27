@@ -65,6 +65,7 @@
 .topbar-right {
   display: flex;
   align-items: center;
+  align-self: stretch;
   gap: var(--s3);
   flex-shrink: 0;
 }
@@ -666,8 +667,13 @@
 /* Berichte ohne Patientin: erkennbar, aber nicht alarmierend. */
 .pat-item[data-lose] .pat-name { color: var(--reed); font-weight: 500; font-style: italic; }
 
-.case-sub { list-style: none; margin: 0 0 var(--s2); padding: 0 0 0 18px; }
-.case-sub:empty { margin: 0; }
+.case-sub {
+  list-style: none;
+  margin: 0 0 var(--s2) 14px;
+  padding: 2px 0 0 6px;
+  border-left: 1px solid var(--line);
+}
+.case-sub:empty { margin: 0; border: none; padding: 0; }
 
 .case-item-fertig {
   flex: none;
@@ -803,8 +809,8 @@
 }
 .stepbar-step::before { left: 0;   right: 50%; margin-right: 17px; }
 .stepbar-step::after  { left: 50%; right: 0;   margin-left: 17px; }
-.stepbar-step:first-child::before { display: none; }
-.stepbar-step:last-child::after   { display: none; }
+.stepbar-step:first-of-type::before { display: none; }
+.stepbar-step:last-of-type::after   { display: none; }
 
 /* Zurückgelegte Strecke */
 .stepbar-step.is-done::before,

@@ -121,19 +121,35 @@ function zeichneGeruest(): void {
       ${railHtml()}
       <main class="work">
         <header class="work-head">
-          <div class="menuwrap" style="position: absolute; top: 16px; right: 24px; z-index: 50;">
-            <button class="btn btn-quiet btn-icon" id="btnMehr"
-                    title="Menü" aria-label="Menü"
-                    aria-haspopup="menu" aria-expanded="false">${icon.dots}</button>
-            <div class="menu" id="mehrMenu" role="menu" hidden>
-              <button class="menu-item" role="menuitem" id="mnuEinstellungen">${icon.gear}<span>Einstellungen</span></button>
-              <button class="menu-item" role="menuitem" id="mnuSicherung">${icon.save}<span>Sicherung</span></button>
-              <button class="menu-item" role="menuitem" id="mnuPapierkorb">${icon.trash}<span>Papierkorb</span></button>
-              <div class="menu-sep"></div>
-              <button class="menu-item" role="menuitem" id="mnuZuordnen" hidden>
-                ${icon.merge}<span id="mnuZuordnenText">Berichte zuordnen</span>
-              </button>
+          <div class="work-actions-top" style="position: absolute; top: 16px; right: 24px; z-index: 50; display: flex; align-items: center; gap: 16px;">
+            <span class="save-indicator" id="saveIndicator">
+              <span class="save-dot"></span>
+              <span class="save-text">Gespeichert</span>
+            </span>
+            <div class="menuwrap">
+              <button class="btn btn-quiet btn-icon" id="btnMehr"
+                      title="Menü" aria-label="Menü"
+                      aria-haspopup="menu" aria-expanded="false">${icon.dots}</button>
+              <div class="menu" id="mehrMenu" role="menu" hidden>
+                <button class="menu-item" role="menuitem" id="mnuEinstellungen">${icon.gear}<span>Einstellungen</span></button>
+                <button class="menu-item" role="menuitem" id="mnuSicherung">${icon.save}<span>Sicherung</span></button>
+                <button class="menu-item" role="menuitem" id="mnuPapierkorb">${icon.trash}<span>Papierkorb</span></button>
+                <div class="menu-sep"></div>
+                <button class="menu-item" role="menuitem" id="mnuZuordnen" hidden>
+                  ${icon.merge}<span id="mnuZuordnenText">Berichte zuordnen</span>
+                </button>
+              </div>
             </div>
+          </div>
+          <!-- Der Zusammenhang steht über der Arbeit, nicht über dem
+               Fenster: wessen Antrag hier offen ist, welcher Schritt es
+               ist, und ob alles gesichert ist. -->
+          <div class="work-head-titel">
+            <div class="work-title">
+              <span class="work-eyebrow" id="workEyebrow"></span>
+              <h2 id="workTitel"></h2>
+            </div>
+            <span class="spacer"></span>
           </div>
           <nav class="stepbar" role="tablist" aria-label="Arbeitsschritte">
             ${SCHRITTE.map((s, i) => `
@@ -144,20 +160,6 @@ function zeichneGeruest(): void {
                 <span class="stepbar-flag" aria-hidden="true"></span>
               </button>`).join("")}
           </nav>
-          <!-- Der Zusammenhang steht über der Arbeit, nicht über dem
-               Fenster: wessen Antrag hier offen ist, welcher Schritt es
-               ist, und ob alles gesichert ist. -->
-          <div class="work-head-titel">
-            <div class="work-title">
-              <span class="work-eyebrow" id="workEyebrow"></span>
-              <h2 id="workTitel"></h2>
-            </div>
-            <span class="spacer"></span>
-            <span class="save-indicator" id="saveIndicator">
-              <span class="save-dot"></span>
-              <span class="save-text">Gespeichert</span>
-            </span>
-          </div>
         </header>
         <div class="work-body" id="work-body" tabindex="-1">
           <div class="work-inner" id="workInner"></div>
@@ -626,6 +628,7 @@ async function patientinInPapierkorb(patientId: string, name: string): Promise<v
 
 async function neuerFall(): Promise<void> {
   await S.neuerFall();
+  S.state.offen.clear();
   zeichneFallListe();
   zeichneSchritt();
   toast("Neuer Fall angelegt.", "ok", 2500);
@@ -662,6 +665,23 @@ async function zeigePatient(patientId: string): Promise<void> {
   }
 
   await S.speichereJetzt();
+
+  if (S.state.patientAnsicht === patientId) {
+    S.state.patientAnsicht = null;
+    S.state.activeId = "";
+    S.state.offen.clear();
+    zeichneFallListe();
+    el("workEyebrow").textContent = "";
+    el("workTitel").textContent = "";
+    el("workInner").innerHTML = `
+      <div class="empty-state">
+        <p class="hint">Bitte wählen Sie links eine Patientin oder einen Antrag aus.</p>
+      </div>`;
+    const stepbar = document.querySelector(".stepbar") as HTMLElement | null;
+    if (stepbar) stepbar.style.display = "none";
+    return;
+  }
+
   S.state.patientAnsicht = patientId;
   S.state.activeId = "";
   S.state.offen.clear();
