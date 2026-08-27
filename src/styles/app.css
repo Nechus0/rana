@@ -659,10 +659,6 @@
   color: var(--peat);
 }
 
-/* Wer nur einen Antrag hat, hat nichts aufzuklappen — das Dreieck
-   bleibt als Platzhalter stehen, damit die Namen in einer Flucht
-   stehen, wird aber unsichtbar. */
-.pat-caret.ist-leer { visibility: hidden; }
 
 /* Berichte ohne Patientin: erkennbar, aber nicht alarmierend. */
 .pat-item[data-lose] .pat-name { color: var(--reed); font-weight: 500; font-style: italic; }
@@ -964,6 +960,16 @@
 }
 .work-inner { max-width: var(--work-max); margin: 0 auto; }
 .work-inner.wide { max-width: 1000px; }
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 160px 20px;
+  color: var(--peat);
+}
 
 
 

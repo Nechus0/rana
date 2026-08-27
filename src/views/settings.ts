@@ -14,7 +14,7 @@ import { confirmDialog, dialog, esc, eur, icon, on, qs, qsa, relDate, toast } fr
 const CONSOLE_LIMITS = "https://platform.claude.com/settings/limits";
 
 /** Steht auch in package.json, Cargo.toml und tauri.conf.json. */
-export const EIGENE_VERSION = "2.5.0";
+export const EIGENE_VERSION = "2.5.1";
 
 // ===============================================================
 // Einstellungen
@@ -163,6 +163,7 @@ export async function zeigeEinstellungen(neuZeichnen: () => void): Promise<void>
         <div class="row row-wrap">
           <button class="btn" id="e_btnSicherung" type="button">Sicherung verwalten</button>
           <button class="btn" id="e_btnPapierkorb" type="button">Papierkorb öffnen</button>
+          <button class="btn" id="e_btnZuordnen" type="button" style="display:none">Berichte zuordnen</button>
         </div>
       </div>
       </section>
@@ -223,6 +224,24 @@ export async function zeigeEinstellungen(neuZeichnen: () => void): Promise<void>
       on(qs<HTMLElement>("#e_btnVerbrauch", root)!, "click", () => { void zeigeVerbrauch(); });
       on(qs<HTMLElement>("#e_btnSicherung", root)!, "click", () => { void zeigeSicherung(neuZeichnen); });
       on(qs<HTMLElement>("#e_btnPapierkorb", root)!, "click", () => { void zeigePapierkorb(neuZeichnen); });
+      
+      const btnZuordnen = qs<HTMLElement>("#e_btnZuordnen", root);
+      if (btnZuordnen) {
+        api.mergePending().then(count => {
+          if (count > 0) {
+            btnZuordnen.style.display = "inline-flex";
+            btnZuordnen.textContent = `Berichte zuordnen (${count})`;
+          }
+        });
+        on(btnZuordnen, "click", () => {
+          import("./patients").then(m => m.zeigeZuordnung()).then(async (n) => {
+            if (n) {
+              await S.refreshCases();
+              neuZeichnen();
+            }
+          });
+        });
+      }
 
       const themeToggle = qs<HTMLInputElement>("#e_theme", root)!;
       themeToggle.checked = document.documentElement.dataset.theme === "dark";
@@ -590,7 +609,7 @@ export async function zeigePapierkorb(neuZeichnen: () => void): Promise<void> {
           ${liste.map((c) => `
             <div class="row" style="gap:8px;padding: var(--s2) 0;border-bottom:1px solid var(--line)">
               <div style="flex:1;min-width:0">
-                <div style="font-weight:550">${esc(c.label)}</div>
+                <div style="font-weight:550">${esc(c.label)} ${c.antrag_nr ? `<span style="font-weight: normal; color: var(--peat)">· ${c.antrag_nr}. Fortführungsantrag</span>` : `<span style="font-weight: normal; color: var(--peat)">· Antrag ohne Nummer</span>`}</div>
                 <div class="small muted">
                   ${c.purge_in_days !== null
                     ? `noch ${c.purge_in_days} ${c.purge_in_days === 1 ? "Tag" : "Tage"}`

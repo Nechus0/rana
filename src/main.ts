@@ -34,9 +34,8 @@ import { runSetup } from "./setup/wizard";
 import { bindeSchritt, fallInPapierkorb, renderSchritt, SCHRITTE } from "./views/steps";
 
 import {
-  EIGENE_VERSION, zeigeEinstellungen, zeigePapierkorb, zeigeSicherung,
+  EIGENE_VERSION, zeigeEinstellungen,
 } from "./views/settings";
-import { offeneZuordnungen, zeigeZuordnung } from "./views/patients";
 import { bindePatient, ladePatient, renderPatient } from "./views/patientview";
 import { confirmDialog, el, esc, icon, marke, on, qsa, relDate, toast } from "./ui/kit";
 
@@ -126,20 +125,10 @@ function zeichneGeruest(): void {
               <span class="save-dot"></span>
               <span class="save-text">Gespeichert</span>
             </span>
-            <div class="menuwrap">
-              <button class="btn btn-quiet btn-icon" id="btnMehr"
-                      title="Menü" aria-label="Menü"
-                      aria-haspopup="menu" aria-expanded="false">${icon.dots}</button>
-              <div class="menu" id="mehrMenu" role="menu" hidden>
-                <button class="menu-item" role="menuitem" id="mnuEinstellungen">${icon.gear}<span>Einstellungen</span></button>
-                <button class="menu-item" role="menuitem" id="mnuSicherung">${icon.save}<span>Sicherung</span></button>
-                <button class="menu-item" role="menuitem" id="mnuPapierkorb">${icon.trash}<span>Papierkorb</span></button>
-                <div class="menu-sep"></div>
-                <button class="menu-item" role="menuitem" id="mnuZuordnen" hidden>
-                  ${icon.merge}<span id="mnuZuordnenText">Berichte zuordnen</span>
-                </button>
-              </div>
-            </div>
+            <button class="btn btn-quiet btn-icon" id="btnSettings"
+                    title="Einstellungen" aria-label="Einstellungen">
+              ${icon.dots}
+            </button>
           </div>
           <!-- Der Zusammenhang steht über der Arbeit, nicht über dem
                Fenster: wessen Antrag hier offen ist, welcher Schritt es
@@ -279,45 +268,7 @@ function bindeRail(): void {
 }
 
 function bindeTopbar(): void {
-  const knopf = el("btnMehr");
-  const menu = el("mehrMenu");
-
-  const schliesse = (): void => {
-    menu.hidden = true;
-    knopf.setAttribute("aria-expanded", "false");
-  };
-
-  on(knopf, "click", (e) => {
-    e.stopPropagation();
-    const auf = menu.hidden;
-    menu.hidden = !auf;
-    knopf.setAttribute("aria-expanded", String(auf));
-  });
-  // Ein Klick irgendwo sonst schliesst. Der Klick im Menü selbst nicht,
-  // sonst schlösse es sich, bevor der Menüpunkt reagieren kann.
-  on(menu, "click", (e) => { e.stopPropagation(); });
-  on(document, "click", schliesse);
-  on(document, "keydown", (e) => {
-    if ((e as KeyboardEvent).key === "Escape") schliesse();
-  });
-
-  const punkt = (id: string, tue: () => void): void => {
-    const b = document.getElementById(id);
-    if (b) on(b, "click", () => { schliesse(); tue(); });
-  };
-
-  punkt("mnuEinstellungen", () => { void zeigeEinstellungen(neuZeichnen); });
-  punkt("mnuSicherung",     () => { void zeigeSicherung(neuZeichnen); });
-  punkt("mnuPapierkorb",    () => { void zeigePapierkorb(neuZeichnen); });
-  punkt("mnuZuordnen",      () => {
-    void zeigeZuordnung().then(async (n) => {
-      if (n) await S.refreshCases();
-      await pruefeZuordnung();
-      zeichneFallListe();
-    });
-  });
-
-  void pruefeZuordnung();
+  on(el("btnSettings"), "click", () => { void zeigeEinstellungen(neuZeichnen); });
 
   // Der Einklapp-Knopf sitzt jetzt am Fuss der Schiene. Angemeldet
   // wird er weiterhin hier, weil das Gerüst zu diesem Zeitpunkt
@@ -363,7 +314,6 @@ function zeigeAnsicht(neu: Ansicht): void {
   el("railFaelle").hidden = neu !== "faelle";
   el("railFortschritt").hidden = neu !== "fortschritt";
   el("railBausteine").hidden = neu !== "bausteine";
-  (el("btnNeuerFall") as HTMLElement).hidden = neu !== "faelle";
 
   if (neu === "fortschritt") zeichneFortschritt();
   if (neu === "bausteine") void zeichneBausteine();
@@ -405,22 +355,7 @@ function bindeFensterknoepfe(): void {
   });
 }
 
-/**
- * Blendet den Menüpunkt für die Zuordnung ein, solange Berichte ohne
- * Patientin dastehen — und blendet ihn wieder aus, wenn alle zugeordnet
- * sind. So steht im Menü nie eine Zeile, die nichts zu tun hätte.
- */
-async function pruefeZuordnung(): Promise<void> {
-  const punkt = document.getElementById("mnuZuordnen");
-  const text = document.getElementById("mnuZuordnenText");
-  const trenner = document.querySelector<HTMLElement>("#mehrMenu .menu-sep");
-  if (!punkt || !text) return;
 
-  const n = await offeneZuordnungen();
-  punkt.hidden = n === 0;
-  if (trenner) trenner.hidden = n === 0;
-  text.textContent = n === 1 ? "1 Bericht zuordnen" : `${n} Berichte zuordnen`;
-}
 
 function toggleRail(): void {
   const rail = el("rail");
@@ -486,14 +421,13 @@ function zeichneFallListe(): void {
   box.innerHTML = gruppen.map((g) => {
     const pid = g.patient?.id ?? "__ohne__";
     const auf = suche || S.state.offen.has(pid) || g.berichte.some((c) => c.id === S.state.activeId);
-    const mehrere = g.berichte.length > 1;
 
     const kopf = `
       <div class="pat-zeile ${S.state.patientAnsicht === pid ? "is-gewaehlt" : ""}">
         <button class="pat-item" data-pat="${esc(pid)}"
                 aria-expanded="${auf}"
                 ${g.patient ? "" : 'data-lose="ja"'}>
-          <span class="pat-caret ${mehrere ? "" : "ist-leer"}" aria-hidden="true">${icon.caret}</span>
+          <span class="pat-caret" aria-hidden="true">${icon.caret}</span>
           <span class="pat-name">${esc(g.label)}</span>
         </button>
         ${g.patient
@@ -708,7 +642,8 @@ async function zeichnePatientAnsicht(): Promise<void> {
 
   try {
     const daten = await ladePatient(pid);
-    el("workEyebrow").textContent = "Patient";
+    const geschlecht = (daten.patient.fields.f_geschlecht || "").trim().toLowerCase();
+    el("workEyebrow").textContent = geschlecht === "weiblich" ? "PATIENTIN" : "PATIENT";
     el("workTitel").textContent = daten.patient.fields.f_name?.trim() || "Ohne Namen";
     el("workInner").className = "work-inner";
     el("workInner").innerHTML = renderPatient(daten);
