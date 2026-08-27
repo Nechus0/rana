@@ -37,7 +37,8 @@ import {
   EIGENE_VERSION, zeigeEinstellungen, zeigePapierkorb, zeigeSicherung,
 } from "./views/settings";
 import { offeneZuordnungen, zeigeZuordnung } from "./views/patients";
-import { confirmDialog, el, esc, icon, on, qsa, relDate, toast } from "./ui/kit";
+import { bindePatient, ladePatient, renderPatient } from "./views/patientview";
+import { confirmDialog, el, esc, icon, marke, on, qsa, relDate, toast } from "./ui/kit";
 
 // ===============================================================
 // Start
@@ -97,19 +98,12 @@ function zeichneGeruest(): void {
         <button class="topbar-rail-toggle" id="btnRailToggle"
                 title="Seitenschiene ein-/ausklappen" aria-label="Seitenschiene ein-/ausklappen"
                 aria-expanded="true">${icon.panelL}</button>
-        <span class="brand-name">Rana</span>
-        <span class="brand-version">arvalis</span>
-        <span class="brand-ver-num">${esc(EIGENE_VERSION)}</span>
-
-        <!-- Was in der Seitenschiene steht. Die Übersicht sass bis
-             2.1 in einer eigenen Spalte rechts; sie nahm dauerhaft
-             Platz weg, obwohl man sie nur ab und zu braucht. Jetzt
-             teilt sie sich die linke Schiene mit der Fallliste. -->
-        <div class="segtabs" id="railTabs" role="tablist" aria-label="Ansicht der Seitenschiene">
-          <button role="tab" data-ansicht="faelle" aria-selected="true">Patienten</button>
-          <button role="tab" data-ansicht="fortschritt" aria-selected="false">Fortschritt</button>
-          <button role="tab" data-ansicht="bausteine" aria-selected="false">Textbausteine</button>
-        </div>
+        <span class="brand" data-tauri-drag-region>
+          ${marke}
+          <span class="brand-name">Rana</span>
+          <span class="brand-version">arvalis</span>
+          <span class="brand-ver-num">${esc(EIGENE_VERSION)}</span>
+        </span>
       </div>
       <div class="topbar-center" data-tauri-drag-region>
         <span class="topbar-patient" id="topbarPatient" data-tauri-drag-region></span>
@@ -180,31 +174,36 @@ function zeichneGeruest(): void {
 function railHtml(): string {
   return `
     <nav class="rail" id="rail" aria-label="Seitenschiene" data-ansicht="faelle">
-      <div class="rail-body" id="railFaelle" role="tabpanel">
-        <div class="rail-head">
-          <span class="record">Fälle</span>
-          <span class="record-num small muted" id="fallZaehler"></span>
-        </div>
+      <!-- Der Umschalter sitzt in der Schiene, nicht in der Fensterleiste.
+           Dort oben klemmte er zwischen Marke und Patientennamen in
+           vierundvierzig Pixel Höhe. Hier steht er über dem, was er
+           schaltet, hat die volle Breite und trägt die Beschriftungen
+           ohne Gedränge. -->
+      <div class="rail-tabs" id="railTabs" role="tablist" aria-label="Ansicht der Seitenschiene">
+        <button role="tab" data-ansicht="faelle" aria-selected="true">Patienten</button>
+        <button role="tab" data-ansicht="fortschritt" aria-selected="false">Fortschritt</button>
+        <button role="tab" data-ansicht="bausteine" aria-selected="false">Bausteine</button>
+      </div>
 
+      <div class="rail-body" id="railFaelle" role="tabpanel">
         <div class="case-search">
           ${icon.search}
-          <input type="search" id="fallSuche" placeholder="Suchen …" aria-label="Fälle durchsuchen">
+          <input type="search" id="fallSuche" placeholder="Patient suchen …"
+                 aria-label="Patienten durchsuchen">
         </div>
 
-        <!-- Zwei knappe Auswahlfelder. Die Beschriftungen sind kurz
-             gehalten: in einer 280 Pixel breiten Schiene bleibt je
-             Feld kaum mehr als ein Wort, und ein abgeschnittener Text
-             unter dem Pfeil sieht nach Fehler aus. -->
         <div class="rail-filters">
-          <select id="fallSort" class="rail-select" aria-label="Fälle ordnen nach">
+          <select id="fallSort" class="rail-select" aria-label="Patienten ordnen nach">
             ${(Object.keys(S.SORT_NAMEN) as S.SortSchluessel[]).map((k) => `
               <option value="${k}" ${S.state.sortierung === k ? "selected" : ""}>${esc(S.SORT_KURZ[k])}</option>`).join("")}
           </select>
-          <select id="fallFilter" class="rail-select" aria-label="Fälle filtern">
+          <select id="fallFilter" class="rail-select" aria-label="Patienten filtern">
             ${(Object.keys(S.FILTER_NAMEN) as S.FilterSchluessel[]).map((k) => `
               <option value="${k}" ${S.state.filter === k ? "selected" : ""}>${esc(S.FILTER_NAMEN[k])}</option>`).join("")}
           </select>
         </div>
+
+        <div class="rail-zaehler"><span id="fallZaehler"></span></div>
 
         <ul class="case-list" id="fallListe" role="list"></ul>
       </div>
@@ -426,14 +425,19 @@ function zeichneFallListe(): void {
   const gruppen = S.sichtbareGruppen();
   const cases = gruppen.flatMap((g) => g.berichte);
 
-  // Trefferzeile: bei aktiver Suche sieht man, wie viele von wie vielen
-  // übrig sind — sonst rät man, ob die Liste vollständig ist.
+  // Die Zeile sagt, was die Liste zeigt — in Worten, nicht als nackte
+  // Zahl. Bei aktiver Suche oder gesetztem Filter steht dabei, wovon.
   const zaehler = document.getElementById("fallZaehler");
   if (zaehler) {
-    const gesamt = S.state.cases.length;
-    zaehler.textContent = S.state.query.trim()
-      ? `${cases.length} von ${gesamt}`
-      : (gesamt ? String(gesamt) : "");
+    const p = gruppen.filter((g) => g.patient).length;
+    const a = cases.length;
+    const eingeschraenkt = !!S.state.query.trim() || S.state.filter !== "alle";
+    const teil = `${p} ${p === 1 ? "Patient" : "Patienten"} · ${a} ${a === 1 ? "Antrag" : "Anträge"}`;
+    zaehler.textContent = a === 0
+      ? (eingeschraenkt ? "nichts gefunden" : "")
+      : eingeschraenkt
+        ? `${teil} von ${S.state.patients.length}`
+        : teil;
   }
 
   if (!cases.length) {
@@ -460,29 +464,25 @@ function zeichneFallListe(): void {
   // was gefunden wurde.
   const suche = !!S.state.query.trim();
 
+  // Zwei Ebenen ohne Zierrat. Die Zahl hinter dem Namen ist entfallen:
+  // sie stand da, ohne etwas zu beantworten — bei elf Patientinnen mit
+  // je einer „1" war sie nur Rauschen. Wie viele Anträge es sind, sagt
+  // jetzt die Übersicht im Arbeitsbereich, und wer aufklappt, sieht sie
+  // ohnehin einzeln. Nur ab zwei Anträgen steht noch ein Hinweis da.
   box.innerHTML = gruppen.map((g) => {
     const pid = g.patient?.id ?? "__ohne__";
     const auf = suche || S.state.offen.has(pid) || g.berichte.some((c) => c.id === S.state.activeId);
-    const zahl = g.patient ? g.patient.report_count : g.berichte.length;
+    const mehrere = g.berichte.length > 1;
 
-    // Der Folgeantrag sitzt an der Person, nicht am Bericht. Das ist
-    // der häufigste Vorgang überhaupt und kostet so einen Klick
-    // statt vier.
     const kopf = `
-      <div class="pat-zeile">
+      <div class="pat-zeile ${S.state.patientAnsicht === pid ? "is-gewaehlt" : ""}">
         <button class="pat-item" data-pat="${esc(pid)}"
                 aria-expanded="${auf}"
                 ${g.patient ? "" : 'data-lose="ja"'}>
-          <span class="pat-caret" aria-hidden="true">${icon.caret}</span>
+          <span class="pat-caret ${mehrere ? "" : "ist-leer"}" aria-hidden="true">${icon.caret}</span>
           <span class="pat-name">${esc(g.label)}</span>
-          <span class="pat-zahl">${zahl}</span>
+          ${mehrere ? `<span class="pat-zahl">${g.berichte.length} Anträge</span>` : ""}
         </button>
-        ${g.patient && g.patient.report_count
-          ? `<button class="pat-plus" data-folge="${esc(g.patient.id)}"
-                     title="Nächsten Fortführungsantrag für ${esc(g.label)} anlegen"
-                     aria-label="Nächsten Fortführungsantrag für ${esc(g.label)} anlegen"
-                     >${icon.plus}</button>`
-          : ""}
         ${g.patient
           ? `<button class="pat-weg" data-patweg="${esc(g.patient.id)}"
                      data-patname="${esc(g.label)}"
@@ -538,27 +538,18 @@ function zeichneFallListe(): void {
         return;
       }
 
-      const f = (e.target as HTMLElement).closest<HTMLElement>("[data-folge]");
-      if (f) {
-        void S.folgeAntragFuerPatientin(f.dataset.folge!).then((id) => {
-          if (id) { neuZeichnen(); toast("Nächster Fortführungsantrag angelegt.", "ok", 2500); }
-        }).catch((err) => toast(api.errorText(err), "danger"));
-        return;
-      }
       const p = (e.target as HTMLElement).closest<HTMLElement>("[data-pat]");
       if (p) {
-        // Die meisten Patientinnen haben genau einen Antrag. Für sie
-        // wäre Aufklappen und dann Klicken ein Klick zu viel — und ein
-        // Aufklappen, das genau eine Zeile zeigt, sieht nach nichts
-        // aus. Deshalb: ein Antrag öffnet sich sofort, mehrere klappen
-        // auf.
+        // Ein Klick auf die Patientin zeigt ihre Übersicht — dort
+        // stehen ihre Anträge mit Datum, und dort legt man den nächsten
+        // an. Wer auf das Dreieck klickt, will nur auf- und zuklappen.
         const pid = p.dataset.pat!;
-        const gruppe = S.sichtbareGruppen().find((g) => (g.patient?.id ?? "__ohne__") === pid);
-        if (gruppe && gruppe.berichte.length === 1) {
-          void oeffneFall(gruppe.berichte[0].id);
-        } else {
+        const aufsDreieck = !!(e.target as HTMLElement).closest(".pat-caret");
+        if (aufsDreieck) {
           S.klappe(pid);
           zeichneFallListe();
+        } else {
+          void zeigePatient(pid);
         }
         return;
       }
@@ -638,10 +629,70 @@ async function neuerFall(): Promise<void> {
  * gewollt zu haben, und musste ihn wieder heraussuchen.
  */
 async function oeffneFall(id: string): Promise<void> {
-  if (id === S.state.activeId) return;
+  S.state.patientAnsicht = null;
+  if (id === S.state.activeId) { zeichneFallListe(); zeichneSchritt(); return; }
   await S.ladeFall(id);
   zeichneFallListe();
   zeichneSchritt();
+}
+
+/**
+ * Zeigt die Übersicht einer Patientin im Arbeitsbereich.
+ *
+ * Der offene Bericht bleibt dabei offen — man kehrt mit einem Klick auf
+ * seinen Antrag dorthin zurück, ohne etwas zu verlieren.
+ */
+async function zeigePatient(patientId: string): Promise<void> {
+  if (patientId === "__ohne__") {
+    // Für die zuordnungslosen Berichte gibt es keine Patientin, die man
+    // zeigen könnte — dort hilft nur das Aufklappen.
+    S.klappe(patientId);
+    zeichneFallListe();
+    return;
+  }
+
+  await S.speichereJetzt();
+  S.state.patientAnsicht = patientId;
+  S.state.offen.add(patientId);
+  zeichneFallListe();
+  await zeichnePatientAnsicht();
+}
+
+async function zeichnePatientAnsicht(): Promise<void> {
+  const pid = S.state.patientAnsicht;
+  if (!pid) return;
+
+  const stepbar = document.querySelector(".stepbar") as HTMLElement | null;
+  if (stepbar) stepbar.style.display = "none";
+
+  try {
+    const daten = await ladePatient(pid);
+    el("workEyebrow").textContent = "Patientin";
+    el("workTitel").textContent = daten.patient.fields.f_name?.trim() || "Ohne Namen";
+    el("workInner").className = "work-inner";
+    el("workInner").innerHTML = renderPatient(daten);
+
+    bindePatient(daten, {
+      oeffnen: (caseId) => { void oeffneFall(caseId); },
+      folgeantrag: (patId) => {
+        void S.folgeAntragFuerPatientin(patId).then((id) => {
+          if (!id) return;
+          S.state.patientAnsicht = null;
+          neuZeichnen();
+          toast("Nächster Fortführungsantrag angelegt.", "ok", 2500);
+        }).catch((err) => toast(api.errorText(err), "danger"));
+      },
+      neuZeichnen: () => {
+        if (S.state.patientAnsicht) void zeichnePatientAnsicht();
+        else neuZeichnen();
+        zeichneFallListe();
+      },
+    });
+  } catch (e) {
+    toast(api.errorText(e), "danger");
+    S.state.patientAnsicht = null;
+    zeichneSchritt();
+  }
 }
 
 async function naechstenFallOeffnen(): Promise<void> {
@@ -667,6 +718,11 @@ function geheZu(n: number): void {
 const neuZeichnen = () => { zeichneSchritt(); zeichneFallListe(); };
 
 function zeichneSchritt(): void {
+  // Steht die Übersicht einer Patientin im Arbeitsbereich, hat sie
+  // Vorrang. Sonst überschriebe jede Zustandsänderung sie mit dem
+  // gerade offenen Schritt.
+  if (S.state.patientAnsicht) { void zeichnePatientAnsicht(); return; }
+
   const stepbar = document.querySelector(".stepbar") as HTMLElement | null;
 
   if (!S.state.activeId) {

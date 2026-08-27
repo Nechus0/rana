@@ -21,12 +21,17 @@
   z-index: 40;
 }
 
+/* Mitte, nicht Schriftlinie. An der Schriftlinie ausgerichtet sass
+   der Knopf für die Seitenschiene deutlich zu hoch — er hat ja keine
+   Schrift, an der er sich ausrichten könnte. Die drei Wörter der
+   Marke teilen sich ihre Schriftlinie eine Ebene tiefer. */
 .topbar-left {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--s2);
   flex-shrink: 0;
 }
+.brand { display: flex; align-items: baseline; gap: var(--s2); }
 
 .topbar-left .brand-name {
   font-family: var(--face-display);
@@ -107,42 +112,69 @@
 }
 .save-dot.unsaved { background: var(--amber); }
 
-/* ---- Segmentierte Reiter -----------------------------------
-   Sie bestimmen, was in der Seitenschiene steht. Die Form ist vom
-   PDF Extractor übernommen: eine eingetiefte Spur, darin ein
-   heller Reiter für die aktive Ansicht. Das trägt gut auf engem
-   Raum und liest sich als eine Gruppe, nicht als drei Knöpfe.
+/* Das Zeichen von Rana in der Fensterleiste. */
+.marke { width: 18px; height: 18px; flex: none; align-self: center; }
+
+/* ---- Die Reiter der Seitenschiene --------------------------
+   Sie sassen zunächst in der Fensterleiste. Dort klemmten sie
+   zwischen Marke und Patientennamen in vierundvierzig Pixel Höhe
+   und mussten sich den Platz mit allem anderen teilen.
+
+   Hier stehen sie über dem, was sie schalten, nehmen die volle
+   Breite der Schiene und tragen als Unterstreichung statt als
+   Kachel: das ist ruhiger und braucht keine eingetiefte Spur,
+   die in einer ohnehin eingetieften Spalte doppelt wirkt.
    ------------------------------------------------------------ */
-.segtabs {
+.rail-tabs {
   display: flex;
-  gap: 2px;
-  background: var(--sphagnum-deep);
-  padding: 3px;
-  border-radius: var(--r-lg);
-  margin-left: var(--s3);
   flex: none;
+  border-bottom: 1px solid var(--line);
+  padding: 0 var(--s2);
+  gap: 2px;
 }
 
-.segtabs button {
+.rail-tabs button {
+  flex: 1 1 auto;
+  min-width: 0;
   border: 0;
   background: transparent;
-  padding: 0 var(--s3);
-  height: 26px;
-  border-radius: var(--r);
+  padding: 0 4px;
+  height: 38px;
   font: inherit;
   font-size: var(--t-xs);
   font-weight: 500;
   color: var(--reed);
   cursor: pointer;
   white-space: nowrap;
-  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  position: relative;
+  transition: color var(--dur-fast) var(--ease);
 }
-.segtabs button:hover { color: var(--peat); }
-.segtabs button[aria-selected="true"] {
-  background: var(--paper);
+.rail-tabs button:hover { color: var(--peat); }
+
+.rail-tabs button::after {
+  content: "";
+  position: absolute;
+  left: 4px; right: 4px; bottom: -1px;
+  height: 2px;
+  border-radius: 1px;
+  background: transparent;
+  transition: background var(--dur-fast) var(--ease);
+}
+.rail-tabs button[aria-selected="true"] {
   color: var(--peat);
   font-weight: 600;
-  box-shadow: 0 1px 2px rgba(35, 40, 42, .06);
+}
+.rail-tabs button[aria-selected="true"]::after { background: var(--arvalis); }
+
+/* Die Trefferzeile steht unter den Auswahlfeldern, klein und ruhig. */
+.rail-zaehler {
+  padding: 0 var(--s3) var(--s2);
+  font-family: var(--face-record);
+  font-size: var(--t-2xs);
+  color: var(--reed-faint);
+  min-height: 14px;
 }
 
 
@@ -208,6 +240,83 @@
   gap: var(--s5);
 }
 .rail-leer { padding: var(--s4) var(--s2); }
+
+/* ============================================================
+   Die Übersicht einer Patientin
+   ------------------------------------------------------------
+   Sie steht im Arbeitsbereich, nicht in einem Dialog: was hier
+   getan wird — einen Antrag anlegen, einen löschen — betrifft die
+   Arbeit selbst und soll nicht über ihr schweben.
+   ============================================================ */
+
+.stammblatt {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--s4) var(--s5);
+  margin: 0;
+}
+.stamm-feld dt {
+  font-family: var(--face-ui);
+  font-size: var(--t-xs);
+  font-weight: 650;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--reed);
+  margin-bottom: 3px;
+}
+.stamm-feld dd {
+  margin: 0;
+  font-size: var(--t-base);
+  color: var(--peat);
+}
+
+.antragstabelle {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--t-sm);
+}
+.antragstabelle th {
+  text-align: left;
+  font-family: var(--face-ui);
+  font-size: var(--t-2xs);
+  font-weight: 650;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--reed-faint);
+  padding: 0 var(--s3) 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+.antragstabelle td {
+  padding: 9px var(--s3) 9px 0;
+  border-bottom: 1px solid var(--line-faint, var(--line));
+  color: var(--peat-soft);
+  vertical-align: middle;
+}
+.antragstabelle tr:last-child td { border-bottom: 0; }
+.antragstabelle tr.ist-offen td { background: var(--arvalis-wash); }
+
+.antragstabelle td.nr {
+  font-family: var(--face-record);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--peat);
+  width: 1%;
+  white-space: nowrap;
+}
+.antragstabelle td.handgriffe {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+  padding-right: 0;
+}
+.antragstabelle td.handgriffe .btn { margin-left: 4px; }
+
+.ist-fertig {
+  display: inline-flex; align-items: center; gap: 4px;
+  color: var(--moss);
+}
+.ist-fertig svg { width: 13px; height: 13px; }
+.ist-offen-text { color: var(--amber); }
 
 /* ---- Textbausteine ----------------------------------------- */
 .baustein-liste { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
@@ -537,20 +646,29 @@
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
-/* Die Zahl der Anträge. Ruhig gesetzt — sie ist eine Angabe,
-   keine Meldung. */
+/* Steht nur noch da, wo es etwas zu sagen gibt: ab zwei Anträgen.
+   Als Wort, nicht als Zahl im Kreis — „3 Anträge" beantwortet eine
+   Frage, eine nackte „1" hinter jedem Namen war nur Rauschen. */
 .pat-zahl {
   flex: none;
   font-family: var(--face-record);
   font-size: var(--t-2xs);
   font-variant-numeric: tabular-nums;
   color: var(--reed-faint);
-  background: var(--paper);
-  border-radius: 999px;
-  min-width: 18px;
-  padding: 1px 6px;
-  text-align: center;
+  white-space: nowrap;
 }
+
+/* Die gerade betrachtete Patientin. */
+.pat-zeile.is-gewaehlt .pat-item {
+  background: var(--arvalis-wash);
+  border-color: var(--arvalis-line);
+  color: var(--peat);
+}
+
+/* Wer nur einen Antrag hat, hat nichts aufzuklappen — das Dreieck
+   bleibt als Platzhalter stehen, damit die Namen in einer Flucht
+   stehen, wird aber unsichtbar. */
+.pat-caret.ist-leer { visibility: hidden; }
 
 /* Berichte ohne Patientin: erkennbar, aber nicht alarmierend. */
 .pat-item[data-lose] .pat-name { color: var(--reed); font-weight: 500; font-style: italic; }

@@ -98,6 +98,19 @@ export const icon = {
   gross:   svg('<path d="M8 4H4v4M12 4h4v4M8 16H4v-4M12 16h4v-4"/>'),
 };
 
+/**
+ * Das Zeichen von Rana — derselbe Ring mit Punkt wie das Programmsymbol.
+ *
+ * Bewusst als eingebettetes SVG und nicht als Bilddatei: es sitzt in
+ * der Fensterleiste, muss auf jeder Bildschirmauflösung scharf sein und
+ * darf beim Start keinen zweiten Ladevorgang auslösen. Die Farben
+ * stehen fest und folgen nicht der Textfarbe — es ist eine Marke, kein
+ * Bedienzeichen.
+ */
+export const marke = `<svg class="marke" viewBox="0 0 24 24" aria-hidden="true">`
+  + `<circle cx="12" cy="12" r="9" fill="none" stroke="#3a6faf" stroke-width="2"/>`
+  + `<circle cx="12" cy="12" r="4.2" fill="#4e93e0"/></svg>`;
+
 // ---------------------------------------------------------------
 // Meldungen
 // ---------------------------------------------------------------

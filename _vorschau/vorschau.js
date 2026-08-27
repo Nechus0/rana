@@ -11,12 +11,14 @@ const icon = {
   merge:  svg('<path d="M5 4v4a4 4 0 0 0 4 4h6"/><path d="M5 16v-2"/><path d="M12.5 9.5L15 12l-2.5 2.5"/>'),
   dots:   svg('<circle cx="10" cy="5" r="1.3" fill="currentColor" stroke="none"/><circle cx="10" cy="10" r="1.3" fill="currentColor" stroke="none"/><circle cx="10" cy="15" r="1.3" fill="currentColor" stroke="none"/>'),
   panelL: svg('<path d="M3 4h5v12H3zM10 4h7M10 8h7M10 12h5"/>'),
-  panelR: svg('<path d="M12 4h5v12h-5zM3 4h7M3 8h7M3 12h5"/>'),
   gross:  svg('<path d="M8 4H4v4M12 4h4v4M8 16H4v-4M12 16h4v-4"/>'),
   winMin:   svg('<path d="M5 10h10"/>'),
   winMax:   svg('<rect x="5.5" y="5.5" width="9" height="9" rx="1"/>'),
   winClose: svg('<path d="M5.5 5.5l9 9M14.5 5.5l-9 9"/>'),
 };
+const marke = `<svg class="marke" viewBox="0 0 24 24" aria-hidden="true">`
+  + `<circle cx="12" cy="12" r="9" fill="none" stroke="#3a6faf" stroke-width="2"/>`
+  + `<circle cx="12" cy="12" r="4.2" fill="#4e93e0"/></svg>`;
 
 const patientinnen = [
   ["Alexandra Inhoff", 1], ["Bettina Gudd", 1], ["Britta Uhden", 2],
@@ -25,9 +27,6 @@ const patientinnen = [
   ["Simone Müller-Mühlenhardt", 1], ["Vißer, Claudia", 3],
 ];
 
-const SORT_KURZ = ["Zuletzt", "Name", "Angelegt", "Antrag"];
-const FILTER = ["Alle", "Ohne Bericht", "Mit Bericht"];
-
 const fallListe = patientinnen.map(([name, n]) => {
   const auf = name === "Vißer, Claudia";
   const kinder = auf ? [3, 2, 1].map((nr) => `
@@ -35,22 +34,21 @@ const fallListe = patientinnen.map(([name, n]) => {
       <button class="case-item" aria-current="${nr === 3}">
         <span class="case-item-text">
           <span class="case-item-name">${nr}. Fortführungsantrag</span>
-          <span class="case-item-meta">V36-025825A09.10.1962</span>
+          <span class="case-item-meta">vor 3 Tagen</span>
         </span>
         ${nr === 1 ? `<span class="case-item-fertig">${icon.check}</span>` : ""}
       </button>
-      <button class="case-weg" title="In den Papierkorb">${icon.close}</button>
+      <button class="case-weg">${icon.close}</button>
     </li>`).join("") : "";
   return `
     <li class="pat-gruppe">
-      <div class="pat-zeile">
+      <div class="pat-zeile ${auf ? "is-gewaehlt" : ""}">
         <button class="pat-item" aria-expanded="${auf}">
-          <span class="pat-caret">${icon.caret}</span>
+          <span class="pat-caret ${n > 1 ? "" : "ist-leer"}">${icon.caret}</span>
           <span class="pat-name">${name}</span>
-          <span class="pat-zahl">${n}</span>
+          ${n > 1 ? `<span class="pat-zahl">${n} Anträge</span>` : ""}
         </button>
-        <button class="pat-plus" title="Folgeantrag">${icon.plus}</button>
-        <button class="pat-weg" title="In den Papierkorb">${icon.close}</button>
+        <button class="pat-weg">${icon.close}</button>
       </div>
       <ul class="case-sub" role="list">${kinder}</ul>
     </li>`;
@@ -63,33 +61,27 @@ const luecken = [
   ["Psychischer Befund", 3], ["Prognose", 3],
 ];
 
+const antraege = [
+  [3, "vor 3 Tagen", "heute", false],
+  [2, "vor 8 Monaten", "vor 8 Monaten", true],
+  [1, "vor 2 Jahren", "vor 2 Jahren", true],
+];
+
 document.getElementById("app").innerHTML = `
 <header class="topbar">
   <div class="topbar-left">
     <button class="topbar-rail-toggle" aria-expanded="true">${icon.panelL}</button>
-    <span class="brand-name">Rana</span>
-    <span class="brand-version">arvalis</span>
-    <span class="brand-ver-num">2.2.0</span>
-    <div class="segtabs" role="tablist">
-      <button role="tab" aria-selected="true">Patienten</button>
-      <button role="tab" aria-selected="false">Fortschritt</button>
-      <button role="tab" aria-selected="false">Textbausteine</button>
-    </div>
+    <span class="brand">
+      ${marke}
+      <span class="brand-name">Rana</span>
+      <span class="brand-version">arvalis</span>
+      <span class="brand-ver-num">2.3.0</span>
+    </span>
   </div>
   <div class="topbar-center"><span class="topbar-patient">Vißer, Claudia</span></div>
   <div class="topbar-right">
     <span class="save-indicator"><span class="save-dot"></span><span class="save-text">Gespeichert</span></span>
-    <div class="menuwrap">
-      <button class="btn btn-sm btn-quiet btn-icon">${icon.dots}</button>
-      <div class="menu" role="menu" hidden>
-        <button class="menu-item">${icon.gear}<span>Einstellungen</span></button>
-        <button class="menu-item">${icon.save}<span>Sicherung</span></button>
-        <button class="menu-item">${icon.trash}<span>Papierkorb</span></button>
-        <div class="menu-sep"></div>
-        <button class="menu-item">${icon.merge}<span>3 Berichte zuordnen</span></button>
-      </div>
-    </div>
-    <button class="topbar-ctx-toggle" aria-expanded="true">${icon.panelR}</button>
+    <div class="menuwrap"><button class="btn btn-sm btn-quiet btn-icon">${icon.dots}</button></div>
     <div class="win-ctrls">
       <button class="win-ctrl">${icon.winMin}</button>
       <button class="win-ctrl">${icon.winMax}</button>
@@ -100,21 +92,25 @@ document.getElementById("app").innerHTML = `
 
 <div class="shell">
   <nav class="rail">
-    <div class="rail-body">
-      <div class="rail-head">
-        <span class="record">Fälle</span>
-        <span class="record-num small muted">13</span>
-      </div>
+    <div class="rail-tabs" role="tablist">
+      <button role="tab" aria-selected="true">Patienten</button>
+      <button role="tab" aria-selected="false">Fortschritt</button>
+      <button role="tab" aria-selected="false">Bausteine</button>
+    </div>
+
+    <div class="rail-body" id="railFaelle">
       <div class="case-search">
         ${icon.search}
-        <input type="search" placeholder="Suchen …">
+        <input type="search" placeholder="Patient suchen …">
       </div>
       <div class="rail-filters">
-        <select class="rail-select">${SORT_KURZ.map((v) => `<option>${v}</option>`).join("")}</select>
-        <select class="rail-select">${FILTER.map((v) => `<option>${v}</option>`).join("")}</select>
+        <select class="rail-select">${["Zuletzt","Name","Angelegt","Anträge"].map((v) => `<option>${v}</option>`).join("")}</select>
+        <select class="rail-select">${["Alle","Offene","Erledigte"].map((v) => `<option>${v}</option>`).join("")}</select>
       </div>
+      <div class="rail-zaehler"><span>11 Patienten · 15 Anträge</span></div>
       <ul class="case-list">${fallListe}</ul>
     </div>
+
     <div class="rail-foot">
       <button class="btn btn-sm btn-primary">${icon.plus} Neue Patientin</button>
     </div>
@@ -122,65 +118,68 @@ document.getElementById("app").innerHTML = `
 
   <main class="work">
     <header class="work-head">
-      <nav class="stepbar" role="tablist">
-        ${SCHRITTE.map((s, i) => `
-          <button class="stepbar-step ${i === 0 ? "is-current" : ""} ${i === 2 ? "has-gap" : ""}"
-                  role="tab" aria-selected="${i === 0}">
-            <span class="stepbar-node">${i + 1}</span>
-            <span class="stepbar-label">${s}</span>
-            <span class="stepbar-flag"></span>
-          </button>`).join("")}
-      </nav>
+      <nav class="stepbar" role="tablist" style="display:none"></nav>
       <div class="work-head-titel">
         <div class="work-title">
-          <span class="work-eyebrow">Schritt 1 von 5</span>
-          <h2>Fall-Stammdaten</h2>
+          <span class="work-eyebrow">Patientin</span>
+          <h2>Vißer, Claudia</h2>
         </div>
       </div>
     </header>
     <div class="work-body">
       <div class="work-inner">
         <section class="group">
-          <div class="group-head"><span class="group-title">Textfeld mit Vergrösserungsknopf</span></div>
-          <div class="field">
-            <label for="v_verlauf" style="align-items:center">
-              Behandlungsverlauf
-              <span class="spacer"></span>
-              <button class="btn btn-sm btn-quiet btn-icon" title="Feld gross öffnen">${icon.gross}</button>
-              <button class="btn btn-sm btn-quiet" type="button">Bausteine</button>
-            </label>
-            <textarea id="v_verlauf" placeholder="Verlauf …"></textarea>
-            <div class="field-fuss">
-              <span class="field-balken" data-stand="kurz"><i></i></span>
-              <span class="field-zaehler ist-kurz">0 Zeichen · Ziel 600–1400</span>
-            </div>
-          </div>
+          <div class="group-head"><span class="group-title">Vißer, Claudia</span></div>
+          <dl class="stammblatt">
+            <div class="stamm-feld"><dt>Chiffre</dt><dd>V36-025825A09.10.1962</dd></div>
+            <div class="stamm-feld"><dt>Geburtsdatum</dt><dd>09.10.1962</dd></div>
+            <div class="stamm-feld"><dt>Kostenträger</dt><dd>Beihilfe</dd></div>
+            <div class="stamm-feld"><dt>Therapiebeginn</dt><dd>14.03.2023</dd></div>
+            <div class="stamm-feld"><dt>Angelegt</dt><dd>vor 2 Jahren</dd></div>
+          </dl>
         </section>
 
         <section class="group">
-          <div class="group-head"><span class="group-title">Praxis und Behandler:in — Feldbreiten wie im Einstellungsdialog</span></div>
-          <div class="feldsatz">
-            <div class="feldzeile">
-              <div class="feld-schmal"><div class="field"><label>Titel</label><input value="Dr. med."></div></div>
-              <div class="feld-weit"><div class="field"><label>Name</label><input value="Anja Roesick-Schulte"></div></div>
-            </div>
-            <div class="field"><label>Funktion</label><input value="Ärztliche Psychotherapeutin"></div>
-            <div class="field"><label>Strasse und Hausnummer</label><input value="Musterstrasse 12"></div>
-            <div class="feldzeile">
-              <div class="feld-schmal"><div class="field"><label>PLZ</label><input value="26384"></div></div>
-              <div class="feld-weit"><div class="field"><label>Ort</label><input value="Wilhelmshaven"></div></div>
-            </div>
-            <div class="feldzeile">
-              <div class="feld-weit"><div class="field"><label>Telefon</label><input value="04421 000000"></div></div>
-              <div class="feld-weit"><div class="field"><label>E-Mail</label><input value="praxis@example.de"></div></div>
-            </div>
+          <div class="group-head">
+            <span class="group-title">Anträge</span>
+            <span class="spacer"></span>
+            <button class="btn btn-sm btn-primary">${icon.plus} Nächster Fortführungsantrag</button>
           </div>
+          <table class="antragstabelle">
+            <thead><tr><th>Antrag</th><th>Angelegt</th><th>Zuletzt geändert</th><th>Bericht</th><th></th></tr></thead>
+            <tbody>
+              ${antraege.map(([nr, a, g, fertig]) => `
+                <tr ${nr === 3 ? 'class="ist-offen"' : ""}>
+                  <td class="nr">${nr}.</td>
+                  <td>${a}</td>
+                  <td>${g}</td>
+                  <td>${fertig ? `<span class="ist-fertig">${icon.check} formuliert</span>` : `<span class="ist-offen-text">offen</span>`}</td>
+                  <td class="handgriffe">
+                    <button class="btn btn-sm">Öffnen</button>
+                    <button class="btn btn-sm btn-quiet btn-icon">${icon.trash}</button>
+                  </td>
+                </tr>`).join("")}
+            </tbody>
+          </table>
+          <p class="hint" style="margin-top:var(--s3)">
+            Der nächste Antrag übernimmt die Stammdaten, zählt die laufende
+            Nummer hoch und rechnet das zuletzt beantragte Kontingent zum
+            bewilligten hinzu.
+          </p>
+        </section>
+
+        <section class="group">
+          <div class="group-head"><span class="group-title">Diese Patientin</span></div>
+          <p class="hint" style="margin-bottom:var(--s3)">
+            Alles landet im Papierkorb und bleibt dort dreissig Tage.
+          </p>
+          <button class="btn btn-danger">${icon.trash} Patientin in den Papierkorb</button>
         </section>
       </div>
     </div>
   </main>
 
-  <template id="tplBereiche">
+  <template id="tplFortschritt">
       <section class="ctx-block">
         <span class="record">Vollständigkeit</span>
         <div class="completeness">
@@ -189,20 +188,12 @@ document.getElementById("app").innerHTML = `
         </div>
         ${[[1, "Fall-Stammdaten"], [3, "Behandlungsverlauf"]].map(([nr, titel]) => `
           <div class="gap-gruppe">
-            <div class="gap-kopf">
-              <span class="gap-num">${nr}</span>
-              <span class="gap-schritt">${titel}</span>
-            </div>
+            <div class="gap-kopf"><span class="gap-num">${nr}</span><span class="gap-schritt">${titel}</span></div>
             <ul class="gap-list">
               ${luecken.filter(([, n]) => n === nr).map(([t]) => `<li><button class="gap-item">${t}</button></li>`).join("")}
             </ul>
           </div>`).join("")}
       </section>
-      <section class="ctx-block">
-        <span class="record">Dieser Fall</span>
-        <p class="hint">Chiffre V36-025825A09.10.1962<br>Zuletzt geändert gestern</p>
-      </section>
-
   </template>
 
   <template id="tplBausteine">
@@ -213,38 +204,27 @@ document.getElementById("app").innerHTML = `
           <button class="baustein">Im Berichtszeitraum kam es zu einer deutlichen Symptomreduktion.</button>
         </div>
       </section>
-      <section class="ctx-block">
-        <span class="record">Prognose</span>
-        <div class="baustein-liste">
-          <button class="baustein">Bei Fortführung der Behandlung ist eine weitere Stabilisierung zu erwarten.</button>
-        </div>
-      </section>
   </template>
 </div>`;
 
-// Die Bereiche in die Schiene hängen und die Reiter schalten lassen —
-// so verhält sich die Vorschau wie das Programm.
+// Die Bereiche einhängen und die Reiter schalten lassen.
 const rail = document.querySelector(".rail");
-const holen = (id) => document.getElementById(id).innerHTML;
-
-const fort = document.createElement("div");
-fort.className = "rail-body rail-scroll";
-fort.id = "railFortschritt";
-fort.hidden = true;
-fort.innerHTML = holen("tplBereiche");
-
-const baus = document.createElement("div");
-baus.className = "rail-body rail-scroll";
-baus.id = "railBausteine";
-baus.hidden = true;
-baus.innerHTML = holen("tplBausteine");
-
+const mach = (id, tpl) => {
+  const d = document.createElement("div");
+  d.className = "rail-body rail-scroll";
+  d.id = id;
+  d.hidden = true;
+  d.innerHTML = document.getElementById(tpl).innerHTML;
+  return d;
+};
+const fort = mach("railFortschritt", "tplFortschritt");
+const baus = mach("railBausteine", "tplBausteine");
 rail.querySelector(".rail-foot").before(fort, baus);
 
-const panes = { Patienten: rail.querySelector(".rail-body"), Fortschritt: fort, Textbausteine: baus };
-for (const b of document.querySelectorAll(".segtabs button")) {
+const panes = { Patienten: document.getElementById("railFaelle"), Fortschritt: fort, Bausteine: baus };
+for (const b of document.querySelectorAll(".rail-tabs button")) {
   b.addEventListener("click", () => {
-    for (const x of document.querySelectorAll(".segtabs button")) {
+    for (const x of document.querySelectorAll(".rail-tabs button")) {
       x.setAttribute("aria-selected", String(x === b));
     }
     const wahl = b.textContent.trim();

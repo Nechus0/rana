@@ -118,15 +118,24 @@ export const SORT_KURZ: Record<SortSchluessel, string> = {
   zuletzt:  "Zuletzt",
   name:     "Name",
   angelegt: "Angelegt",
-  nummer:   "Antrag",
+  nummer:   "Anträge",
 };
 
+/**
+ * Der Filter der Seitenschiene.
+ *
+ * Er wählt **Patienten** aus, nicht einzelne Anträge. Vorher blendete
+ * er einzelne Anträge aus — eine Patientin mit drei Anträgen zeigte
+ * dann nur einen, und es sah aus, als fehlten die anderen. Gefragt ist
+ * aber „wo habe ich noch etwas zu tun", und das ist eine Frage an die
+ * Person.
+ */
 export type FilterSchluessel = "alle" | "offen" | "fertig";
 
 export const FILTER_NAMEN: Record<FilterSchluessel, string> = {
   alle:   "Alle",
-  offen:  "Ohne Bericht",
-  fertig: "Mit Bericht",
+  offen:  "Offene",
+  fertig: "Erledigte",
 };
 
 const SORT_KEY = "rana-sortierung";
@@ -164,6 +173,14 @@ export interface State {
   patients: PatientSummary[];
   /** Zu welcher Patientin der offene Bericht gehört. */
   patientId: string | null;
+  /**
+   * Welche Patientin im Arbeitsbereich als Übersicht steht.
+   *
+   * Ist sie gesetzt, zeigt der Arbeitsbereich die Übersicht statt der
+   * fünf Schritte. Das ist eine eigene Ansicht, nicht ein anderer
+   * Schritt — deshalb ein eigenes Feld und nicht `step`.
+   */
+  patientAnsicht: string | null;
   /** Welche Patientinnen in der Liste aufgeklappt sind. */
   offen: Set<string>;
   activeId: string | null;
@@ -189,6 +206,7 @@ export const state: State = {
   cases: [],
   patients: [],
   patientId: null,
+  patientAnsicht: null,
   offen: new Set<string>(),
   activeId: null,
   fields: {},
@@ -339,15 +357,17 @@ export function sichtbareGruppen(): Gruppe[] {
   const passt = (heu: string): boolean =>
     woerter.every((w) => heu.toLowerCase().includes(w));
 
-  // Der Filter greift vor der Suche: er sagt, welche Anträge
-  // überhaupt zur Auswahl stehen.
-  const erlaubt = (c: CaseSummary): boolean =>
-    state.filter === "alle"
-    || (state.filter === "fertig" ? c.has_report : !c.has_report);
+  // „Offene" heisst: mindestens ein Antrag hat noch keinen Bericht.
+  // „Erledigte" heisst: alle sind formuliert.
+  const gruppePasst = (berichte: CaseSummary[]): boolean => {
+    if (state.filter === "alle") return true;
+    const offene = berichte.some((c) => !c.has_report);
+    return state.filter === "offen" ? offene : !offene;
+  };
 
   const nachPatient = new Map<string, CaseSummary[]>();
   const ohne: CaseSummary[] = [];
-  for (const c of state.cases.filter(erlaubt)) {
+  for (const c of state.cases) {
     if (c.patient_id) {
       const liste = nachPatient.get(c.patient_id) ?? [];
       liste.push(c);
@@ -372,6 +392,7 @@ export function sichtbareGruppen(): Gruppe[] {
     // stehenbleiben. Ohne Bericht entsteht sie ohnehin nie — angelegt
     // wird sie erst beim Speichern eines Berichts.
     if (!berichte.length) continue;
+    if (!gruppePasst(alle)) continue;
 
     gruppen.push({ patient: p, label: p.label, berichte: sortiereBerichte(berichte) });
   }
@@ -401,7 +422,11 @@ function vergleicheGruppen(a: Gruppe, b: Gruppe): number {
     case "angelegt":
       return ((a.patient?.created_at ?? 0) - (b.patient?.created_at ?? 0)) * r;
     case "nummer":
-      return ((a.patient?.hoechste_nr ?? 0) - (b.patient?.hoechste_nr ?? 0)) * r;
+      // Nach Zahl der Anträge: wer am längsten in Behandlung ist,
+      // steht oben. Bei gleicher Zahl nach Namen, sonst springt die
+      // Liste bei jedem Neuzeichnen.
+      return (a.berichte.length - b.berichte.length) * r
+        || a.label.localeCompare(b.label, "de", { sensitivity: "base" });
     default:
       return ((a.patient?.updated_at ?? 0) - (b.patient?.updated_at ?? 0)) * r;
   }
