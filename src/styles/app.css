@@ -58,20 +58,9 @@
    nimmt dort die gewöhnliche Knopfform an. Die Sonderregeln sind
    damit gegenstandslos. */
 
-.topbar-center {
-  flex: 1;
-  text-align: center;
-  min-width: 0;
-}
-.topbar-patient {
-  font-family: var(--face-ui);
-  font-size: var(--t-sm);
-  font-weight: 550;
-  color: var(--peat);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+/* Leer, und das ist der Zweck: die Mitte der Leiste ist reine
+   Ziehfläche. Hier stand der Name der Patientin. */
+.topbar-center { flex: 1; min-width: 0; }
 
 .topbar-right {
   display: flex;
@@ -515,13 +504,16 @@
 .case-sub li { display: flex; align-items: center; gap: 2px; }
 .case-sub .case-item { flex: 1 1 auto; min-width: 0; }
 
-/* ---- Das Menü oben rechts ----------------------------------- */
-.menuwrap { position: relative; }
+/* ---- Das Menü am Fuss der Schiene ---------------------------
+   Es sass in der Fensterleiste. Dort standen Befehle, die mit dem
+   Fenster nichts zu tun haben — Einstellungen, Sicherung,
+   Papierkorb. Sie gehören zur Anwendung, und die Anwendung wohnt
+   in der Schiene.
+   ------------------------------------------------------------ */
+.menuwrap { position: relative; flex: none; }
 
 .menu {
   position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
   min-width: 212px;
   background: var(--paper);
   border: 1px solid var(--line);
@@ -531,6 +523,10 @@
   z-index: 60;
 }
 .menu[hidden] { display: none; }
+
+/* Am unteren Rand klappt es nach oben auf, sonst stünde es ausserhalb
+   des Fensters. Waagerecht am Knopf ausgerichtet. */
+.menu-auf { bottom: calc(100% + 6px); left: 0; }
 
 .menu-item {
   width: 100%;
@@ -926,14 +922,23 @@
   align-items: flex-end;
   gap: var(--s4);
 }
-.work-title { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.work-title { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1 1 auto; }
 .work-eyebrow {
   font-family: var(--face-record);
   font-size: var(--t-xs);
   letter-spacing: var(--record-track);
   text-transform: uppercase;
   color: var(--reed);
+  /* Die Zeile trägt seit 2.3 auch den Namen und die Antragsnummer.
+     Bei langen Namen bricht sie nicht um, sondern kürzt — die
+     Überschrift darunter soll ihre Zeile behalten. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+/* Der Speicherstand steht am rechten Ende derselben Zeile, auf der
+   Grundlinie der Überschrift. */
+.work-head-titel .save-indicator { flex: none; align-self: flex-end; padding-bottom: 4px; }
 .work-head h2 { font-size: var(--t-xl); }
 
 .work-body {

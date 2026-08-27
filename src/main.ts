@@ -102,28 +102,14 @@ function zeichneGeruest(): void {
           <span class="brand-ver-num">${esc(EIGENE_VERSION)}</span>
         </span>
       </div>
-      <div class="topbar-center" data-tauri-drag-region>
-        <span class="topbar-patient" id="topbarPatient" data-tauri-drag-region></span>
-      </div>
+      <!-- Zwischen Marke und Fensterknöpfen steht nichts. Der Name der
+           Patientin, der Speicherstand und das Menü sassen hier und
+           gehören nicht hierher: das eine ist Zusammenhang der Arbeit,
+           das andere ihr Stand, das dritte ein Vorrat an Befehlen. Die
+           Fensterleiste beantwortet nur die Frage, welches Fenster das
+           ist — und wie man es schliesst. -->
+      <div class="topbar-center" data-tauri-drag-region></div>
       <div class="topbar-right">
-        <span class="save-indicator" id="saveIndicator">
-          <span class="save-dot"></span>
-          <span class="save-text">Gespeichert</span>
-        </span>
-        <div class="menuwrap">
-          <button class="btn btn-sm btn-quiet btn-icon" id="btnMehr"
-                  title="Menü" aria-label="Menü"
-                  aria-haspopup="menu" aria-expanded="false">${icon.dots}</button>
-          <div class="menu" id="mehrMenu" role="menu" hidden>
-            <button class="menu-item" role="menuitem" id="mnuEinstellungen">${icon.gear}<span>Einstellungen</span></button>
-            <button class="menu-item" role="menuitem" id="mnuSicherung">${icon.save}<span>Sicherung</span></button>
-            <button class="menu-item" role="menuitem" id="mnuPapierkorb">${icon.trash}<span>Papierkorb</span></button>
-            <div class="menu-sep"></div>
-            <button class="menu-item" role="menuitem" id="mnuZuordnen" hidden>
-              ${icon.merge}<span id="mnuZuordnenText">Berichte zuordnen</span>
-            </button>
-          </div>
-        </div>
         <div class="win-ctrls">
           <button class="win-ctrl" id="winMin" title="Minimieren" aria-label="Minimieren">${icon.winMin}</button>
           <button class="win-ctrl" id="winMax" title="Maximieren" aria-label="Maximieren">${icon.winMax}</button>
@@ -144,12 +130,19 @@ function zeichneGeruest(): void {
                 <span class="stepbar-flag" aria-hidden="true"></span>
               </button>`).join("")}
           </nav>
+          <!-- Der Zusammenhang steht über der Arbeit, nicht über dem
+               Fenster: wessen Antrag hier offen ist, welcher Schritt es
+               ist, und ob alles gesichert ist. -->
           <div class="work-head-titel">
             <div class="work-title">
               <span class="work-eyebrow" id="workEyebrow"></span>
               <h2 id="workTitel"></h2>
             </div>
             <span class="spacer"></span>
+            <span class="save-indicator" id="saveIndicator">
+              <span class="save-dot"></span>
+              <span class="save-text">Gespeichert</span>
+            </span>
           </div>
         </header>
         <div class="work-body" id="work-body" tabindex="-1">
@@ -217,6 +210,23 @@ function railHtml(): string {
       <div class="rail-foot">
         <button class="btn btn-primary" id="btnNeuerFall"
                 title="Neuen Patienten anlegen (Strg+N)">${icon.plus} Neuer Patient</button>
+
+        <div class="menuwrap">
+          <button class="btn btn-quiet btn-icon" id="btnMehr"
+                  title="Menü" aria-label="Menü"
+                  aria-haspopup="menu" aria-expanded="false">${icon.dots}</button>
+          <!-- Klappt nach oben auf: der Knopf steht am unteren Rand. -->
+          <div class="menu menu-auf" id="mehrMenu" role="menu" hidden>
+            <button class="menu-item" role="menuitem" id="mnuEinstellungen">${icon.gear}<span>Einstellungen</span></button>
+            <button class="menu-item" role="menuitem" id="mnuSicherung">${icon.save}<span>Sicherung</span></button>
+            <button class="menu-item" role="menuitem" id="mnuPapierkorb">${icon.trash}<span>Papierkorb</span></button>
+            <div class="menu-sep"></div>
+            <button class="menu-item" role="menuitem" id="mnuZuordnen" hidden>
+              ${icon.merge}<span id="mnuZuordnenText">Berichte zuordnen</span>
+            </button>
+          </div>
+        </div>
+
         <button class="btn btn-quiet btn-icon" id="btnRailToggle"
                 title="Seitenschiene einklappen" aria-label="Seitenschiene einklappen"
                 aria-expanded="true">${icon.panelL}</button>
@@ -754,7 +764,17 @@ function zeichneSchritt(): void {
 
   const n = S.state.step;
 
-  el("workEyebrow").textContent = `Schritt ${n + 1} von ${SCHRITTE.length}`;
+  // Die Augenbraue trägt den Zusammenhang: an wessen Antrag hier
+  // gearbeitet wird, und an welchem. Der Name stand bis 2.3 in der
+  // Fensterleiste — dort steht er weit weg von der Arbeit und
+  // konkurriert mit dem Fenstertitel.
+  const nr = S.state.fields.f_nr?.trim();
+  const wer = S.state.fields.f_name?.trim();
+  el("workEyebrow").textContent = [
+    wer || null,
+    nr ? `${nr}. Fortführungsantrag` : null,
+    `Schritt ${n + 1} von ${SCHRITTE.length}`,
+  ].filter(Boolean).join(" · ");
   el("workTitel").textContent = SCHRITTE[n].titel;
 
   // Schritt 5 braucht mehr Platz: dort liegt das Blatt.
@@ -775,12 +795,6 @@ function aktualisiereRand(): void {
   aktualisiereSchrittleiste();
   zeichneFortschritt();
   aktualisiereSpeicherstand();
-  aktualisiereTopbar();
-}
-
-function aktualisiereTopbar(): void {
-  const tp = document.getElementById("topbarPatient");
-  if (tp) tp.textContent = S.state.fields.f_name || "";
 }
 
 function aktualisiereSchrittleiste(): void {

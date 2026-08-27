@@ -78,10 +78,8 @@ document.getElementById("app").innerHTML = `
       <span class="brand-ver-num">2.3.0</span>
     </span>
   </div>
-  <div class="topbar-center"><span class="topbar-patient">Vißer, Claudia</span></div>
+  <div class="topbar-center"></div>
   <div class="topbar-right">
-    <span class="save-indicator"><span class="save-dot"></span><span class="save-text">Gespeichert</span></span>
-    <div class="menuwrap"><button class="btn btn-sm btn-quiet btn-icon">${icon.dots}</button></div>
     <div class="win-ctrls">
       <button class="win-ctrl">${icon.winMin}</button>
       <button class="win-ctrl">${icon.winMax}</button>
@@ -113,6 +111,7 @@ document.getElementById("app").innerHTML = `
 
     <div class="rail-foot">
       <button class="btn btn-primary">${icon.plus} Neuer Patient</button>
+      <div class="menuwrap"><button class="btn btn-quiet btn-icon">${icon.dots}</button></div>
       <button class="btn btn-quiet btn-icon">${icon.panelL}</button>
     </div>
   </nav>
@@ -122,9 +121,11 @@ document.getElementById("app").innerHTML = `
       <nav class="stepbar" role="tablist" style="display:none"></nav>
       <div class="work-head-titel">
         <div class="work-title">
-          <span class="work-eyebrow">Patientin</span>
+          <span class="work-eyebrow">Patient</span>
           <h2>Vißer, Claudia</h2>
         </div>
+        <span class="spacer"></span>
+        <span class="save-indicator"><span class="save-dot"></span><span class="save-text">Gespeichert</span></span>
       </div>
     </header>
     <div class="work-body">
