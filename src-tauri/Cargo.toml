@@ -1,6 +1,6 @@
 [package]
 name = "rana"
-version = "2.5.3"
+version = "2.5.4"
 description = "Rana — Assistent für Berichte an den Gutachter"
 authors = ["Rana"]
 edition = "2021"

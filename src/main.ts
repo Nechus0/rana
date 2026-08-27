@@ -617,6 +617,8 @@ async function zeigePatient(patientId: string): Promise<void> {
       </div>`;
     const stepbar = document.querySelector(".stepbar") as HTMLElement | null;
     if (stepbar) stepbar.style.display = "none";
+    const whr = document.querySelector(".work-head-row") as HTMLElement | null;
+    if (whr) whr.style.display = "none";
     return;
   }
 
@@ -634,6 +636,8 @@ async function zeichnePatientAnsicht(): Promise<void> {
 
   const stepbar = document.querySelector(".stepbar") as HTMLElement | null;
   if (stepbar) stepbar.style.display = "none";
+  const whr = document.querySelector(".work-head-row") as HTMLElement | null;
+  if (whr) whr.style.display = "flex";
 
   try {
     const daten = await ladePatient(pid);
@@ -711,6 +715,8 @@ function zeichneSchritt(): void {
       </div>
     `;
     if (stepbar) stepbar.style.display = "none";
+    const whr = document.querySelector(".work-head-row") as HTMLElement | null;
+    if (whr) whr.style.display = "none";
     
     // Bind button
     const btn = document.getElementById("btnEmptyNeuerFall");
@@ -720,6 +726,8 @@ function zeichneSchritt(): void {
   }
 
   if (stepbar) stepbar.style.display = "";
+  const whr = document.querySelector(".work-head-row") as HTMLElement | null;
+  if (whr) whr.style.display = "flex";
 
   const n = S.state.step;
 
