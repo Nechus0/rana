@@ -126,14 +126,14 @@ export function renderPatient(d: PatientDaten): string {
     </section>
 
     <section class="group">
-      <div class="group-head"><span class="group-title">Diese Patientin</span></div>
+      <div class="group-head"><span class="group-title">Dieser Patient</span></div>
       <p class="hint" style="margin-bottom:var(--s3)">
         Alles landet im Papierkorb und bleibt dort dreissig Tage.
         Endgültig entfernt wird nichts ohne eine zweite Rückfrage.
       </p>
       <button class="btn btn-danger" data-patientweg="${esc(d.patient.id)}"
               data-patientname="${esc(name)}">
-        ${icon.trash} Patientin in den Papierkorb
+        ${icon.trash} Patient in den Papierkorb
       </button>
     </section>`;
 }

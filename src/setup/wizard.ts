@@ -196,7 +196,7 @@ export async function runSetup(onFertig: () => void): Promise<void> {
           </div>
           <div class="key-state" id="keyState"></div>
         </div>
-        <p class="hint" style="margin-top:8px">
+        <p class="hint" style="margin-top: var(--s2)">
           Noch keinen Schlüssel? <a href="#" id="lnkKeys">In der Anthropic-Console anlegen</a> — dort unter „API keys“.
         </p>
       </div>
@@ -224,7 +224,7 @@ export async function runSetup(onFertig: () => void): Promise<void> {
             <input id="s_daily" type="number" min="1" step="1" value="${b.daily_reports}">
           </div>
         </div>
-        <div class="notice notice-info" style="margin-top:14px">
+        <div class="notice notice-info" style="margin-top: var(--s4)">
           Ein Bericht kostet mit Opus 5 rund <b>fünf Cent</b>. Bei einem Bericht pro Tag sind das etwa
           <b>1,60 € im Monat</b>. Zehn Euro sind deshalb keine Einschränkung, sondern eine Reissleine:
           Rana hört auf zu senden, bevor unbemerkt Kosten entstehen.
@@ -238,7 +238,7 @@ export async function runSetup(onFertig: () => void): Promise<void> {
           einmal abhandenkommt — dann zählt nur noch die Grenze bei Anthropic selbst.
           Bitte dort einmalig ein Monatslimit setzen. Das ist die wichtigste Minute dieser Einrichtung.
         </div>
-        <p class="hint" style="margin:10px 0 12px">
+        <p class="hint" style="margin: var(--s3) 0 12px">
           <a href="#" id="lnkLimits">Ausgabengrenze in der Anthropic-Console öffnen</a> —
           empfohlen: Monatslimit 15 €, Kostenwarnung bei 10 €.
         </p>
@@ -290,7 +290,7 @@ export async function runSetup(onFertig: () => void): Promise<void> {
 
       <div class="group">
         <div class="group-head"><span class="group-title">Umfang</span></div>
-        <p class="hint" style="margin-bottom:14px">
+        <p class="hint" style="margin-bottom: var(--s4)">
           Gemessen, nicht geschätzt: Testberichte wurden erzeugt und die Seiten gezählt.
           Bis 5.362 Zeichen sind es zwei Seiten, ab 5.659 drei. Der Korridor zielt bewusst
           an das obere Ende, damit die zweite Seite gefüllt ist.
@@ -369,15 +369,15 @@ export async function runSetup(onFertig: () => void): Promise<void> {
       <div class="group">
         <div class="group-head"><span class="group-title">Was Rana mit den Daten macht</span></div>
         <div class="notice">
-          <p style="margin-bottom:8px"><b>Auf diesem Gerät.</b> Alle Fälle liegen verschlüsselt im Benutzerprofil. Der Schlüssel dazu steht im Windows-Tresor. Wer die Datei kopiert, kann damit nichts anfangen.</p>
-          <p style="margin-bottom:8px"><b>An Anthropic.</b> Beim Formulieren gehen die klinischen Angaben und die Chiffre an die Schnittstelle — <b>nie der Klarname</b>. Rana prüft jede Anfrage darauf und bricht ab, wenn ein Name darin steht.</p>
+          <p style="margin-bottom: var(--s2)"><b>Auf diesem Gerät.</b> Alle Fälle liegen verschlüsselt im Benutzerprofil. Der Schlüssel dazu steht im Windows-Tresor. Wer die Datei kopiert, kann damit nichts anfangen.</p>
+          <p style="margin-bottom: var(--s2)"><b>An Anthropic.</b> Beim Formulieren gehen die klinischen Angaben und die Chiffre an die Schnittstelle — <b>nie der Klarname</b>. Rana prüft jede Anfrage darauf und bricht ab, wenn ein Name darin steht.</p>
           <p><b>Sonst nirgendwohin.</b> Keine Cloud, keine Nutzungsstatistik, keine Absturzberichte. Die einzige Verbindung, die Rana aufbauen kann, geht an api.anthropic.com.</p>
         </div>
       </div>
 
       <div class="group">
         <div class="group-head"><span class="group-title">Fälle aus dem Vorgängerprogramm</span></div>
-        <p class="hint" style="margin-bottom:12px">
+        <p class="hint" style="margin-bottom: var(--s3)">
           Rana übernimmt nichts von selbst. Wer die Fälle aus dem alten Artefakt weiterführen
           möchte, kann sie hier einlesen — das alte Artefakt bleibt dabei unverändert.
         </p>

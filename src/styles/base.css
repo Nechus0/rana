@@ -81,7 +81,8 @@ a { color: var(--arvalis); text-decoration-thickness: 1px; text-underline-offset
   align-items: center;
   justify-content: center;
   gap: var(--s2);
-  padding: 9px 15px;
+  height: var(--h-md);
+  padding: 0 var(--s4);
   border-radius: var(--r);
   border: 1px solid var(--line-strong);
   background: var(--paper);
@@ -92,7 +93,7 @@ a { color: var(--arvalis); text-decoration-thickness: 1px; text-underline-offset
               border-color var(--dur-fast) var(--ease),
               color var(--dur-fast) var(--ease);
 }
-.btn:hover:not(:disabled) { background: var(--sphagnum); border-color: var(--reed-faint); }
+.btn:hover:not(:disabled) { background: var(--sphagnum); border-color: var(--reed); }
 .btn:active:not(:disabled) { background: var(--sphagnum-deep); }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 
@@ -114,10 +115,12 @@ a { color: var(--arvalis); text-decoration-thickness: 1px; text-underline-offset
 .btn-danger { color: var(--brick); }
 .btn-danger:hover:not(:disabled) { background: var(--brick-wash); border-color: var(--brick); }
 
-.btn-lg { padding: 12px 22px; font-size: var(--t-base); }
-.btn-sm { padding: 6px 10px; font-size: var(--t-xs); }
-.btn-icon { padding: 8px; width: 34px; height: 34px; }
+.btn-lg   { height: var(--h-lg); padding: 0 var(--s5); font-size: var(--t-base); }
+.btn-sm   { height: var(--h-sm); padding: 0 var(--s3); font-size: var(--t-xs); gap: 6px; }
+.btn-icon { width: var(--h-md); padding: 0; }
+.btn-sm.btn-icon { width: var(--h-sm); }
 .btn svg { width: 16px; height: 16px; flex: none; }
+.btn-sm svg { width: 14px; height: 14px; }
 
 /* ---- Eingabefelder ---------------------------------------- */
 .field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
@@ -139,7 +142,7 @@ a { color: var(--arvalis); text-decoration-thickness: 1px; text-underline-offset
   letter-spacing: 0;
   font-family: var(--face-ui);
   font-size: var(--t-sm);
-  color: var(--reed-faint);
+  color: var(--reed);
   font-weight: 400;
   /* Kurze Hinweise stehen neben der Beschriftung. Lange umbrechen
      sauber darunter, statt die Zeile auseinanderzuziehen. */
@@ -165,12 +168,18 @@ select, textarea {
   background: var(--paper);
   border: 1px solid var(--line-strong);
   border-radius: var(--r-lg);
-  padding: 10px 14px;
+  /* Auf der Höhenskala: dasselbe Mass wie ein betonter Knopf, damit
+     Feld und Knopf nebeneinander in einer Flucht stehen. */
+  min-height: var(--h-lg);
+  padding: 0 var(--s4);
   width: 100%;
   transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
 }
-textarea { border-radius: var(--r); }
-input::placeholder, textarea::placeholder { color: var(--reed-faint); }
+/* Das Textfeld ist kein Bedienelement einer Zeile, sondern eine
+   Fläche zum Schreiben — es bekommt seinen senkrechten Innenabstand
+   zurück, den die Höhenregel oben allen Feldern genommen hat. */
+textarea { border-radius: var(--r); padding: var(--s3) var(--s4); }
+input::placeholder, textarea::placeholder { color: var(--reed); }
 input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--arvalis);
@@ -364,7 +373,7 @@ select {
   font-family: var(--face-record);
   font-size: var(--t-xs);
   font-variant-numeric: tabular-nums;
-  color: var(--reed-faint);
+  color: var(--reed);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -407,7 +416,7 @@ textarea.input-record {
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--reed-faint);
+  color: var(--reed);
 }
 
 .icd10-search {
@@ -422,4 +431,4 @@ textarea.input-record {
   text-transform: none;
   color: var(--peat);
 }
-.icd10-search::placeholder { color: var(--reed-faint); text-transform: none; }
+.icd10-search::placeholder { color: var(--reed); text-transform: none; }

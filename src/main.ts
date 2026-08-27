@@ -217,8 +217,8 @@ function railHtml(): string {
            die Meldung, dass die Funktion noch fehle — und nahm dem
            einzigen Knopf, der etwas tut, die halbe Breite. -->
       <div class="rail-foot">
-        <button class="btn btn-sm btn-primary" id="btnNeuerFall"
-                title="Neue Patientin anlegen (Strg+N)">${icon.plus} Neue Patientin</button>
+        <button class="btn btn-primary" id="btnNeuerFall"
+                title="Neuen Patienten anlegen (Strg+N)">${icon.plus} Neuer Patient</button>
       </div>
 
       <div class="rail-collapsed" id="railCollapsed">
@@ -481,7 +481,6 @@ function zeichneFallListe(): void {
                 ${g.patient ? "" : 'data-lose="ja"'}>
           <span class="pat-caret ${mehrere ? "" : "ist-leer"}" aria-hidden="true">${icon.caret}</span>
           <span class="pat-name">${esc(g.label)}</span>
-          ${mehrere ? `<span class="pat-zahl">${g.berichte.length} Anträge</span>` : ""}
         </button>
         ${g.patient
           ? `<button class="pat-weg" data-patweg="${esc(g.patient.id)}"
@@ -667,7 +666,7 @@ async function zeichnePatientAnsicht(): Promise<void> {
 
   try {
     const daten = await ladePatient(pid);
-    el("workEyebrow").textContent = "Patientin";
+    el("workEyebrow").textContent = "Patient";
     el("workTitel").textContent = daten.patient.fields.f_name?.trim() || "Ohne Namen";
     el("workInner").className = "work-inner";
     el("workInner").innerHTML = renderPatient(daten);
@@ -731,11 +730,11 @@ function zeichneSchritt(): void {
     el("workInner").className = "work-inner";
     el("workInner").innerHTML = `
       <div style="text-align:center; padding: 120px 20px; color: var(--peat);">
-        <svg width="48" height="48" viewBox="0 0 24 24" style="margin-bottom: 20px; color: var(--reed);">
+        <svg width="48" height="48" viewBox="0 0 24 24" style="margin-bottom: var(--s5); color: var(--reed);">
           <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2"/>
         </svg>
         <h3>Kein Fall ausgewählt</h3>
-        <p style="margin-bottom: 24px; color: var(--reed);">Wählen Sie einen Patienten aus der Liste<br>oder legen Sie einen neuen Fall an.</p>
+        <p style="margin-bottom: var(--s5); color: var(--reed);">Wählen Sie einen Patienten aus der Liste<br>oder legen Sie einen neuen Fall an.</p>
         <button class="btn btn-primary" id="btnEmptyNeuerFall">Neuen Fall anlegen</button>
       </div>
     `;
@@ -1054,9 +1053,9 @@ void main().catch((e) => {
   // Kommt der Start nicht durch, darf kein leeres Fenster stehen bleiben.
   el("app").innerHTML = `
     <div style="max-width:520px;margin:14vh auto;padding:0 24px">
-      <h1 style="font-size:var(--t-xl);margin-bottom:12px">Rana konnte nicht starten</h1>
+      <h1 style="font-size:var(--t-xl);margin-bottom: var(--s3)">Rana konnte nicht starten</h1>
       <div class="notice notice-danger">${esc(api.errorText(e))}</div>
-      <p class="hint" style="margin-top:16px">
+      <p class="hint" style="margin-top: var(--s4)">
         Läuft Rana bereits in einem anderen Fenster? Dann bitte dieses schliessen.
         Andernfalls hilft ein Neustart des Rechners; die Falldaten bleiben unberührt.
       </p>

@@ -136,7 +136,7 @@ function schritt1(): string {
       })}
     </div>
     <div id="warnungen"></div>
-    <div class="row" style="margin-top:20px">
+    <div class="row" style="margin-top: var(--s5)">
       <button class="btn" id="btnFolgeantrag" type="button"
               title="Legt den nächsten Antrag derselben Patientin an und übernimmt, was gleich bleibt">
         ${icon.plus} Folgeantrag aus diesem Fall
@@ -152,13 +152,13 @@ function schritt1(): string {
 function schritt2(): string {
   const hat = f("f_vorbericht") === "ja";
   return `
-    <p class="hint" style="margin-bottom:20px">
+    <p class="hint" style="margin-bottom: var(--s5)">
       Dieser Schritt ist freiwillig. Ohne Vorbericht kann er übersprungen werden — die
       Angaben dienen nur als Hintergrund für die Formulierung und stehen nicht wörtlich
       im Bericht.
     </p>
 
-    <label class="switch" style="margin-bottom:24px">
+    <label class="switch" style="margin-bottom: var(--s5)">
       <input type="checkbox" id="cbVorbericht" ${hat ? "checked" : ""}>
       <span class="switch-track"></span>
       <span>Ein Vorbericht liegt vor</span>
@@ -166,7 +166,7 @@ function schritt2(): string {
 
     <div id="vorberichtBlock" class="${hat ? "" : "hidden"}">
       ${gruppe(null, "Text des letzten Berichts", `
-        <div class="row" style="margin-bottom:12px">
+        <div class="row" style="margin-bottom: var(--s3)">
           <button class="btn btn-sm" id="btnUploadVorbericht" type="button" title="Word (.docx) oder PDF laden">
             ${icon.word} Datei einlesen (Word / PDF)
           </button>
@@ -212,7 +212,7 @@ function psychodynPh(): string {
 
 function schritt3(): string {
   return `
-    <p class="hint" style="margin-bottom:20px">
+    <p class="hint" style="margin-bottom: var(--s5)">
       Stichworte genügen. Die Nummern zeigen, in welchen Gliederungspunkt
       des fertigen Berichts der Text einfliesst.
     </p>
@@ -260,20 +260,20 @@ function schritt4(): string {
   const offen = S.luecken();
 
   return `
-    <p class="hint" style="margin-bottom:20px">
+    <p class="hint" style="margin-bottom: var(--s5)">
       Claude formuliert die drei Gliederungspunkte in freier Form. Briefkopf, Metabox,
       Überschriften und Unterschrift kommen in Schritt 5 automatisch dazu. Der Text
       unten ist danach direkt bearbeitbar.
     </p>
 
     ${offen.length ? `
-      <div class="notice notice-warn" style="margin-bottom:20px">
+      <div class="notice notice-warn" style="margin-bottom: var(--s5)">
         <b>${offen.length} ${offen.length === 1 ? "Angabe fehlt" : "Angaben fehlen"} noch.</b>
         Claude markiert die Stellen mit 【Bitte ergänzen】. Das Formulieren geht trotzdem —
         die Lücken lassen sich hinterher füllen.
       </div>` : ""}
 
-    <div class="row row-wrap" style="margin-bottom:20px">
+    <div class="row row-wrap" style="margin-bottom: var(--s5)">
       <button class="btn btn-primary btn-lg" id="btnFormulieren"
               ${b && !b.may_send ? "disabled" : ""}>
         ${icon.wand} Bericht formulieren
@@ -295,7 +295,7 @@ function schritt4(): string {
     </div>
 
     ${b && !b.may_send ? `
-      <div class="notice notice-danger" style="margin-bottom:20px">
+      <div class="notice notice-danger" style="margin-bottom: var(--s5)">
         <b>Rana sendet gerade nichts.</b>
         ${b.today_reports >= b.daily_limit
           ? `Das Tageslimit von ${b.daily_limit} Berichten ist erreicht.`
@@ -335,7 +335,7 @@ function schritt5(): string {
   const konsiliar = p.verfahren.qualifikation !== "aerztlich";
 
   return `
-    <div class="row row-wrap" style="margin-bottom:20px">
+    <div class="row row-wrap" style="margin-bottom: var(--s5)">
       <button class="btn btn-primary" id="btnWord" ${leer ? "disabled" : ""}>${icon.word} Word (.docx)</button>
       <button class="btn" id="btnPdf" ${leer ? "disabled" : ""}>${icon.pdf} Als PDF sichern</button>
       <button class="btn" id="btnKopieren" ${leer ? "disabled" : ""}>${icon.copy} Text kopieren</button>
@@ -353,13 +353,13 @@ function schritt5(): string {
         <div class="paper-sheet paper-doc">${renderDocHTML(S.state.report, S.state.fields, p)}</div>
       </div>
 
-      <div class="notice notice-info" style="margin-top:20px">
+      <div class="notice notice-info" style="margin-top: var(--s5)">
         <b>Einzureichen:</b> Bericht, PTV 2b${konsiliar ? ", Konsiliarbericht (Muster 22b)" : ""}, ggf. Befundkopien (pseudonymisiert).
       </div>
 
       ${gruppe(null, "Beiblatt PTV 2b", `
         <p class="hint">Angaben für das PTV 2b — zum Kopieren.</p>
-        <div class="paper-tray" style="padding:16px">
+        <div class="paper-tray" style="padding: var(--s4)">
           <table style="width:100%;border-collapse:collapse;font-size:var(--t-sm)" class="selectable">
             ${ptv2bZeilen().map(([k, v]) => `
               <tr>
@@ -595,7 +595,7 @@ function zeigeWarnungen(): void {
   if (!box) return;
   const w = S.warnungen();
   box.innerHTML = w.length
-    ? w.map((t) => `<div class="notice notice-warn" style="margin-top:14px">${esc(t)}</div>`).join("")
+    ? w.map((t) => `<div class="notice notice-warn" style="margin-top: var(--s4)">${esc(t)}</div>`).join("")
     : "";
 }
 

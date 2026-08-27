@@ -115,11 +115,11 @@ export async function zeigeEinstellungen(neuZeichnen: () => void): Promise<void>
             <div class="budget-fill ${b.level === "gestoppt" ? "stop" : b.level === "warnung" ? "warn" : ""}"
                  style="--used:${Math.min(100, b.month_pct)}%"></div>
           </div>
-          <p class="hint" style="margin-top:8px">
+          <p class="hint" style="margin-top: var(--s2)">
             ${b.today_reports} von ${b.daily_limit} Berichten heute
           </p>
         </div>
-        <p class="hint" style="margin-top:14px">
+        <p class="hint" style="margin-top: var(--s4)">
           <button class="btn btn-sm" id="e_btnVerbrauch" type="button">Verbrauch der letzten Monate</button>
         </p>
       </div>
@@ -130,7 +130,7 @@ export async function zeigeEinstellungen(neuZeichnen: () => void): Promise<void>
           ${num("e_budget", "Monatsbudget (€)", p.budget.monthly_eur)}
           ${num("e_daily", "Berichte je Tag", p.budget.daily_reports)}
         </div>
-        <p class="hint" style="margin-top:10px">
+        <p class="hint" style="margin-top: var(--s3)">
           Die Grenze bei Anthropic bleibt davon unberührt.
           <a href="#" id="e_console">Dort prüfen</a>.
         </p>
@@ -145,7 +145,7 @@ export async function zeigeEinstellungen(neuZeichnen: () => void): Promise<void>
           <span class="switch-track"></span>
           <span>Dunkler Modus</span>
         </label>
-        <p class="hint" style="margin-top:10px">
+        <p class="hint" style="margin-top: var(--s3)">
           Berichte entstehen oft abends. Der dunkle Modus färbt die
           Oberfläche — das Blatt in Schritt 5 bleibt weiss, weil es
           gedruckt wird.
@@ -156,7 +156,7 @@ export async function zeigeEinstellungen(neuZeichnen: () => void): Promise<void>
       <section data-bereich="daten">
       <div class="group">
         <div class="group-head"><span class="group-title">Sicherung und Papierkorb</span></div>
-        <p class="hint" style="margin-bottom:12px">
+        <p class="hint" style="margin-bottom: var(--s3)">
           Alle Fälle liegen verschlüsselt auf diesem Gerät. Rana legt
           täglich einen Stand an und hält die letzten sieben.
         </p>
@@ -170,7 +170,7 @@ export async function zeigeEinstellungen(neuZeichnen: () => void): Promise<void>
       <section data-bereich="update">
       <div class="group">
         <div class="group-head"><span class="group-title">Aktualisierung</span></div>
-        <p class="hint" style="margin-bottom:12px">
+        <p class="hint" style="margin-bottom: var(--s3)">
           Rana fragt bei GitHub <b>nie von selbst</b> nach — auch nicht
           beim Start. Nur wenn Sie es hier auslösen.
         </p>
@@ -185,13 +185,13 @@ export async function zeigeEinstellungen(neuZeichnen: () => void): Promise<void>
         <p style="font-family:var(--face-display);font-style:italic;color:var(--reed);margin-top:2px">
           arvalis · ${esc(EIGENE_VERSION)}
         </p>
-        <p class="hint" style="margin-top:16px">
+        <p class="hint" style="margin-top: var(--s4)">
           Rana arvalis, der Moorfrosch, ist ein unauffälliges braunes Tier, das sich
           für wenige Tage im Frühjahr leuchtend blau färbt und danach wieder verblasst.
           Diese Anwendung hält es genauso: sie bleibt ruhig, und sie wird blau
           genau dann, wenn Daten das Gerät verlassen.
         </p>
-        <div class="notice" style="margin-top:16px">
+        <div class="notice" style="margin-top: var(--s4)">
           <b>Wo die Daten liegen.</b> Verschlüsselt im Benutzerprofil.
           Der Schlüssel steht im Schlüsselbund.<br><br>
           <b>Was hinausgeht.</b> Beim Formulieren die klinischen Angaben und die Chiffre —
@@ -370,17 +370,17 @@ export async function zeigeVerbrauch(): Promise<void> {
             <span class="budget-of">von ${eur(b.month_limit_eur)}</span>
           </div>
           ${balken(b.month_pct)}
-          <p class="hint" style="margin-top:8px">
+          <p class="hint" style="margin-top: var(--s2)">
             ${b.today_reports} von ${b.daily_limit} Berichten heute ·
             der nächste kostet voraussichtlich ${eur(b.estimate_eur)}
           </p>
         </div>
         ${b.level === "gestoppt" ? `
-          <div class="notice notice-danger" style="margin-top:14px">
+          <div class="notice notice-danger" style="margin-top: var(--s4)">
             Rana sendet gerade nichts. Unter „Einstellungen“ lässt sich die Grenze anheben.
           </div>`
         : b.level === "warnung" ? `
-          <div class="notice notice-warn" style="margin-top:14px">
+          <div class="notice notice-warn" style="margin-top: var(--s4)">
             Über 90 % des Monatsbudgets verbraucht.
           </div>` : ""}
       </div>
@@ -392,9 +392,9 @@ export async function zeigeVerbrauch(): Promise<void> {
             <tbody>
               ${monate.map(([m, kosten, n]) => `
                 <tr style="border-bottom:1px solid var(--line)">
-                  <td style="padding:8px 0;font-family:var(--face-record);font-size:var(--t-sm);color:var(--reed)">${esc(monatName(m))}</td>
-                  <td style="padding:8px 0;text-align:right;font-family:var(--face-record);font-variant-numeric:tabular-nums">${eur(kosten)}</td>
-                  <td style="padding:8px 0 8px 20px;text-align:right;color:var(--reed)">${n} ${n === 1 ? "Aufruf" : "Aufrufe"}</td>
+                  <td style="padding: var(--s2) 0;font-family:var(--face-record);font-size:var(--t-sm);color:var(--reed)">${esc(monatName(m))}</td>
+                  <td style="padding: var(--s2) 0;text-align:right;font-family:var(--face-record);font-variant-numeric:tabular-nums">${eur(kosten)}</td>
+                  <td style="padding: var(--s2) 0 8px 20px;text-align:right;color:var(--reed)">${n} ${n === 1 ? "Aufruf" : "Aufrufe"}</td>
                 </tr>`).join("")}
             </tbody>
           </table>` : `<p class="hint">Noch kein Verbrauch aufgezeichnet.</p>`}
@@ -444,7 +444,7 @@ export async function zeigeSicherung(neuZeichnen: () => void): Promise<void> {
 
       <div class="group">
         <div class="group-head"><span class="group-title">Täglich, von selbst</span></div>
-        <p class="hint" style="margin-bottom:12px">
+        <p class="hint" style="margin-bottom: var(--s3)">
           Rana legt bei jedem ersten Start des Tages einen Stand an und hält die letzten sieben.
           Diese Stände brauchen kein Passwort — sie liegen im geschützten Benutzerprofil.
         </p>
@@ -588,7 +588,7 @@ export async function zeigePapierkorb(neuZeichnen: () => void): Promise<void> {
       ${liste.length ? `
         <div style="display:flex;flex-direction:column;gap:6px">
           ${liste.map((c) => `
-            <div class="row" style="gap:8px;padding:8px 0;border-bottom:1px solid var(--line)">
+            <div class="row" style="gap:8px;padding: var(--s2) 0;border-bottom:1px solid var(--line)">
               <div style="flex:1;min-width:0">
                 <div style="font-weight:550">${esc(c.label)}</div>
                 <div class="small muted">
@@ -647,7 +647,7 @@ export async function zeigeUeber(): Promise<void> {
         <div style="flex:1">
           <p style="font-family:var(--face-display);font-size:var(--t-lg);font-weight:600;letter-spacing:-.02em">Rana</p>
           <p style="font-family:var(--face-display);font-style:italic;color:var(--reed);margin-top:2px">arvalis · 1.0.0</p>
-          <p class="hint" style="margin-top:16px">
+          <p class="hint" style="margin-top: var(--s4)">
             Rana arvalis, der Moorfrosch, ist ein unauffälliges braunes Tier, das sich
             für wenige Tage im Frühjahr leuchtend blau färbt und danach wieder verblasst.
             Diese Anwendung hält es genauso: sie bleibt ruhig, und sie wird blau
@@ -689,7 +689,7 @@ export async function zeigeAktualisierung(): Promise<void> {
         Rana prüft nur, wenn Sie es hier auslösen — nie von selbst und nie im
         Hintergrund. Geprüft wird gegen die Veröffentlichungen auf GitHub.
       </p>
-      <div class="row" style="margin-top:4px">
+      <div class="row" style="margin-top: var(--s1)">
         <button class="btn btn-primary" id="u_pruefen" type="button">Nach Aktualisierung suchen</button>
         <span class="spacer"></span>
         <span class="record-num small muted">installiert: ${esc(EIGENE_VERSION)}</span>
@@ -726,15 +726,15 @@ export async function zeigeAktualisierung(): Promise<void> {
           status.className = "key-state ok";
           status.innerHTML = `${icon.check} <span>Fassung ${esc(gefunden.version)} liegt vor.</span>`;
           details.innerHTML = `
-            <div class="notice" style="margin-top:12px">
-              ${gefunden.body ? `<p style="margin-bottom:10px">${esc(gefunden.body).slice(0, 600)}</p>` : ""}
+            <div class="notice" style="margin-top: var(--s3)">
+              ${gefunden.body ? `<p style="margin-bottom: var(--s3)">${esc(gefunden.body).slice(0, 600)}</p>` : ""}
               <p class="hint">
                 Der Installer wird heruntergeladen, seine Signatur geprüft und
                 anschliessend ausgeführt. Rana startet danach neu. Ihre Fälle
                 bleiben unberührt.
               </p>
             </div>
-            <div class="row" style="margin-top:12px">
+            <div class="row" style="margin-top: var(--s3)">
               <button class="btn btn-primary" id="u_install" type="button">Herunterladen und installieren</button>
               <span class="hint" id="u_fortschritt"></span>
             </div>`;

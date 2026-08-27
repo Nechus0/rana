@@ -49,7 +49,7 @@
 .brand-ver-num {
   font-family: var(--face-record);
   font-size: var(--t-2xs);
-  color: var(--reed-faint);
+  color: var(--reed);
   margin-left: var(--s1);
 }
 
@@ -99,7 +99,7 @@
   gap: var(--s1);
   font-family: var(--face-record);
   font-size: var(--t-2xs);
-  color: var(--reed-faint);
+  color: var(--reed);
   white-space: nowrap;
   width: 84px;
   justify-content: flex-end;
@@ -173,7 +173,7 @@
   padding: 0 var(--s3) var(--s2);
   font-family: var(--face-record);
   font-size: var(--t-2xs);
-  color: var(--reed-faint);
+  color: var(--reed);
   min-height: 14px;
 }
 
@@ -282,7 +282,7 @@
   font-weight: 650;
   letter-spacing: .05em;
   text-transform: uppercase;
-  color: var(--reed-faint);
+  color: var(--reed);
   padding: 0 var(--s3) 6px 0;
   border-bottom: 1px solid var(--line);
 }
@@ -369,8 +369,9 @@
 .rail-select {
   width: 100%;
   min-width: 0;
-  height: 30px;
-  padding: 0 26px 0 10px;
+  height: var(--h-sm);
+  min-height: var(--h-sm);
+  padding: 0 26px 0 var(--s3);
   font-size: var(--t-xs);
   border-radius: var(--r);
   border: 1px solid var(--line);
@@ -391,9 +392,11 @@
 }
 .case-search input {
   width: 100%;
+  height: var(--h-md);
+  min-height: var(--h-md);
   border: 1px solid var(--line);
-  border-radius: 20px;
-  padding: 8px 12px 8px 34px;
+  border-radius: 999px;
+  padding: 0 var(--s3) 0 34px;
   background: var(--paper);
   outline: none;
   font-family: inherit;
@@ -408,7 +411,7 @@
 }
 .case-search svg {
   position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
-  width: 16px; height: 16px; color: var(--reed-faint); pointer-events: none;
+  width: 16px; height: 16px; color: var(--reed); pointer-events: none;
 }
 
 .case-list {
@@ -445,7 +448,7 @@
 .case-item-meta {
   font-family: var(--face-record);
   font-size: var(--t-2xs);
-  color: var(--reed-faint);
+  color: var(--reed);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
 }
 .case-item[aria-current="true"] .case-item-meta { color: var(--reed); }
@@ -453,10 +456,10 @@
   flex: 0 0 auto;
   font-family: var(--face-record);
   font-size: var(--t-xs);
-  color: var(--reed-faint);
+  color: var(--reed);
   font-variant-numeric: tabular-nums;
 }
-.case-empty { padding: var(--s3) var(--s3); font-size: var(--t-sm); color: var(--reed-faint); }
+.case-empty { padding: var(--s3) var(--s3); font-size: var(--t-sm); color: var(--reed); }
 
 /* ------------------------------------------------------------
    Die Personenebene
@@ -480,7 +483,7 @@
   border: 1px solid transparent;
   border-radius: var(--r);
   background: transparent;
-  color: var(--reed-faint);
+  color: var(--reed);
   cursor: pointer;
   opacity: 0;
   transition: opacity var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
@@ -502,7 +505,7 @@
   border: 1px solid transparent;
   border-radius: var(--r);
   background: transparent;
-  color: var(--reed-faint);
+  color: var(--reed);
   cursor: pointer;
   opacity: 0;
   transition: opacity var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
@@ -612,7 +615,7 @@
   font-size: var(--t-2xs);
   letter-spacing: .07em;
   text-transform: uppercase;
-  color: var(--reed-faint);
+  color: var(--reed);
 }
 
 .pat-item {
@@ -635,7 +638,7 @@
 .pat-caret {
   flex: none;
   display: inline-flex;
-  color: var(--reed-faint);
+  color: var(--reed);
   transition: transform var(--dur-fast) var(--ease);
 }
 .pat-caret svg { width: 13px; height: 13px; }
@@ -654,7 +657,7 @@
   font-family: var(--face-record);
   font-size: var(--t-2xs);
   font-variant-numeric: tabular-nums;
-  color: var(--reed-faint);
+  color: var(--reed);
   white-space: nowrap;
 }
 
@@ -679,7 +682,7 @@
 .case-item-fertig {
   flex: none;
   display: inline-flex;
-  color: var(--reed-faint);
+  color: var(--reed);
 }
 .case-item-fertig svg { width: 13px; height: 13px; }
 .case-item[aria-current="true"] .case-item-fertig { color: var(--arvalis); }
@@ -730,7 +733,7 @@
   flex: none;
   font-family: var(--face-record);
   font-size: var(--t-2xs);
-  color: var(--reed-faint);
+  color: var(--reed);
   font-variant-numeric: tabular-nums;
 }
 
@@ -741,7 +744,7 @@
   margin: 4px 0 0 26px;
   font-family: var(--face-record);
   font-size: var(--t-2xs);
-  color: var(--reed-faint);
+  color: var(--reed);
 }
 
 .merge-berichte { margin: var(--s2) 0 0 26px; display: flex; flex-direction: column; gap: 2px; }
@@ -834,7 +837,7 @@
               color var(--dur) var(--ease),
               box-shadow var(--dur-fade) var(--ease);
 }
-.stepbar-step:hover .stepbar-node { border-color: var(--reed-faint); }
+.stepbar-step:hover .stepbar-node { border-color: var(--reed); }
 
 .stepbar-step.is-done .stepbar-node {
   background: var(--arvalis-wash);

@@ -17,15 +17,25 @@
   color-scheme: light;
 
   /* ---- Palette ------------------------------------------- */
-  --peat:            #212529;   /* Text. Neutral dark gray */
-  --peat-soft:       #495057;   /* Secondary text */
-  --reed:            #6c757d;   /* Labels, hints */
-  --reed-faint:      #adb5bd;   /* Placeholders, disabled */
-  --sphagnum:        #f8f9fa;   /* App background */
-  --sphagnum-deep:   #e9ecef;   /* Sidebar, darker background */
-  --paper:           #ffffff;   /* Cards and document */
-  --line:            #dee2e6;   /* Borders */
-  --line-strong:     #ced4da;   /* Stronger borders */
+  /* Vier Stufen Text, und nur drei davon tragen Schrift.
+     Gemessen gegen Weiss:
+       peat       15,4 : 1
+       peat-soft   8,2 : 1
+       reed        4,7 : 1   ← die unterste Stufe, die Text tragen darf
+       reed-faint  2,1 : 1   ← KEIN Text. Nur Zeichnung, Linien, Deaktiviertes.
+     Die vierte Stufe stand lange auch unter Text — Zählzeilen,
+     Tabellenköpfe, Zusatzangaben in der Fallliste. Bei 2,1 : 1 ist das
+     nicht blass, sondern unlesbar. Wer eine dritte Textstufe braucht,
+     nimmt `reed`. */
+  --peat:            #212529;
+  --peat-soft:       #495057;
+  --reed:            #6c757d;
+  --reed-faint:      #adb5bd;
+  --sphagnum:        #f8f9fa;   /* Arbeitsfläche */
+  --sphagnum-deep:   #e9ecef;   /* Seitenschiene, eingetieft */
+  --paper:           #ffffff;   /* Karten und Papier */
+  --line:            #dee2e6;
+  --line-strong:     #ced4da;
 
   --arvalis:         #3a6faf;   /* Akzent. Das gedeckte Moorfroschblau */
   --arvalis-deep:    #2d5a92;   /* gedrückter Zustand */
@@ -60,9 +70,16 @@
      Ausserhalb des gedruckten Berichts steht KEINE Schriftgrösse
      als feste Zahl im Code — alles greift auf diese Stufen zu.
      Wer eine neue Grösse braucht, ergänzt hier eine Stufe. */
-  --t-2xs:  10.5px;
-  --t-xs:   11.5px;
-  --t-sm:   12.5px;
+  /* Nachgemessen: von 73 Schriftgrössen in der Oberfläche greifen 66
+     auf die drei kleinsten Stufen zu und nur 7 auf die Grundgrösse.
+     Die Anwendung war damit fast vollständig in Kleinschrift gesetzt.
+     Für jemanden, der damit stundenlang Befunde liest und schreibt,
+     ist das der falsche Weg. Die drei kleinen Stufen sind deshalb um
+     rund einen Punkt angehoben; die Grundgrösse bleibt, damit sich das
+     Verhältnis zum gesetzten Bericht nicht verschiebt. */
+  --t-2xs:  11px;
+  --t-xs:   12px;
+  --t-sm:   13.5px;
   --t-base: 15px;
   --t-md:   17px;
   --t-lg:   21px;
@@ -82,9 +99,17 @@
   --s5: 24px; --s6: 32px; --s7: 48px; --s8: 64px;
 
   --rail-w: 264px;
-  --ctx-w:  296px;
   --bar-h: 44px;
   --work-max: 780px;
+
+  /* Höhen für alles, was man anklicken kann.
+     Vorher gab es sechs Höhen — 27, 28, 30, 34, 36 und 38 Pixel —,
+     keine davon abgestimmt. Nebeneinander standen sie nie in einer
+     Flucht, und man sah es an jeder Werkzeugzeile. Jetzt drei Stufen,
+     und jedes Bedienelement greift auf eine davon zu. */
+  --h-sm: 28px;   /* kleine Knöpfe, Auswahlfelder in der Schiene */
+  --h-md: 34px;   /* der Normalfall: Knöpfe, Eingabefelder         */
+  --h-lg: 40px;   /* betonte Knöpfe, Felder im Bericht            */
 
   /* Moderne Radien */
   --r-sm: 4px;

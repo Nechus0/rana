@@ -46,7 +46,7 @@ const fallListe = patientinnen.map(([name, n]) => {
         <button class="pat-item" aria-expanded="${auf}">
           <span class="pat-caret ${n > 1 ? "" : "ist-leer"}">${icon.caret}</span>
           <span class="pat-name">${name}</span>
-          ${n > 1 ? `<span class="pat-zahl">${n} Anträge</span>` : ""}
+          
         </button>
         <button class="pat-weg">${icon.close}</button>
       </div>
@@ -112,7 +112,7 @@ document.getElementById("app").innerHTML = `
     </div>
 
     <div class="rail-foot">
-      <button class="btn btn-sm btn-primary">${icon.plus} Neue Patientin</button>
+      <button class="btn btn-primary">${icon.plus} Neuer Patient</button>
     </div>
   </nav>
 
