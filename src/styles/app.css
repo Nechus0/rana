@@ -938,10 +938,14 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* Der Speicherstand steht am rechten Ende derselben Zeile, auf der
-   Grundlinie der Überschrift. */
-.work-head-titel .save-indicator { flex: none; align-self: flex-end; padding-bottom: 4px; }
-.work-head-titel .menuwrap { flex: none; align-self: flex-end; padding-bottom: 2px; }
+/* Der Speicherstand und das Menü stehen übereinander am rechten Rand. */
+.work-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex: none;
+}
 .work-head h2 { font-size: var(--t-xl); }
 
 .work-body {

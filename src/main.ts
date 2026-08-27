@@ -139,23 +139,25 @@ function zeichneGeruest(): void {
               <h2 id="workTitel"></h2>
             </div>
             <span class="spacer"></span>
-            <span class="save-indicator" id="saveIndicator">
-              <span class="save-dot"></span>
-              <span class="save-text">Gespeichert</span>
-            </span>
-            <div class="menuwrap">
-              <button class="btn btn-quiet btn-icon" id="btnMehr"
-                      title="Menü" aria-label="Menü"
-                      aria-haspopup="menu" aria-expanded="false">${icon.dots}</button>
-              <div class="menu" id="mehrMenu" role="menu" hidden>
-                <button class="menu-item" role="menuitem" id="mnuEinstellungen">${icon.gear}<span>Einstellungen</span></button>
-                <button class="menu-item" role="menuitem" id="mnuSicherung">${icon.save}<span>Sicherung</span></button>
-                <button class="menu-item" role="menuitem" id="mnuPapierkorb">${icon.trash}<span>Papierkorb</span></button>
-                <div class="menu-sep"></div>
-                <button class="menu-item" role="menuitem" id="mnuZuordnen" hidden>
-                  ${icon.merge}<span id="mnuZuordnenText">Berichte zuordnen</span>
-                </button>
+            <div class="work-actions">
+              <div class="menuwrap">
+                <button class="btn btn-quiet btn-icon" id="btnMehr"
+                        title="Menü" aria-label="Menü"
+                        aria-haspopup="menu" aria-expanded="false">${icon.dots}</button>
+                <div class="menu" id="mehrMenu" role="menu" hidden>
+                  <button class="menu-item" role="menuitem" id="mnuEinstellungen">${icon.gear}<span>Einstellungen</span></button>
+                  <button class="menu-item" role="menuitem" id="mnuSicherung">${icon.save}<span>Sicherung</span></button>
+                  <button class="menu-item" role="menuitem" id="mnuPapierkorb">${icon.trash}<span>Papierkorb</span></button>
+                  <div class="menu-sep"></div>
+                  <button class="menu-item" role="menuitem" id="mnuZuordnen" hidden>
+                    ${icon.merge}<span id="mnuZuordnenText">Berichte zuordnen</span>
+                  </button>
+                </div>
               </div>
+              <span class="save-indicator" id="saveIndicator">
+                <span class="save-dot"></span>
+                <span class="save-text">Gespeichert</span>
+              </span>
             </div>
           </div>
         </header>
