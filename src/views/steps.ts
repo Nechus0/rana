@@ -57,6 +57,9 @@ function textarea(id: string, label: string, opts: {
       <label for="${id}" style="align-items: center;">
         ${esc(label)}${opts.note ? ` <span class="field-note">${esc(opts.note)}</span>` : ""}
         <span class="spacer"></span>
+        <button class="btn btn-sm btn-quiet btn-icon" data-gross="${id}" type="button"
+                title="Feld gross öffnen (Strg+Umschalt+E)"
+                aria-label="Feld gross öffnen">${icon.gross}</button>
         ${opts.bausteine !== false
           ? `<button class="btn btn-sm btn-quiet" data-bausteine="${id}" type="button"
                      title="Eigene Textbausteine für dieses Feld">Bausteine</button>`
@@ -417,6 +420,75 @@ export function renderSchritt(n: number): string {
 // Ereignisse
 // ---------------------------------------------------------------
 
+/**
+ * Öffnet ein Textfeld gross — fast über das ganze Fenster.
+ *
+ * Die Felder im Arbeitsbereich sind bewusst niedrig: sonst sähe man
+ * von einem Schritt nur zwei davon. Zum Schreiben eines langen
+ * Verlaufs ist das zu wenig. Hier bekommt das Feld dieselbe Schrift
+ * und denselben Zeilenabstand, aber die volle Fensterhöhe.
+ *
+ * Geschrieben wird dabei **laufend** in den Zustand, nicht erst beim
+ * Schliessen. Es gibt deshalb kein „Übernehmen" und kein „Verwerfen" —
+ * und keine Möglichkeit, eine halbe Stunde Arbeit mit der Esc-Taste zu
+ * verlieren. Das ist derselbe Grundsatz wie im übrigen Programm:
+ * getippt ist gespeichert.
+ */
+function grossOeffnen(feldId: string): void {
+  const original = document.getElementById(feldId) as HTMLTextAreaElement | null;
+  if (!original) return;
+
+  const beschriftung = original
+    .closest(".field")?.querySelector("label")?.childNodes[0]?.textContent?.trim()
+    ?? "Feld bearbeiten";
+
+  void dialog({
+    title: beschriftung,
+    breit: true,
+    voll: true,
+    cancel: "Schliessen",
+    body: `
+      <textarea id="gross_ta" class="gross-feld"
+                placeholder="${esc(original.placeholder)}">${esc(original.value)}</textarea>
+      <div class="field-fuss">
+        <span class="field-balken" data-balken="${esc(feldId)}"><i></i></span>
+        <span class="field-zaehler" data-zaehler="${esc(feldId)}"></span>
+      </div>`,
+
+    onOpen: (root) => {
+      const gross = qs<HTMLTextAreaElement>("#gross_ta", root)!;
+      const balken = qs<HTMLElement>(`[data-balken="${feldId}"]`, root);
+      const zaehler = qs<HTMLElement>(`[data-zaehler="${feldId}"]`, root);
+
+      const zeigeStand = (): void => {
+        const stand = S.fuellstand(feldId, gross.value.length);
+        const ziel = S.ZIELUMFANG[feldId];
+        if (balken && stand) balken.dataset.stand = stand;
+        if (zaehler) {
+          zaehler.textContent = ziel
+            ? `${gross.value.length} Zeichen · Ziel ${ziel.von}–${ziel.bis}`
+            : `${gross.value.length} Zeichen`;
+          zaehler.className = "field-zaehler"
+            + (stand && stand !== "leer" && stand !== "gut" ? ` ist-${stand}` : "");
+        }
+      };
+
+      on(gross, "input", () => {
+        original.value = gross.value;
+        S.setzeFeld(feldId, gross.value);
+        aktualisiereZaehler(original);
+        zeigeStand();
+      });
+
+      zeigeStand();
+      // Die Schreibmarke ans Ende, nicht an den Anfang: wer ein Feld
+      // gross öffnet, will meist weiterschreiben.
+      gross.focus();
+      gross.setSelectionRange(gross.value.length, gross.value.length);
+    },
+  });
+}
+
 export function bindeSchritt(n: number, neuZeichnen: () => void): void {
   // Alle einfachen Felder hängen am selben Zustandsschreiber.
   for (const node of qsa<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>("[data-feld]")) {
@@ -428,6 +500,20 @@ export function bindeSchritt(n: number, neuZeichnen: () => void): void {
 
   for (const btn of qsa<HTMLButtonElement>("[data-bausteine]")) {
     on(btn, "click", () => { void bausteinDialog(btn.dataset.bausteine!, neuZeichnen); });
+  }
+
+  for (const btn of qsa<HTMLButtonElement>("[data-gross]")) {
+    on(btn, "click", () => grossOeffnen(btn.dataset.gross!));
+  }
+
+  // Strg+Umschalt+E öffnet das Feld gross, in dem die Schreibmarke steht.
+  for (const ta of qsa<HTMLTextAreaElement>("textarea[data-feld]")) {
+    on(ta, "keydown", (e) => {
+      const k = e as KeyboardEvent;
+      if (!k.ctrlKey || !k.shiftKey || k.key.toLowerCase() !== "e") return;
+      k.preventDefault();
+      grossOeffnen(ta.id);
+    });
   }
 
   for (const search of qsa<HTMLInputElement>(".icd10-search")) {

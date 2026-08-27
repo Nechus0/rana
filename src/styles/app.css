@@ -107,14 +107,55 @@
 }
 .save-dot.unsaved { background: var(--amber); }
 
+/* ---- Segmentierte Reiter -----------------------------------
+   Sie bestimmen, was in der Seitenschiene steht. Die Form ist vom
+   PDF Extractor übernommen: eine eingetiefte Spur, darin ein
+   heller Reiter für die aktive Ansicht. Das trägt gut auf engem
+   Raum und liest sich als eine Gruppe, nicht als drei Knöpfe.
+   ------------------------------------------------------------ */
+.segtabs {
+  display: flex;
+  gap: 2px;
+  background: var(--sphagnum-deep);
+  padding: 3px;
+  border-radius: var(--r-lg);
+  margin-left: var(--s3);
+  flex: none;
+}
 
+.segtabs button {
+  border: 0;
+  background: transparent;
+  padding: 0 var(--s3);
+  height: 26px;
+  border-radius: var(--r);
+  font: inherit;
+  font-size: var(--t-xs);
+  font-weight: 500;
+  color: var(--reed);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.segtabs button:hover { color: var(--peat); }
+.segtabs button[aria-selected="true"] {
+  background: var(--paper);
+  color: var(--peat);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(35, 40, 42, .06);
+}
+
+
+/* Zwei Spalten: Seitenschiene und Arbeitsbereich. Die dritte Spalte
+   rechts ist mit 2.2 entfallen — was dort stand, steht jetzt als
+   eigener Bereich in der Schiene und nimmt nur Platz, wenn es
+   gebraucht wird. */
 .shell {
   flex: 1 1 auto;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   min-height: 0;
 }
-.shell.no-context { grid-template-columns: auto minmax(0, 1fr); }
 
 /* ============================================================
    Seitenschiene
@@ -156,18 +197,36 @@
   white-space: nowrap;
 }
 
-/* ---- Einklappbare Kontextspalte ----------------------------- */
-.context {
-  transition: width var(--dur) var(--ease), min-width var(--dur) var(--ease);
-  width: var(--ctx-w);
-  min-width: var(--ctx-w);
+/* ---- Die Bereiche der Schiene ------------------------------
+   „Fortschritt" und „Textbausteine" sind Bildlaufflächen mit dem
+   Innenabstand, den die Kontextspalte hatte. „Patienten" bringt
+   seinen eigenen Aufbau mit und bleibt davon unberührt.
+   ------------------------------------------------------------ */
+.rail-scroll {
+  overflow-y: auto;
+  padding: var(--s4) var(--s3);
+  gap: var(--s5);
 }
-.context-body { display: flex; flex-direction: column; gap: var(--s5); flex: 1; overflow-y: auto; }
-.context-collapsed { display: none; flex-direction: column; height: 100%; }
+.rail-leer { padding: var(--s4) var(--s2); }
 
-.context.collapsed { width: 34px; min-width: 34px; padding: 0; }
-.context.collapsed .context-body { display: none; }
-.context.collapsed .context-collapsed { display: flex; }
+/* ---- Textbausteine ----------------------------------------- */
+.baustein-liste { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+
+.baustein {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  border-radius: var(--r);
+  padding: 8px 10px;
+  font: inherit;
+  font-size: var(--t-xs);
+  line-height: var(--lh-read);
+  color: var(--peat-soft);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.baustein:hover { border-color: var(--arvalis); color: var(--peat); }
 
 /* ---- Fallauswahl ------------------------------------------ */
 .rail-section { padding: 0 var(--s3) var(--s3); }
@@ -1105,6 +1164,34 @@ details.fold > summary:hover { background: var(--sphagnum); }
    kennt, kennt auch diese.
    ============================================================ */
 .dialog.dialog-breit { width: min(880px, 100%); }
+
+/* ---- Ein Feld, gross geöffnet ------------------------------
+   Fast das ganze Fenster. Der Kopf bleibt schmal, der Fuss auch;
+   dazwischen bekommt das Textfeld alles, was übrig ist.
+   ------------------------------------------------------------ */
+.dialog.dialog-voll {
+  width: min(1040px, 96vw);
+  height: 92vh;
+  display: flex;
+  flex-direction: column;
+}
+.dialog.dialog-voll .dialog-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.gross-feld {
+  flex: 1 1 auto;
+  min-height: 0;
+  resize: none;
+  /* Zum Schreiben etwas grösser und luftiger als im Formular —
+     dafür ist die grosse Ansicht schliesslich da. */
+  font-size: var(--t-base);
+  line-height: var(--lh-read);
+  padding: var(--s4) var(--s5);
+}
 
 .settings {
   display: grid;

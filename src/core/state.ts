@@ -53,6 +53,42 @@ export const PFLICHT: { feld: FeldName; label: string; schritt: number }[] = [
 ];
 
 /**
+ * Lesbare Namen für alle Felder.
+ *
+ * Die Bausteinliste in der Seitenschiene gruppiert nach Feld und
+ * bräuchte sonst „f_begruendung" als Überschrift. PFLICHT deckt nur
+ * die Pflichtangaben ab, hier stehen auch die übrigen.
+ */
+export const FELD_NAMEN: Record<string, string> = {
+  f_name: "Patient:in",
+  f_chiffre: "Chiffre",
+  f_nr: "Lfd. Nummer",
+  f_gebdatum: "Geburtsdatum",
+  f_geschlecht: "Geschlecht",
+  f_kasse: "Kostenträger",
+  f_bewilligt: "Bisher bewilligt",
+  f_verbraucht: "Davon verbraucht",
+  f_beantragt: "Jetzt beantragt",
+  f_frequenz: "Frequenz",
+  f_sozio: "Soziodemografische Angaben",
+  f_vorbericht: "Vorbericht liegt vor",
+  f_lastreport: "Text des letzten Berichts",
+  f_diag_alt: "Bisherige Diagnose(n)",
+  f_psychodyn: "Psychodynamik",
+  f_ziele_alt: "Zuletzt vereinbarte Therapieziele",
+  f_verlauf: "Behandlungsverlauf",
+  f_befund: "Psychischer Befund",
+  f_diag_neu: "Aktuelle Diagnose(n)",
+  f_begruendung: "Begründung der Fortführung",
+  f_prognose: "Prognose",
+  f_beginn: "Therapiebeginn",
+  f_ausgangslage: "Ausgangslage bei Therapiebeginn",
+  f_zielstatus: "Stand der Therapieziele",
+  f_methoden: "Behandlungsmethoden",
+  f_abschluss: "Planung des Therapieabschlusses",
+};
+
+/**
  * Wonach die Fallliste geordnet wird.
  *
  * „zuletzt“ ist die Vorgabe, weil man beim Öffnen fast immer da
@@ -173,8 +209,26 @@ export const state: State = {
  * Datenbank: die Übersichten liegen ohnehin alle im Speicher, und so
  * lässt sich die Reihenfolge ohne neue Abfrage umstellen.
  */
+/**
+ * Die natürliche Richtung je Ordnung.
+ *
+ * Bis 2.1 gab es dafür einen Umkehrknopf. Er ist bei der Umstellung
+ * der Seitenschiene entfallen — die gemerkte Richtung blieb aber
+ * stehen, und weil sie „absteigend" lautete, lief „Name" von Z nach A.
+ * Eine Richtung, die niemand mehr umstellen kann, ist keine
+ * Einstellung, sondern ein Fehler. Sie ergibt sich jetzt aus der
+ * Ordnung selbst: Namen von A nach Z, Zeitpunkte und Nummern mit dem
+ * Jüngsten und Höchsten zuerst.
+ */
+const RICHTUNG: Record<SortSchluessel, 1 | -1> = {
+  name:     1,
+  zuletzt: -1,
+  angelegt: -1,
+  nummer:  -1,
+};
+
 export function sortiereFaelle(liste: CaseSummary[]): CaseSummary[] {
-  const richtung = state.sortAuf ? 1 : -1;
+  const richtung = RICHTUNG[state.sortierung] ?? -1;
   const zahl = (v: string) => {
     const n = parseInt(v, 10);
     return isNaN(n) ? 0 : n;
@@ -319,7 +373,7 @@ export function sichtbareGruppen(): Gruppe[] {
     // wird sie erst beim Speichern eines Berichts.
     if (!berichte.length) continue;
 
-    gruppen.push({ patient: p, label: p.label, berichte: sortiereFaelle(berichte) });
+    gruppen.push({ patient: p, label: p.label, berichte: sortiereBerichte(berichte) });
   }
 
   gruppen.sort((a, b) => vergleicheGruppen(a, b));
@@ -331,7 +385,7 @@ export function sichtbareGruppen(): Gruppe[] {
     gruppen.push({
       patient: null,
       label: "Ohne Zuordnung",
-      berichte: sortiereFaelle(ohneGefiltert),
+      berichte: sortiereBerichte(ohneGefiltert),
     });
   }
 
@@ -340,10 +394,10 @@ export function sichtbareGruppen(): Gruppe[] {
 
 /** Ordnet die Personenzeilen nach derselben Regel wie die Berichte. */
 function vergleicheGruppen(a: Gruppe, b: Gruppe): number {
-  const r = state.sortAuf ? 1 : -1;
+  const r = RICHTUNG[state.sortierung] ?? -1;
   switch (state.sortierung) {
     case "name":
-      return a.label.localeCompare(b.label, "de") * (state.sortAuf ? 1 : -1);
+      return a.label.localeCompare(b.label, "de", { sensitivity: "base" }) * r;
     case "angelegt":
       return ((a.patient?.created_at ?? 0) - (b.patient?.created_at ?? 0)) * r;
     case "nummer":
@@ -351,6 +405,23 @@ function vergleicheGruppen(a: Gruppe, b: Gruppe): number {
     default:
       return ((a.patient?.updated_at ?? 0) - (b.patient?.updated_at ?? 0)) * r;
   }
+}
+
+/**
+ * Die Anträge einer Patientin, jüngster zuerst.
+ *
+ * Bewusst unabhängig von der Ordnung der Liste: dort geht es darum,
+ * eine Person zu finden, hier darum, ihren letzten Antrag zu öffnen.
+ * Nach „Name" geordnet stünden sonst alle Anträge einer Person gleich
+ * — sie tragen ja denselben Namen — und die Reihenfolge wäre zufällig.
+ */
+function sortiereBerichte(liste: CaseSummary[]): CaseSummary[] {
+  const nr = (v: string) => {
+    const n = parseInt(v, 10);
+    return isNaN(n) ? 0 : n;
+  };
+  return [...liste].sort((a, b) =>
+    nr(b.antrag_nr) - nr(a.antrag_nr) || b.created_at - a.created_at);
 }
 
 /** Klappt eine Patientin auf oder zu. */

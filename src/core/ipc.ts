@@ -200,6 +200,9 @@ export const addSnippet    = (field: string, text: string) =>
   call<string>("add_snippet", { field, text });
 export const listSnippets  = (field: string) =>
   call<[string, string][]>("list_snippets", { field });
+/** Alle Bausteine: [Kennung, Feld, Text]. */
+export const listAllSnippets = () =>
+  call<[string, string, string][]>("list_all_snippets");
 export const deleteSnippet = (id: string) => call<void>("delete_snippet", { id });
 
 // ---------------------------------------------------------------

@@ -100,6 +100,16 @@ function zeichneGeruest(): void {
         <span class="brand-name">Rana</span>
         <span class="brand-version">arvalis</span>
         <span class="brand-ver-num">${esc(EIGENE_VERSION)}</span>
+
+        <!-- Was in der Seitenschiene steht. Die Übersicht sass bis
+             2.1 in einer eigenen Spalte rechts; sie nahm dauerhaft
+             Platz weg, obwohl man sie nur ab und zu braucht. Jetzt
+             teilt sie sich die linke Schiene mit der Fallliste. -->
+        <div class="segtabs" id="railTabs" role="tablist" aria-label="Ansicht der Seitenschiene">
+          <button role="tab" data-ansicht="faelle" aria-selected="true">Patienten</button>
+          <button role="tab" data-ansicht="fortschritt" aria-selected="false">Fortschritt</button>
+          <button role="tab" data-ansicht="bausteine" aria-selected="false">Textbausteine</button>
+        </div>
       </div>
       <div class="topbar-center" data-tauri-drag-region>
         <span class="topbar-patient" id="topbarPatient" data-tauri-drag-region></span>
@@ -123,10 +133,6 @@ function zeichneGeruest(): void {
             </button>
           </div>
         </div>
-        <button class="topbar-ctx-toggle" id="btnCtxToggle"
-                title="Übersicht ein-/ausklappen" aria-label="Übersicht ein-/ausklappen"
-                aria-expanded="true">${icon.panelR}</button>
-
         <div class="win-ctrls">
           <button class="win-ctrl" id="winMin" title="Minimieren" aria-label="Minimieren">${icon.winMin}</button>
           <button class="win-ctrl" id="winMax" title="Maximieren" aria-label="Maximieren">${icon.winMax}</button>
@@ -159,14 +165,6 @@ function zeichneGeruest(): void {
           <div class="work-inner" id="workInner"></div>
         </div>
       </main>
-      <aside class="context" id="context" aria-label="Übersicht">
-        <div class="context-body" id="contextBody"></div>
-        <div class="context-collapsed" id="contextCollapsed">
-          <button class="rail-tab" id="btnCtxExpand" title="Übersicht anzeigen">
-            <span class="rail-tab-label">Übersicht</span>
-          </button>
-        </div>
-      </aside>
     </div>`;
 
   bindeTopbar();
@@ -181,8 +179,8 @@ function zeichneGeruest(): void {
 
 function railHtml(): string {
   return `
-    <nav class="rail" id="rail" aria-label="Fälle">
-      <div class="rail-body" id="railBody">
+    <nav class="rail" id="rail" aria-label="Seitenschiene" data-ansicht="faelle">
+      <div class="rail-body" id="railFaelle" role="tabpanel">
         <div class="rail-head">
           <span class="record">Fälle</span>
           <span class="record-num small muted" id="fallZaehler"></span>
@@ -211,6 +209,11 @@ function railHtml(): string {
         <ul class="case-list" id="fallListe" role="list"></ul>
       </div>
       
+      <!-- Die weiteren Ansichten derselben Schiene. „Fortschritt"
+           ersetzt die Spalte, die bis 2.1 rechts stand. -->
+      <div class="rail-body rail-scroll" id="railFortschritt" role="tabpanel" hidden></div>
+      <div class="rail-body rail-scroll" id="railBausteine" role="tabpanel" hidden></div>
+
       <!-- Hier stand ein zweiter Knopf „Aus Ordner". Er zeigte nur
            die Meldung, dass die Funktion noch fehle — und nahm dem
            einzigen Knopf, der etwas tut, die halbe Breite. -->
@@ -220,7 +223,7 @@ function railHtml(): string {
       </div>
 
       <div class="rail-collapsed" id="railCollapsed">
-        <button class="rail-tab" id="btnRailExpand" title="Fälle anzeigen">
+        <button class="rail-tab" id="btnRailExpand" title="Seitenschiene anzeigen">
           <span class="rail-tab-label">Fälle</span>
         </button>
       </div>
@@ -308,12 +311,49 @@ function bindeTopbar(): void {
   // Sidebar ein-/ausklappen
   on(el("btnRailToggle"), "click", toggleRail);
 
-  // Kontextspalte ein-/ausklappen
-  on(el("btnCtxToggle"), "click", toggleContext);
-  const expandCtx = document.getElementById("btnCtxExpand");
-  if (expandCtx) on(expandCtx, "click", toggleContext);
-
   bindeFensterknoepfe();
+
+  for (const b of qsa<HTMLButtonElement>("#railTabs [data-ansicht]")) {
+    on(b, "click", () => zeigeAnsicht(b.dataset.ansicht as Ansicht));
+  }
+  zeigeAnsicht(ansicht);
+}
+
+// ---------------------------------------------------------------
+// Was in der Seitenschiene steht
+// ---------------------------------------------------------------
+
+type Ansicht = "faelle" | "fortschritt" | "bausteine";
+
+const ANSICHT_KEY = "rana-rail-ansicht";
+let ansicht: Ansicht = (() => {
+  try {
+    const g = globalThis.localStorage?.getItem(ANSICHT_KEY);
+    return g === "fortschritt" || g === "bausteine" ? g : "faelle";
+  } catch { return "faelle"; }
+})();
+
+/**
+ * Schaltet die Schiene um.
+ *
+ * Der Knopf „Neue Patientin" unten bleibt nur bei der Fallliste
+ * stehen — unter einer Bausteinliste hiesse er nichts.
+ */
+function zeigeAnsicht(neu: Ansicht): void {
+  ansicht = neu;
+  try { globalThis.localStorage?.setItem(ANSICHT_KEY, neu); } catch { /* egal */ }
+
+  el("rail").dataset.ansicht = neu;
+  for (const b of qsa<HTMLButtonElement>("#railTabs [data-ansicht]")) {
+    b.setAttribute("aria-selected", String(b.dataset.ansicht === neu));
+  }
+  el("railFaelle").hidden = neu !== "faelle";
+  el("railFortschritt").hidden = neu !== "fortschritt";
+  el("railBausteine").hidden = neu !== "bausteine";
+  el("btnNeuerFall").parentElement!.hidden = neu !== "faelle";
+
+  if (neu === "fortschritt") zeichneFortschritt();
+  if (neu === "bausteine") void zeichneBausteine();
 }
 
 /**
@@ -379,12 +419,6 @@ function toggleRail(): void {
     expandBtn.dataset.bound = "1";
     on(expandBtn, "click", toggleRail);
   }
-}
-
-function toggleContext(): void {
-  const ctx = el("context");
-  const collapsed = ctx.classList.toggle("collapsed");
-  el("btnCtxToggle").setAttribute("aria-expanded", String(!collapsed));
 }
 
 function zeichneFallListe(): void {
@@ -513,12 +547,23 @@ function zeichneFallListe(): void {
       }
       const p = (e.target as HTMLElement).closest<HTMLElement>("[data-pat]");
       if (p) {
-        S.klappe(p.dataset.pat!);
-        zeichneFallListe();
+        // Die meisten Patientinnen haben genau einen Antrag. Für sie
+        // wäre Aufklappen und dann Klicken ein Klick zu viel — und ein
+        // Aufklappen, das genau eine Zeile zeigt, sieht nach nichts
+        // aus. Deshalb: ein Antrag öffnet sich sofort, mehrere klappen
+        // auf.
+        const pid = p.dataset.pat!;
+        const gruppe = S.sichtbareGruppen().find((g) => (g.patient?.id ?? "__ohne__") === pid);
+        if (gruppe && gruppe.berichte.length === 1) {
+          void oeffneFall(gruppe.berichte[0].id);
+        } else {
+          S.klappe(pid);
+          zeichneFallListe();
+        }
         return;
       }
       const b = (e.target as HTMLElement).closest<HTMLElement>("[data-fall]");
-      if (b) void wechsleFall(b.dataset.fall!);
+      if (b) void oeffneFall(b.dataset.fall!);
     });
 
     box.addEventListener("contextmenu", (e) => {
@@ -585,12 +630,16 @@ async function neuerFall(): Promise<void> {
   (document.getElementById("f_name") as HTMLInputElement | null)?.focus();
 }
 
-async function wechsleFall(id: string): Promise<void> {
-  if (id === S.state.activeId) {
-    await S.schliesseFall();
-  } else {
-    await S.ladeFall(id);
-  }
+/**
+ * Öffnet einen Antrag.
+ *
+ * Ein Klick auf den bereits offenen Antrag tut nichts mehr. Vorher
+ * schloss er ihn — man landete auf „Kein Fall ausgewählt", ohne das
+ * gewollt zu haben, und musste ihn wieder heraussuchen.
+ */
+async function oeffneFall(id: string): Promise<void> {
+  if (id === S.state.activeId) return;
+  await S.ladeFall(id);
   zeichneFallListe();
   zeichneSchritt();
 }
@@ -619,7 +668,6 @@ const neuZeichnen = () => { zeichneSchritt(); zeichneFallListe(); };
 
 function zeichneSchritt(): void {
   const stepbar = document.querySelector(".stepbar") as HTMLElement | null;
-  const ctx = document.querySelector(".context") as HTMLElement | null;
 
   if (!S.state.activeId) {
     el("workEyebrow").textContent = "";
@@ -636,7 +684,6 @@ function zeichneSchritt(): void {
       </div>
     `;
     if (stepbar) stepbar.style.display = "none";
-    if (ctx) ctx.style.display = "none";
     
     // Bind button
     const btn = document.getElementById("btnEmptyNeuerFall");
@@ -646,7 +693,6 @@ function zeichneSchritt(): void {
   }
 
   if (stepbar) stepbar.style.display = "";
-  if (ctx) ctx.style.display = "";
 
   const n = S.state.step;
 
@@ -669,7 +715,7 @@ function zeichneSchritt(): void {
 
 function aktualisiereRand(): void {
   aktualisiereSchrittleiste();
-  aktualisiereKontext();
+  zeichneFortschritt();
   aktualisiereSpeicherstand();
   aktualisiereTopbar();
 }
@@ -728,9 +774,9 @@ function gapListe(offen: S.Luecke[]): string {
       </div>`).join("");
 }
 
-function aktualisiereKontext(): void {
-  const box = document.getElementById("contextBody");
-  if (!box) return;
+function zeichneFortschritt(): void {
+  const box = document.getElementById("railFortschritt");
+  if (!box || box.hidden) return;
 
   const pct = S.vollstaendigkeit();
   const offen = S.luecken();
@@ -768,6 +814,106 @@ function aktualisiereKontext(): void {
     });
   }
 
+}
+
+// ---------------------------------------------------------------
+// Textbausteine in der Seitenschiene
+// ---------------------------------------------------------------
+
+/**
+ * Wohin ein Baustein eingefügt wird.
+ *
+ * Ein Klick in die Seitenschiene nimmt dem Textfeld den Fokus. Deshalb
+ * wird gemerkt, wo die Schreibmarke zuletzt stand — sonst wüsste die
+ * Liste nach dem Klick nicht mehr, wohin sie schreiben soll.
+ */
+let letztesFeld: HTMLTextAreaElement | HTMLInputElement | null = null;
+
+document.addEventListener("focusin", (e) => {
+  const z = e.target as HTMLElement;
+  if (!z.closest("#workInner")) return;
+  if (z instanceof HTMLTextAreaElement || z instanceof HTMLInputElement) letztesFeld = z;
+});
+
+/**
+ * Alle eigenen Formulierungen an einer Stelle, nach Feld gruppiert.
+ *
+ * Bisher lagen sie hinter je einem Knopf im jeweiligen Feld — man fand
+ * sie nur, wenn man schon wusste, wo sie liegen. Ein Klick hier fügt an
+ * der Schreibmarke ein; das Verwalten bleibt beim Feld.
+ */
+async function zeichneBausteine(): Promise<void> {
+  const box = document.getElementById("railBausteine");
+  if (!box) return;
+
+  let alle: [string, string, string][];
+  try {
+    alle = await api.listAllSnippets();
+  } catch (e) {
+    box.innerHTML = `<p class="hint" style="padding:var(--s3)">${esc(api.errorText(e))}</p>`;
+    return;
+  }
+
+  if (!alle.length) {
+    box.innerHTML = `
+      <div class="rail-leer">
+        <p class="hint">
+          Noch keine Bausteine. Formulierungen, die immer wiederkehren,
+          legen Sie über „Bausteine" am jeweiligen Feld ab — hier stehen
+          sie dann alle beisammen.
+        </p>
+      </div>`;
+    return;
+  }
+
+  const nachFeld = new Map<string, [string, string][]>();
+  for (const [id, feld, text] of alle) {
+    const liste = nachFeld.get(feld) ?? [];
+    liste.push([id, text]);
+    nachFeld.set(feld, liste);
+  }
+
+  box.innerHTML = [...nachFeld.entries()].map(([feld, liste]) => `
+    <section class="ctx-block">
+      <span class="record">${esc(S.FELD_NAMEN[feld] ?? feld)}</span>
+      <div class="baustein-liste">
+        ${liste.map(([id, text]) => `
+          <button class="baustein" data-baustein="${esc(id)}" title="An der Schreibmarke einfügen">
+            ${esc(text.length > 160 ? text.slice(0, 160) + " …" : text)}
+          </button>`).join("")}
+      </div>
+    </section>`).join("");
+
+  const texte = new Map(alle.map(([id, , text]) => [id, text]));
+  for (const b of qsa<HTMLButtonElement>("[data-baustein]", box)) {
+    on(b, "click", () => fuegeBausteinEin(texte.get(b.dataset.baustein!) ?? ""));
+  }
+}
+
+function fuegeBausteinEin(text: string): void {
+  const feld = letztesFeld;
+  if (!feld || !feld.isConnected) {
+    toast("Bitte zuerst in das Feld klicken, in das der Baustein soll.", "info");
+    return;
+  }
+
+  const a = feld.selectionStart ?? feld.value.length;
+  const b = feld.selectionEnd ?? a;
+  const davor = feld.value.slice(0, a);
+  const danach = feld.value.slice(b);
+
+  // Ein Leerzeichen dazwischen, wo keines ist — sonst klebt der
+  // Baustein am vorigen Wort.
+  const luecke = davor && !/\s$/.test(davor) ? " " : "";
+  feld.value = davor + luecke + text + danach;
+
+  const marke = (davor + luecke + text).length;
+  feld.setSelectionRange(marke, marke);
+  feld.focus();
+
+  const name = feld.dataset.feld ?? feld.id;
+  if (name) S.setzeFeld(name, feld.value);
+  feld.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
 function aktualisiereSpeicherstand(): void {

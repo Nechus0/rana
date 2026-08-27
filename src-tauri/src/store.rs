@@ -486,6 +486,34 @@ impl Store {
         Ok(id)
     }
 
+    /// Alle Bausteine, mit dem Feld dazu.
+    ///
+    /// Die Seitenschiene zeigt sie gesammelt, damit man nicht erst
+    /// wissen muss, hinter welchem Feld eine Formulierung liegt.
+    /// Auch hier gilt: unlesbare Datensätze werden übersprungen, nicht
+    /// zum Fehler erklärt.
+    pub fn list_all_snippets(&self) -> Result<Vec<(String, String, String)>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, field, nonce, payload FROM snippets ORDER BY field, created_at DESC",
+        )?;
+        let rows: Vec<(String, String, Vec<u8>, Vec<u8>)> = stmt
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))?
+            .collect::<std::result::Result<_, _>>()?;
+        drop(stmt);
+        drop(conn);
+
+        let mut out = Vec::with_capacity(rows.len());
+        for (id, feld, nonce, payload) in rows {
+            if let Ok(klar) = self.unseal(&nonce, &payload) {
+                if let Ok(text) = String::from_utf8(klar) {
+                    out.push((id, feld, text));
+                }
+            }
+        }
+        Ok(out)
+    }
+
     pub fn list_snippets(&self, field_id: &str) -> Result<Vec<(String, String)>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(

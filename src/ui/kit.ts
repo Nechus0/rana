@@ -93,6 +93,9 @@ export const icon = {
   winMax:   svg('<rect x="5.5" y="5.5" width="9" height="9" rx="1"/>'),
   winRest:  svg('<rect x="7" y="4.5" width="8" height="8" rx="1"/><path d="M12.5 15.5h-7a1 1 0 0 1-1-1v-7"/>'),
   winClose: svg('<path d="M5.5 5.5l9 9M14.5 5.5l-9 9"/>'),
+
+  // Vier nach aussen zeigende Ecken: das Feld gross öffnen.
+  gross:   svg('<path d="M8 4H4v4M12 4h4v4M8 16H4v-4M12 16h4v-4"/>'),
 };
 
 // ---------------------------------------------------------------
@@ -131,6 +134,8 @@ export interface DialogOpts {
   body: string;
   /** Breiter Dialog für Ansichten mit seitlichem Verzeichnis. */
   breit?: boolean;
+  /** Nimmt fast das ganze Fenster ein — zum Schreiben langer Texte. */
+  voll?: boolean;
   /** Beschriftung des bestätigenden Knopfes. */
   confirm?: string;
   cancel?: string;
@@ -150,7 +155,7 @@ export function dialog(opts: DialogOpts): Promise<boolean> {
     scrim.setAttribute("aria-label", opts.title);
 
     scrim.innerHTML = `
-      <div class="dialog${opts.breit ? " dialog-breit" : ""}">
+      <div class="dialog${opts.breit ? " dialog-breit" : ""}${opts.voll ? " dialog-voll" : ""}">
         <div class="dialog-head"><h3>${esc(opts.title)}</h3></div>
         <div class="dialog-body">${opts.body}</div>
         <div class="dialog-foot">

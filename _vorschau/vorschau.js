@@ -12,6 +12,7 @@ const icon = {
   dots:   svg('<circle cx="10" cy="5" r="1.3" fill="currentColor" stroke="none"/><circle cx="10" cy="10" r="1.3" fill="currentColor" stroke="none"/><circle cx="10" cy="15" r="1.3" fill="currentColor" stroke="none"/>'),
   panelL: svg('<path d="M3 4h5v12H3zM10 4h7M10 8h7M10 12h5"/>'),
   panelR: svg('<path d="M12 4h5v12h-5zM3 4h7M3 8h7M3 12h5"/>'),
+  gross:  svg('<path d="M8 4H4v4M12 4h4v4M8 16H4v-4M12 16h4v-4"/>'),
   winMin:   svg('<path d="M5 10h10"/>'),
   winMax:   svg('<rect x="5.5" y="5.5" width="9" height="9" rx="1"/>'),
   winClose: svg('<path d="M5.5 5.5l9 9M14.5 5.5l-9 9"/>'),
@@ -68,7 +69,12 @@ document.getElementById("app").innerHTML = `
     <button class="topbar-rail-toggle" aria-expanded="true">${icon.panelL}</button>
     <span class="brand-name">Rana</span>
     <span class="brand-version">arvalis</span>
-    <span class="brand-ver-num">2.1.1</span>
+    <span class="brand-ver-num">2.2.0</span>
+    <div class="segtabs" role="tablist">
+      <button role="tab" aria-selected="true">Patienten</button>
+      <button role="tab" aria-selected="false">Fortschritt</button>
+      <button role="tab" aria-selected="false">Textbausteine</button>
+    </div>
   </div>
   <div class="topbar-center"><span class="topbar-patient">Vißer, Claudia</span></div>
   <div class="topbar-right">
@@ -135,6 +141,23 @@ document.getElementById("app").innerHTML = `
     <div class="work-body">
       <div class="work-inner">
         <section class="group">
+          <div class="group-head"><span class="group-title">Textfeld mit Vergrösserungsknopf</span></div>
+          <div class="field">
+            <label for="v_verlauf" style="align-items:center">
+              Behandlungsverlauf
+              <span class="spacer"></span>
+              <button class="btn btn-sm btn-quiet btn-icon" title="Feld gross öffnen">${icon.gross}</button>
+              <button class="btn btn-sm btn-quiet" type="button">Bausteine</button>
+            </label>
+            <textarea id="v_verlauf" placeholder="Verlauf …"></textarea>
+            <div class="field-fuss">
+              <span class="field-balken" data-stand="kurz"><i></i></span>
+              <span class="field-zaehler ist-kurz">0 Zeichen · Ziel 600–1400</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="group">
           <div class="group-head"><span class="group-title">Praxis und Behandler:in — Feldbreiten wie im Einstellungsdialog</span></div>
           <div class="feldsatz">
             <div class="feldzeile">
@@ -157,8 +180,7 @@ document.getElementById("app").innerHTML = `
     </div>
   </main>
 
-  <aside class="context">
-    <div class="context-body">
+  <template id="tplBereiche">
       <section class="ctx-block">
         <span class="record">Vollständigkeit</span>
         <div class="completeness">
@@ -180,6 +202,53 @@ document.getElementById("app").innerHTML = `
         <span class="record">Dieser Fall</span>
         <p class="hint">Chiffre V36-025825A09.10.1962<br>Zuletzt geändert gestern</p>
       </section>
-    </div>
-  </aside>
+
+  </template>
+
+  <template id="tplBausteine">
+      <section class="ctx-block">
+        <span class="record">Behandlungsverlauf</span>
+        <div class="baustein-liste">
+          <button class="baustein">Die Behandlung wurde im vereinbarten Setting fortgeführt; die Sitzungen fanden regelmässig statt.</button>
+          <button class="baustein">Im Berichtszeitraum kam es zu einer deutlichen Symptomreduktion.</button>
+        </div>
+      </section>
+      <section class="ctx-block">
+        <span class="record">Prognose</span>
+        <div class="baustein-liste">
+          <button class="baustein">Bei Fortführung der Behandlung ist eine weitere Stabilisierung zu erwarten.</button>
+        </div>
+      </section>
+  </template>
 </div>`;
+
+// Die Bereiche in die Schiene hängen und die Reiter schalten lassen —
+// so verhält sich die Vorschau wie das Programm.
+const rail = document.querySelector(".rail");
+const holen = (id) => document.getElementById(id).innerHTML;
+
+const fort = document.createElement("div");
+fort.className = "rail-body rail-scroll";
+fort.id = "railFortschritt";
+fort.hidden = true;
+fort.innerHTML = holen("tplBereiche");
+
+const baus = document.createElement("div");
+baus.className = "rail-body rail-scroll";
+baus.id = "railBausteine";
+baus.hidden = true;
+baus.innerHTML = holen("tplBausteine");
+
+rail.querySelector(".rail-foot").before(fort, baus);
+
+const panes = { Patienten: rail.querySelector(".rail-body"), Fortschritt: fort, Textbausteine: baus };
+for (const b of document.querySelectorAll(".segtabs button")) {
+  b.addEventListener("click", () => {
+    for (const x of document.querySelectorAll(".segtabs button")) {
+      x.setAttribute("aria-selected", String(x === b));
+    }
+    const wahl = b.textContent.trim();
+    for (const [name, p] of Object.entries(panes)) p.hidden = name !== wahl;
+    rail.querySelector(".rail-foot").hidden = wahl !== "Patienten";
+  });
+}

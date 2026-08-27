@@ -200,6 +200,12 @@ fn list_snippets(app: State<App>, field: String) -> Result<Vec<(String, String)>
     app.store.list_snippets(&field)
 }
 
+/// Alle Bausteine auf einmal, für die Seitenschiene.
+#[tauri::command]
+fn list_all_snippets(app: State<App>) -> Result<Vec<(String, String, String)>> {
+    app.store.list_all_snippets()
+}
+
 #[tauri::command]
 fn delete_snippet(app: State<App>, id: String) -> Result<()> {
     app.store.delete_snippet(&id)
@@ -385,6 +391,7 @@ pub fn run() {
             merge_pending,
             add_snippet,
             list_snippets,
+            list_all_snippets,
             delete_snippet,
             generate_report,
             check_clear_names,
