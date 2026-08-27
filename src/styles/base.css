@@ -147,8 +147,18 @@ a { color: var(--arvalis); text-decoration-thickness: 1px; text-underline-offset
   min-width: 0;
 }
 
-input[type="text"], input[type="number"], input[type="date"],
-input[type="password"], input[type="email"], select, textarea {
+/* Ein input ohne type-Angabe ist ein Textfeld — aber der Wähler
+   input[type="text"] trifft es nicht. Genau daran lag es, dass die
+   Felder unter „Praxis" ungestaltet dastanden: schmal, eckig, ohne
+   Innenabstand. Deshalb hier über den Ausschluss statt über die
+   Aufzählung.
+
+   Die Ausschlüsse stehen in :where(), weil :not() sonst das Gewicht
+   seiner Argumente übernimmt. Ohne das schlägt diese Regel jede
+   Sonderform mit einer Klasse — das Suchfeld in der Seitenschiene
+   verlor dadurch seinen Platz für die Lupe. */
+input:not(:where([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"])),
+select, textarea {
   font-family: var(--face-ui);
   font-size: var(--t-base);
   color: var(--peat);
@@ -247,6 +257,20 @@ select {
    die Aneinanderreihung von span-all in einem zweispaltigen Raster,
    bei der die Abstände je nach Zeile verschieden ausfielen. */
 .feldsatz { display: flex; flex-direction: column; gap: var(--s4); }
+
+/* Eine Zeile aus mehreren Feldern. Anders als ein Raster mit
+   Bruchteilen bekommt hier jedes Feld die Breite, die sein Inhalt
+   braucht: „Titel" und „PLZ" sind schmal und bleiben es, der Rest
+   füllt den Platz. Unter 520 Pixeln bricht die Zeile um, statt die
+   Felder unlesbar schmal zu quetschen. */
+.feldzeile {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--s4) var(--s5);
+}
+.feld-schmal { flex: 0 0 132px; min-width: 132px; }
+.feld-weit   { flex: 1 1 220px; min-width: 200px; }
 .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s4) var(--s5); align-items: end; }
 .span-all { grid-column: 1 / -1; }
 .muted { color: var(--reed); }

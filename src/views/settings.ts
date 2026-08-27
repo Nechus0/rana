@@ -52,24 +52,24 @@ export async function zeigeEinstellungen(neuZeichnen: () => void): Promise<void>
       <section data-bereich="praxis" data-offen="ja">
       <div class="group">
         <div class="group-head"><span class="group-title">Praxis und Behandler:in</span></div>
-        <!-- Jedes Feld bekommt die Breite, die sein Inhalt braucht.
-             Vorher standen PLZ und Ort gleich breit nebeneinander —
-             fünf Ziffern in einem Feld für zwanzig Zeichen sieht
-             falsch aus und lässt den Ort zu eng wirken. -->
+        <!-- Schmale Felder bekommen eine feste Breite statt eines
+             Bruchteils der Spalte. Vorher schrumpften Titel und PLZ
+             auf Pillengrösse, während daneben ein breites Feld stand —
+             das sah nach Versehen aus, nicht nach Absicht. -->
         <div class="feldsatz">
-          <div class="grid-1-2">
-            ${txt("e_titel", "Titel", p.behandler.titel)}
-            ${txt("e_name", "Name", p.behandler.name)}
+          <div class="feldzeile">
+            <div class="feld-schmal">${txt("e_titel", "Titel", p.behandler.titel)}</div>
+            <div class="feld-weit">${txt("e_name", "Name", p.behandler.name)}</div>
           </div>
           ${txt("e_funktion", "Funktion", p.behandler.funktion)}
           ${txt("e_strasse", "Strasse und Hausnummer", p.praxis.strasse)}
-          <div class="grid-1-3">
-            ${txt("e_plz", "PLZ", p.praxis.plz)}
-            ${txt("e_ort", "Ort", p.praxis.ort)}
+          <div class="feldzeile">
+            <div class="feld-schmal">${txt("e_plz", "PLZ", p.praxis.plz)}</div>
+            <div class="feld-weit">${txt("e_ort", "Ort", p.praxis.ort)}</div>
           </div>
-          <div class="grid-2">
-            ${txt("e_tel", "Telefon", p.praxis.telefon)}
-            ${txt("e_mail", "E-Mail", p.praxis.email)}
+          <div class="feldzeile">
+            <div class="feld-weit">${txt("e_tel", "Telefon", p.praxis.telefon)}</div>
+            <div class="feld-weit">${txt("e_mail", "E-Mail", p.praxis.email)}</div>
           </div>
         </div>
       </div>
@@ -310,7 +310,7 @@ export async function zeigeEinstellungen(neuZeichnen: () => void): Promise<void>
 const txt = (id: string, label: string, wert: string) => `
   <div class="field">
     <label for="${id}">${esc(label)}</label>
-    <input id="${id}" value="${esc(wert)}">
+    <input id="${id}" type="text" value="${esc(wert)}">
   </div>`;
 
 const num = (id: string, label: string, wert: number) => `

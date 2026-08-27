@@ -33,8 +33,11 @@ import * as S from "./core/state";
 import { runSetup } from "./setup/wizard";
 import { bindeSchritt, fallInPapierkorb, renderSchritt, SCHRITTE } from "./views/steps";
 
-import { zeigeEinstellungen, EIGENE_VERSION } from "./views/settings";
-import { el, esc, eur, icon, on, qsa, relDate, toast } from "./ui/kit";
+import {
+  EIGENE_VERSION, zeigeEinstellungen, zeigePapierkorb, zeigeSicherung,
+} from "./views/settings";
+import { offeneZuordnungen, zeigeZuordnung } from "./views/patients";
+import { confirmDialog, el, esc, icon, on, qsa, relDate, toast } from "./ui/kit";
 
 // ===============================================================
 // Start
@@ -83,8 +86,14 @@ async function starteArbeitsansicht(): Promise<void> {
 
 function zeichneGeruest(): void {
   el("app").innerHTML = `
-    <header class="topbar" id="topbar">
-      <div class="topbar-left">
+    <!-- Diese Leiste IST der Fensterrahmen. Windows zeichnet keinen
+         eigenen mehr (decorations: false in tauri.conf.json), deshalb
+         trägt sie die Ziehfläche und die drei Fensterknöpfe rechts.
+         Das Merkmal data-tauri-drag-region verschiebt das Fenster;
+         Knöpfe und Felder darin sind davon ausgenommen, sonst liesse
+         sich nichts mehr anklicken. -->
+    <header class="topbar" id="topbar" data-tauri-drag-region>
+      <div class="topbar-left" data-tauri-drag-region>
         <button class="topbar-rail-toggle" id="btnRailToggle"
                 title="Seitenschiene ein-/ausklappen" aria-label="Seitenschiene ein-/ausklappen"
                 aria-expanded="true">${icon.panelL}</button>
@@ -92,19 +101,37 @@ function zeichneGeruest(): void {
         <span class="brand-version">arvalis</span>
         <span class="brand-ver-num">${esc(EIGENE_VERSION)}</span>
       </div>
-      <div class="topbar-center">
-        <span class="topbar-patient" id="topbarPatient"></span>
+      <div class="topbar-center" data-tauri-drag-region>
+        <span class="topbar-patient" id="topbarPatient" data-tauri-drag-region></span>
       </div>
       <div class="topbar-right">
         <span class="save-indicator" id="saveIndicator">
           <span class="save-dot"></span>
           <span class="save-text">Gespeichert</span>
         </span>
-        <button class="btn btn-sm btn-quiet btn-icon" id="btnEinstellungen"
-                title="Einstellungen" aria-label="Einstellungen">${icon.dots}</button>
+        <div class="menuwrap">
+          <button class="btn btn-sm btn-quiet btn-icon" id="btnMehr"
+                  title="Menü" aria-label="Menü"
+                  aria-haspopup="menu" aria-expanded="false">${icon.dots}</button>
+          <div class="menu" id="mehrMenu" role="menu" hidden>
+            <button class="menu-item" role="menuitem" id="mnuEinstellungen">${icon.gear}<span>Einstellungen</span></button>
+            <button class="menu-item" role="menuitem" id="mnuSicherung">${icon.save}<span>Sicherung</span></button>
+            <button class="menu-item" role="menuitem" id="mnuPapierkorb">${icon.trash}<span>Papierkorb</span></button>
+            <div class="menu-sep"></div>
+            <button class="menu-item" role="menuitem" id="mnuZuordnen" hidden>
+              ${icon.merge}<span id="mnuZuordnenText">Berichte zuordnen</span>
+            </button>
+          </div>
+        </div>
         <button class="topbar-ctx-toggle" id="btnCtxToggle"
                 title="Übersicht ein-/ausklappen" aria-label="Übersicht ein-/ausklappen"
                 aria-expanded="true">${icon.panelR}</button>
+
+        <div class="win-ctrls">
+          <button class="win-ctrl" id="winMin" title="Minimieren" aria-label="Minimieren">${icon.winMin}</button>
+          <button class="win-ctrl" id="winMax" title="Maximieren" aria-label="Maximieren">${icon.winMax}</button>
+          <button class="win-ctrl win-close" id="winClose" title="Schliessen" aria-label="Schliessen">${icon.winClose}</button>
+        </div>
       </div>
     </header>
     <div class="shell" id="shell">
@@ -166,22 +193,30 @@ function railHtml(): string {
           <input type="search" id="fallSuche" placeholder="Suchen …" aria-label="Fälle durchsuchen">
         </div>
 
-        <div class="row rail-filters">
-          <select id="fallSort" aria-label="Fälle ordnen nach" style="flex:1;">
+        <!-- Zwei knappe Auswahlfelder. Die Beschriftungen sind kurz
+             gehalten: in einer 280 Pixel breiten Schiene bleibt je
+             Feld kaum mehr als ein Wort, und ein abgeschnittener Text
+             unter dem Pfeil sieht nach Fehler aus. -->
+        <div class="rail-filters">
+          <select id="fallSort" class="rail-select" aria-label="Fälle ordnen nach">
             ${(Object.keys(S.SORT_NAMEN) as S.SortSchluessel[]).map((k) => `
-              <option value="${k}" ${S.state.sortierung === k ? "selected" : ""}>Sortierung: ${esc(S.SORT_NAMEN[k])}</option>`).join("")}
+              <option value="${k}" ${S.state.sortierung === k ? "selected" : ""}>${esc(S.SORT_KURZ[k])}</option>`).join("")}
           </select>
-          <select id="fallFilter" aria-label="Fälle filtern" style="flex:1;">
-            <option value="alle">Alle zeigen</option>
+          <select id="fallFilter" class="rail-select" aria-label="Fälle filtern">
+            ${(Object.keys(S.FILTER_NAMEN) as S.FilterSchluessel[]).map((k) => `
+              <option value="${k}" ${S.state.filter === k ? "selected" : ""}>${esc(S.FILTER_NAMEN[k])}</option>`).join("")}
           </select>
         </div>
 
         <ul class="case-list" id="fallListe" role="list"></ul>
       </div>
       
+      <!-- Hier stand ein zweiter Knopf „Aus Ordner". Er zeigte nur
+           die Meldung, dass die Funktion noch fehle — und nahm dem
+           einzigen Knopf, der etwas tut, die halbe Breite. -->
       <div class="rail-foot">
-        <button class="btn btn-sm" id="btnNeuerFall" title="Neuen Fall anlegen (Strg+N)">${icon.plus} Neuer Patient</button>
-        <button class="btn btn-sm btn-quiet" id="btnOrdner" title="Patienten aus Ordner laden">${icon.save} Aus Ordner</button>
+        <button class="btn btn-sm btn-primary" id="btnNeuerFall"
+                title="Neue Patientin anlegen (Strg+N)">${icon.plus} Neue Patientin</button>
       </div>
 
       <div class="rail-collapsed" id="railCollapsed">
@@ -194,7 +229,6 @@ function railHtml(): string {
 
 function bindeRail(): void {
   on(el("btnNeuerFall"), "click", () => { void neuerFall(); });
-  on(el("btnOrdner"), "click", () => { toast("Verzeichnisauswahl folgt in Kürze."); });
 
   // Kein Umweg über Rust mehr: die Übersichten liegen bereits im
   // Speicher, gefiltert wird hier. Damit entfällt auch die Verzögerung
@@ -221,13 +255,55 @@ function bindeRail(): void {
     S.setzeSortierung(el<HTMLSelectElement>("fallSort").value as S.SortSchluessel, S.state.sortAuf);
     zeichneFallListe();
   });
+  on(el("fallFilter"), "change", () => {
+    S.setzeFilter(el<HTMLSelectElement>("fallFilter").value as S.FilterSchluessel);
+    zeichneFallListe();
+  });
 
 
   zeichneFallListe();
 }
 
 function bindeTopbar(): void {
-  on(el("btnEinstellungen"), "click", () => { void zeigeEinstellungen(neuZeichnen); });
+  const knopf = el("btnMehr");
+  const menu = el("mehrMenu");
+
+  const schliesse = (): void => {
+    menu.hidden = true;
+    knopf.setAttribute("aria-expanded", "false");
+  };
+
+  on(knopf, "click", (e) => {
+    e.stopPropagation();
+    const auf = menu.hidden;
+    menu.hidden = !auf;
+    knopf.setAttribute("aria-expanded", String(auf));
+  });
+  // Ein Klick irgendwo sonst schliesst. Der Klick im Menü selbst nicht,
+  // sonst schlösse es sich, bevor der Menüpunkt reagieren kann.
+  on(menu, "click", (e) => { e.stopPropagation(); });
+  on(document, "click", schliesse);
+  on(document, "keydown", (e) => {
+    if ((e as KeyboardEvent).key === "Escape") schliesse();
+  });
+
+  const punkt = (id: string, tue: () => void): void => {
+    const b = document.getElementById(id);
+    if (b) on(b, "click", () => { schliesse(); tue(); });
+  };
+
+  punkt("mnuEinstellungen", () => { void zeigeEinstellungen(neuZeichnen); });
+  punkt("mnuSicherung",     () => { void zeigeSicherung(neuZeichnen); });
+  punkt("mnuPapierkorb",    () => { void zeigePapierkorb(neuZeichnen); });
+  punkt("mnuZuordnen",      () => {
+    void zeigeZuordnung().then(async (n) => {
+      if (n) await S.refreshCases();
+      await pruefeZuordnung();
+      zeichneFallListe();
+    });
+  });
+
+  void pruefeZuordnung();
 
   // Sidebar ein-/ausklappen
   on(el("btnRailToggle"), "click", toggleRail);
@@ -236,6 +312,61 @@ function bindeTopbar(): void {
   on(el("btnCtxToggle"), "click", toggleContext);
   const expandCtx = document.getElementById("btnCtxExpand");
   if (expandCtx) on(expandCtx, "click", toggleContext);
+
+  bindeFensterknoepfe();
+}
+
+/**
+ * Die drei Fensterknöpfe rechts.
+ *
+ * Seit das Fenster ohne Systemrahmen läuft, gibt es keinen anderen Weg
+ * mehr, es zu minimieren oder zu schliessen — deshalb ist ein Fehler
+ * hier kein Schönheitsfehler. Schlägt das Laden der Fenster-Schnitt-
+ * stelle fehl, werden die Knöpfe ausgeblendet statt untätig
+ * stehenzubleiben.
+ */
+function bindeFensterknoepfe(): void {
+  void import("@tauri-apps/api/window").then(async ({ getCurrentWindow }) => {
+    const fenster = getCurrentWindow();
+
+    on(el("winMin"), "click", () => { void fenster.minimize(); });
+    on(el("winClose"), "click", () => { void fenster.close(); });
+
+    const knopfMax = el("winMax");
+    const zeichneMax = async (): Promise<void> => {
+      const voll = await fenster.isMaximized();
+      knopfMax.innerHTML = voll ? icon.winRest : icon.winMax;
+      knopfMax.title = voll ? "Wiederherstellen" : "Maximieren";
+      knopfMax.setAttribute("aria-label", knopfMax.title);
+    };
+    on(knopfMax, "click", () => { void fenster.toggleMaximize().then(zeichneMax); });
+    await zeichneMax();
+
+    // Ein Doppelklick auf die Leiste maximiert — wie bei jedem Fenster.
+    on(el("topbar"), "dblclick", (e) => {
+      if ((e.target as HTMLElement).closest("button, input, select, .menu")) return;
+      void fenster.toggleMaximize().then(zeichneMax);
+    });
+  }).catch(() => {
+    document.getElementById("winMin")?.parentElement?.remove();
+  });
+}
+
+/**
+ * Blendet den Menüpunkt für die Zuordnung ein, solange Berichte ohne
+ * Patientin dastehen — und blendet ihn wieder aus, wenn alle zugeordnet
+ * sind. So steht im Menü nie eine Zeile, die nichts zu tun hätte.
+ */
+async function pruefeZuordnung(): Promise<void> {
+  const punkt = document.getElementById("mnuZuordnen");
+  const text = document.getElementById("mnuZuordnenText");
+  const trenner = document.querySelector<HTMLElement>("#mehrMenu .menu-sep");
+  if (!punkt || !text) return;
+
+  const n = await offeneZuordnungen();
+  punkt.hidden = n === 0;
+  if (trenner) trenner.hidden = n === 0;
+  text.textContent = n === 1 ? "1 Bericht zuordnen" : `${n} Berichte zuordnen`;
 }
 
 function toggleRail(): void {
@@ -318,6 +449,13 @@ function zeichneFallListe(): void {
                      aria-label="Nächsten Fortführungsantrag für ${esc(g.label)} anlegen"
                      >${icon.plus}</button>`
           : ""}
+        ${g.patient
+          ? `<button class="pat-weg" data-patweg="${esc(g.patient.id)}"
+                     data-patname="${esc(g.label)}"
+                     title="${esc(g.label)} in den Papierkorb legen"
+                     aria-label="${esc(g.label)} in den Papierkorb legen"
+                     >${icon.close}</button>`
+          : ""}
       </div>`;
 
     const kinder = auf ? g.berichte.map((c) => `
@@ -330,6 +468,10 @@ function zeichneFallListe(): void {
           </span>
           ${c.has_report ? `<span class="case-item-fertig" title="Bericht formuliert">${icon.check}</span>` : ""}
         </button>
+        <button class="case-weg" data-fallweg="${esc(c.id)}"
+                data-fallname="${esc(c.antrag_nr ? `${c.antrag_nr}. Fortführungsantrag` : "Antrag ohne Nummer")}"
+                title="Diesen Antrag in den Papierkorb legen"
+                aria-label="Diesen Antrag in den Papierkorb legen">${icon.close}</button>
       </li>`).join("") : "";
 
     return `<li class="pat-gruppe">${kopf}<ul class="case-sub" role="list">${kinder}</ul></li>`;
@@ -342,6 +484,26 @@ function zeichneFallListe(): void {
     box.dataset.gebunden = "ja";
 
     on(box, "click", (e) => {
+      // Erst die Kreuze prüfen: sie liegen innerhalb der Zeile, und
+      // ohne diese Reihenfolge würde stattdessen der Fall gewechselt
+      // oder die Patientin auf- und zugeklappt.
+      const pw = (e.target as HTMLElement).closest<HTMLElement>("[data-patweg]");
+      if (pw) {
+        e.stopPropagation();
+        void patientinInPapierkorb(pw.dataset.patweg!, pw.dataset.patname ?? "");
+        return;
+      }
+      const fw = (e.target as HTMLElement).closest<HTMLElement>("[data-fallweg]");
+      if (fw) {
+        e.stopPropagation();
+        const id = fw.dataset.fallweg!;
+        void fallInPapierkorb(id, fw.dataset.fallname ?? "").then((weg) => {
+          if (weg && id === S.state.activeId) void naechstenFallOeffnen();
+          else if (weg) void S.refreshCases().then(zeichneFallListe);
+        });
+        return;
+      }
+
       const f = (e.target as HTMLElement).closest<HTMLElement>("[data-folge]");
       if (f) {
         void S.folgeAntragFuerPatientin(f.dataset.folge!).then((id) => {
@@ -371,6 +533,48 @@ function zeichneFallListe(): void {
       });
     });
   }
+}
+
+/**
+ * Legt eine Patientin samt allen ihren Anträgen in den Papierkorb.
+ *
+ * Bewusst mit Zahl in der Rückfrage: „Frau Pauer löschen" klingt nach
+ * einem Eintrag, es sind aber womöglich vier Berichte. Endgültig
+ * entfernt wird nichts — dafür gibt es den Papierkorb, und der hält
+ * dreissig Tage.
+ */
+async function patientinInPapierkorb(patientId: string, name: string): Promise<void> {
+  const berichte = S.state.cases.filter((c) => c.patient_id === patientId);
+  const n = berichte.length;
+
+  const ja = await confirmDialog(
+    "In den Papierkorb legen",
+    n === 1
+      ? `„${name}" wird mit ihrem einen Antrag in den Papierkorb gelegt. `
+        + `Dort bleibt sie dreissig Tage und lässt sich jederzeit zurückholen.`
+      : `„${name}" wird mit allen ${n} Anträgen in den Papierkorb gelegt. `
+        + `Dort bleiben sie dreissig Tage und lassen sich jederzeit zurückholen.`,
+    "In den Papierkorb",
+    true,
+  );
+  if (!ja) return;
+
+  try {
+    for (const c of berichte) await api.trashCase(c.id);
+    // Die Patientin selbst verschwindet mit ihrem letzten sichtbaren
+    // Bericht aus der Liste; ihr Datensatz bleibt, damit die Berichte
+    // beim Wiederherstellen ihre Stammdaten wiederfinden.
+    toast(
+      n === 1 ? "In den Papierkorb gelegt." : `${n} Anträge in den Papierkorb gelegt.`,
+      "ok", 3200,
+    );
+  } catch (e) {
+    toast(api.errorText(e), "danger");
+    return;
+  }
+
+  if (berichte.some((c) => c.id === S.state.activeId)) await naechstenFallOeffnen();
+  else { await S.refreshCases(); zeichneFallListe(); }
 }
 
 async function neuerFall(): Promise<void> {
@@ -491,13 +695,46 @@ function aktualisiereSchrittleiste(): void {
   // is-done und is-current — es braucht keine gerechnete Länge mehr.
 }
 
+/**
+ * Die offenen Pflichtangaben, nach Schritt gruppiert.
+ *
+ * Vorher stand vor jeder Zeile die Nummer ihres Schritts — bei sieben
+ * Lücken also „1 1 1 3 3 3 3". Das liest sich wie eine kaputte
+ * Aufzählung. Die Nummer steht jetzt einmal über der Gruppe, und
+ * damit sagt sie auch etwas: wo die Lücken sitzen.
+ */
+function gapListe(offen: S.Luecke[]): string {
+  const nachSchritt = new Map<number, S.Luecke[]>();
+  for (const l of offen) {
+    const liste = nachSchritt.get(l.schritt) ?? [];
+    liste.push(l);
+    nachSchritt.set(l.schritt, liste);
+  }
+
+  return [...nachSchritt.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([schritt, liste]) => `
+      <div class="gap-gruppe">
+        <div class="gap-kopf">
+          <span class="gap-num">${schritt + 1}</span>
+          <span class="gap-schritt">${esc(SCHRITTE[schritt]?.titel ?? "")}</span>
+        </div>
+        <ul class="gap-list">
+          ${liste.map((l) => `
+            <li><button class="gap-item" data-luecke="${esc(l.feld)}" data-schritt="${l.schritt}">
+              ${esc(l.label)}
+            </button></li>`).join("")}
+        </ul>
+      </div>`).join("");
+}
+
 function aktualisiereKontext(): void {
   const box = document.getElementById("contextBody");
   if (!box) return;
 
   const pct = S.vollstaendigkeit();
   const offen = S.luecken();
-  const b = S.state.budget;
+  const dieser = S.state.cases.find((c) => c.id === S.state.activeId);
 
   box.innerHTML = `
     <section class="ctx-block">
@@ -508,22 +745,14 @@ function aktualisiereKontext(): void {
           <div class="comp-fill ${pct === 100 ? "is-full" : ""}" style="--comp:${pct}%"></div>
         </div>
       </div>
-      ${offen.length ? `
-        <ul class="gap-list">
-          ${offen.map((l) => `
-            <li><button class="gap-item" data-luecke="${esc(l.feld)}" data-schritt="${l.schritt}">
-              <span class="gap-num">${l.schritt + 1}</span>
-              ${esc(l.label)}
-            </button></li>`).join("")}
-        </ul>`
-      : `<p class="hint">Alle Pflichtangaben liegen vor.</p>`}
+      ${offen.length ? gapListe(offen) : `<p class="hint">Alle Pflichtangaben liegen vor.</p>`}
     </section>
 
     <section class="ctx-block">
       <span class="record">Dieser Fall</span>
       <p class="hint">
         ${S.state.fields.f_chiffre ? `Chiffre ${esc(S.state.fields.f_chiffre)}<br>` : ""}
-        Zuletzt geändert ${esc(relDate(Date.now()))}
+        Zuletzt geändert ${esc(relDate(dieser?.updated_at ?? 0))}
       </p>
     </section>`;
 
@@ -539,8 +768,6 @@ function aktualisiereKontext(): void {
     });
   }
 
-  const rv = document.getElementById("railVerbrauch");
-  if (rv && b) rv.textContent = eur(b.month_spent_eur);
 }
 
 function aktualisiereSpeicherstand(): void {

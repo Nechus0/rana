@@ -70,7 +70,31 @@ export const SORT_NAMEN: Record<SortSchluessel, string> = {
   nummer:   "Antragsnummer",
 };
 
+/**
+ * Dieselben Ordnungen, nur in einem Wort.
+ *
+ * In der Seitenschiene ist das Auswahlfeld rund 120 Pixel breit. Ein
+ * `<select>` schneidet zu langen Text ohne Auslassungszeichen ab, und
+ * der Pfeil legt sich obendrauf — es sieht dann aus, als sei etwas
+ * kaputt. Deshalb hier die Kurzform.
+ */
+export const SORT_KURZ: Record<SortSchluessel, string> = {
+  zuletzt:  "Zuletzt",
+  name:     "Name",
+  angelegt: "Angelegt",
+  nummer:   "Antrag",
+};
+
+export type FilterSchluessel = "alle" | "offen" | "fertig";
+
+export const FILTER_NAMEN: Record<FilterSchluessel, string> = {
+  alle:   "Alle",
+  offen:  "Ohne Bericht",
+  fertig: "Mit Bericht",
+};
+
 const SORT_KEY = "rana-sortierung";
+const FILTER_KEY = "rana-filter";
 
 /**
  * Liest eine gemerkte Einstellung — abgesichert.
@@ -120,6 +144,8 @@ export interface State {
   sortierung: SortSchluessel;
   /** true = aufsteigend (A–Z, ältestes zuerst, 1 zuerst). */
   sortAuf: boolean;
+  /** Welche Anträge die Liste zeigt. */
+  filter: FilterSchluessel;
 }
 
 export const state: State = {
@@ -139,6 +165,7 @@ export const state: State = {
   dirty: false,
   sortierung: merkeLesen(SORT_KEY, "zuletzt") as SortSchluessel,
   sortAuf: merkeLesen(SORT_KEY + "-auf", "0") === "1",
+  filter: merkeLesen(FILTER_KEY, "alle") as FilterSchluessel,
 };
 
 /**
@@ -178,6 +205,12 @@ export function setzeSortierung(s: SortSchluessel, auf: boolean): void {
   state.sortAuf = auf;
   merkeSchreiben(SORT_KEY, s);
   merkeSchreiben(SORT_KEY + "-auf", auf ? "1" : "0");
+  notify();
+}
+
+export function setzeFilter(f: FilterSchluessel): void {
+  state.filter = f;
+  merkeSchreiben(FILTER_KEY, f);
   notify();
 }
 
@@ -252,9 +285,15 @@ export function sichtbareGruppen(): Gruppe[] {
   const passt = (heu: string): boolean =>
     woerter.every((w) => heu.toLowerCase().includes(w));
 
+  // Der Filter greift vor der Suche: er sagt, welche Anträge
+  // überhaupt zur Auswahl stehen.
+  const erlaubt = (c: CaseSummary): boolean =>
+    state.filter === "alle"
+    || (state.filter === "fertig" ? c.has_report : !c.has_report);
+
   const nachPatient = new Map<string, CaseSummary[]>();
   const ohne: CaseSummary[] = [];
-  for (const c of state.cases) {
+  for (const c of state.cases.filter(erlaubt)) {
     if (c.patient_id) {
       const liste = nachPatient.get(c.patient_id) ?? [];
       liste.push(c);
@@ -274,9 +313,11 @@ export function sichtbareGruppen(): Gruppe[] {
       : alle.filter((c) => passt(`${c.label} ${c.chiffre} ${c.antrag_nr}`));
 
     // Eine Patientin ohne sichtbaren Bericht verschwindet aus der
-    // Liste — es sei denn, sie selbst ist der Treffer und hat noch
-    // gar keinen Bericht.
-    if (!berichte.length && !(personPasst && !alle.length)) continue;
+    // Liste. Das ist seit dem Papierkorb-Kreuz wichtig: liegen alle
+    // ihre Anträge im Papierkorb, soll sie nicht als leere Zeile
+    // stehenbleiben. Ohne Bericht entsteht sie ohnehin nie — angelegt
+    // wird sie erst beim Speichern eines Berichts.
+    if (!berichte.length) continue;
 
     gruppen.push({ patient: p, label: p.label, berichte: sortiereFaelle(berichte) });
   }

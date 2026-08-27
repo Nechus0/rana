@@ -1,6 +1,8 @@
-// Hebt die Fassungsnummer an allen fünf Stellen zugleich.
-// Fünf, nicht vier: Cargo.lock wurde schon einmal vergessen, und
+// Hebt die Fassungsnummer an allen sechs Stellen zugleich.
+// Sechs, nicht vier: Cargo.lock wurde schon einmal vergessen, und
 // dann meldet der Bauserver eine Abweichung nach zwanzig Minuten.
+// EIGENE_VERSION kam mit der Leiste dazu — sie steht sichtbar oben
+// links im Fenster, eine falsche Zahl dort fällt sofort auf.
 import { readFileSync, writeFileSync } from "node:fs";
 
 const alt = process.argv[2];
@@ -12,6 +14,7 @@ const dateien = [
   ["src-tauri/Cargo.toml",      `version = "${alt}"`,   `version = "${neu}"`],
   ["src-tauri/tauri.conf.json", `"version": "${alt}"`,  `"version": "${neu}"`],
   ["README.md",                 `Arvalis · ${alt}`,     `Arvalis · ${neu}`],
+  ["src/views/settings.ts",     `EIGENE_VERSION = "${alt}"`, `EIGENE_VERSION = "${neu}"`],
 ];
 
 for (const [pfad, suche, ersatz] of dateien) {

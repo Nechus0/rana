@@ -81,10 +81,18 @@ export const icon = {
   // Zeigt nach rechts; aufgeklappt dreht ihn die Formatvorlage.
   caret:   svg('<path d="M8 5.5l4.5 4.5L8 14.5"/>'),
   person:  svg('<circle cx="10" cy="7" r="3"/><path d="M4.5 16.5a5.5 5.5 0 0 1 11 0"/>'),
+  close:   svg('<path d="M6 6l8 8M14 6l-8 8"/>'),
   merge:   svg('<path d="M5 4v4a4 4 0 0 0 4 4h6"/><path d="M5 16v-2"/><path d="M12.5 9.5L15 12l-2.5 2.5"/>'),
   dots:    svg('<circle cx="10" cy="5" r="1.3" fill="currentColor" stroke="none"/><circle cx="10" cy="10" r="1.3" fill="currentColor" stroke="none"/><circle cx="10" cy="15" r="1.3" fill="currentColor" stroke="none"/>'),
   panelL:  svg('<path d="M3 4h5v12H3zM10 4h7M10 8h7M10 12h5"/>'),
   panelR:  svg('<path d="M12 4h5v12h-5zM3 4h7M3 8h7M3 12h5"/>'),
+
+  // Die drei Fensterknöpfe. Bewusst in den Strichstärken von Windows
+  // gehalten — sie sollen wie Systemknöpfe wirken, nicht wie Zierrat.
+  winMin:   svg('<path d="M5 10h10"/>'),
+  winMax:   svg('<rect x="5.5" y="5.5" width="9" height="9" rx="1"/>'),
+  winRest:  svg('<rect x="7" y="4.5" width="8" height="8" rx="1"/><path d="M12.5 15.5h-7a1 1 0 0 1-1-1v-7"/>'),
+  winClose: svg('<path d="M5.5 5.5l9 9M14.5 5.5l-9 9"/>'),
 };
 
 // ---------------------------------------------------------------

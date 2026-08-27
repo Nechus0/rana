@@ -183,10 +183,37 @@
   border-top: 1px solid var(--line);
   background: var(--sphagnum-deep);
 }
-.rail-foot .btn { justify-content: flex-start; padding-left: 12px; }
+.rail-foot .btn { justify-content: center; }
 .rail-foot svg { margin-right: 6px; }
 
-.rail-filters { margin: 0 var(--s3) var(--s3); }
+/* ---- Ordnen und Filtern -------------------------------------
+   Zwei gleich breite Auswahlfelder. Sie sind bewusst kleiner und
+   flacher als die Felder im Arbeitsbereich: hier wird nichts
+   eingetragen, hier wird nur umgeschaltet.
+   ------------------------------------------------------------ */
+.rail-filters {
+  margin: 0 var(--s3) var(--s3);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s2);
+}
+
+.rail-select {
+  width: 100%;
+  min-width: 0;
+  height: 30px;
+  padding: 0 26px 0 10px;
+  font-size: var(--t-xs);
+  border-radius: var(--r);
+  border: 1px solid var(--line);
+  background-color: var(--paper);
+  background-position: right 8px center;
+  background-size: 11px 11px;
+  /* Ein `select` kürzt zu langen Text nicht mit Auslassungspunkten,
+     sondern schneidet ihn hart ab — deshalb sind die Beschriftungen
+     schon in der Datenquelle kurz gehalten (SORT_KURZ). */
+  text-overflow: ellipsis;
+}
 
 
 
@@ -199,7 +226,7 @@
   border: 1px solid var(--line);
   border-radius: 20px;
   padding: 8px 12px 8px 34px;
-  background: var(--surface);
+  background: var(--paper);
   outline: none;
   font-family: inherit;
   font-size: var(--t-sm);
@@ -294,6 +321,131 @@
 .pat-zeile:hover .pat-plus,
 .pat-plus:focus-visible { opacity: 1; }
 .pat-plus:hover { color: var(--arvalis); border-color: var(--line); }
+
+/* ---- Das Kreuz: in den Papierkorb ---------------------------
+   Erscheint erst beim Überfahren der Zeile. Es liegt neben dem
+   Eintrag, nicht darin — sonst führte ein knapp danebengesetzter
+   Klick zum Löschen statt zum Öffnen.
+   ------------------------------------------------------------ */
+.pat-weg, .case-weg {
+  flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px;
+  border: 1px solid transparent;
+  border-radius: var(--r);
+  background: transparent;
+  color: var(--reed-faint);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.pat-weg svg, .case-weg svg { width: 13px; height: 13px; }
+.pat-zeile:hover .pat-weg,
+.pat-weg:focus-visible,
+.case-sub li:hover .case-weg,
+.case-weg:focus-visible { opacity: 1; }
+.pat-weg:hover, .case-weg:hover {
+  color: var(--rust, #a8362a);
+  border-color: var(--line);
+}
+
+/* Der Antrag und sein Kreuz teilen sich eine Zeile. */
+.case-sub li { display: flex; align-items: center; gap: 2px; }
+.case-sub .case-item { flex: 1 1 auto; min-width: 0; }
+
+/* ---- Das Menü oben rechts ----------------------------------- */
+.menuwrap { position: relative; }
+
+.menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 212px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--lift);
+  padding: var(--s1, 4px);
+  z-index: 60;
+}
+.menu[hidden] { display: none; }
+
+.menu-item {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  border-radius: var(--r);
+  height: 34px;
+  padding: 0 var(--s3);
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  font: inherit;
+  font-size: var(--t-sm);
+  color: var(--peat-soft);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.menu-item[hidden] { display: none; }
+.menu-item:hover { background: var(--sphagnum); color: var(--peat); }
+.menu-item svg { width: 16px; height: 16px; flex: none; opacity: .7; }
+
+.menu-sep { height: 1px; background: var(--line); margin: 4px var(--s2); }
+.menu-sep[hidden] { display: none; }
+
+/* ---- Fensterknöpfe ------------------------------------------
+   Das Fenster hat keinen Systemrahmen mehr; Minimieren,
+   Maximieren und Schliessen sitzen deshalb hier. Masse und
+   Verhalten folgen Windows: 46 Pixel breit, volle Leistenhöhe,
+   Rot erst beim Überfahren des Schliessknopfes.
+   ------------------------------------------------------------ */
+.win-ctrls {
+  display: flex;
+  align-items: stretch;
+  align-self: stretch;
+  margin-left: var(--s2);
+  /* Bis an den Fensterrand, damit die Maus in der Ecke trifft. */
+  margin-right: calc(-1 * var(--s4));
+}
+
+.win-ctrl {
+  width: 46px;
+  border: 0;
+  background: transparent;
+  color: var(--reed);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.win-ctrl svg { width: 14px; height: 14px; stroke-width: 1.3; }
+.win-ctrl:hover { background: var(--sphagnum); color: var(--peat); }
+.win-close:hover { background: #c42b1c; color: #fff; }
+
+/* Ohne das legt sich die Ziehfläche über die Knöpfe, und das
+   Fenster wandert, statt dass der Knopf reagiert. */
+.topbar button,
+.topbar input,
+.topbar select,
+.topbar .menu { -webkit-app-region: no-drag; }
+
+/* ---- Offene Pflichtangaben, nach Schritt gruppiert ---------- */
+.gap-gruppe + .gap-gruppe { margin-top: var(--s4); }
+
+.gap-kopf {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin-bottom: 4px;
+}
+.gap-schritt {
+  font-family: var(--face-record);
+  font-size: var(--t-2xs);
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--reed-faint);
+}
 
 .pat-item {
   display: flex; align-items: center; gap: var(--s2);
@@ -752,6 +904,10 @@ details.fold > summary:hover { background: var(--sphagnum); }
   border-radius: var(--r-sm);
 }
 .gap-item:hover { color: var(--arvalis); }
+/* Die Einträge stehen jetzt unter einer Schrittüberschrift und
+   bekommen deshalb einen Einzug statt einer eigenen Nummer. */
+.gap-gruppe .gap-list { padding-left: 24px; }
+
 .gap-num {
   font-family: var(--face-record);
   font-size: var(--t-2xs);
