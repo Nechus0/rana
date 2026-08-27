@@ -773,7 +773,6 @@ function zeichneSchritt(): void {
   el("workEyebrow").textContent = [
     wer || null,
     nr ? `${nr}. Fortführungsantrag` : null,
-    `Schritt ${n + 1} von ${SCHRITTE.length}`,
   ].filter(Boolean).join(" · ");
   el("workTitel").textContent = SCHRITTE[n].titel;
 
@@ -955,7 +954,7 @@ async function zeichneBausteine(): Promise<void> {
               ${esc(text.length > 160 ? text.slice(0, 160) + " …" : text)}
             </button>
             <button class="btn btn-quiet btn-icon" data-baustein-weg="${esc(id)}" title="Baustein löschen" aria-label="Löschen" style="flex:none; opacity:0.6;">
-              ${icon.trash}
+              ${icon.close}
             </button>
           </div>`).join("")}
       </div>

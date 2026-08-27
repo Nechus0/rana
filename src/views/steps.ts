@@ -870,7 +870,7 @@ async function bausteinDialog(feldId: string, neuZeichnen: () => void): Promise<
             <button class="btn btn-sm" style="flex:1;justify-content:flex-start;text-align:left;white-space:normal"
                     data-einfuegen="${esc(text)}">${esc(text.length > 150 ? text.slice(0, 150) + " …" : text)}</button>
             <button class="btn btn-sm btn-danger btn-icon" data-loeschen="${esc(id)}"
-                    aria-label="Baustein löschen">${icon.trash}</button>
+                    aria-label="Baustein löschen">${icon.close}</button>
           </div>`).join("")
           : `<p class="hint">Noch keine Bausteine für dieses Feld.</p>`}
       </div>
