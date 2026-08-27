@@ -747,7 +747,7 @@ async function formuliere(kind: "report" | "expand", neuZeichnen: () => void): P
     stopStream();
     btn.disabled = false;
     btnAb.classList.add("hidden");
-    neuZeichnen();
+    neuZeichnen(); window.dispatchEvent(new Event("bausteine-geandert"));
   }
 }
 
@@ -900,7 +900,7 @@ async function bausteinDialog(feldId: string, neuZeichnen: () => void): Promise<
         on(b, "click", async () => {
           await api.deleteSnippet(b.dataset.loeschen!);
           b.parentElement?.remove();
-          toast("Baustein gelöscht.");
+          toast("Baustein gelöscht."); window.dispatchEvent(new Event("bausteine-geandert"));
         });
       }
 
@@ -909,7 +909,7 @@ async function bausteinDialog(feldId: string, neuZeichnen: () => void): Promise<
         if (!t) return;
         await api.addSnippet(feldId, t);
         toast("Baustein gespeichert.", "ok");
-        neuZeichnen();
+        neuZeichnen(); window.dispatchEvent(new Event("bausteine-geandert"));
       });
     },
   });
@@ -940,7 +940,7 @@ async function folgeAntragAnlegen(neuZeichnen: () => void): Promise<void> {
   if (!ok) return;
 
   await S.folgeAntrag();
-  neuZeichnen();
+  neuZeichnen(); window.dispatchEvent(new Event("bausteine-geandert"));
   toast(`${naechste}. Fortführungsantrag angelegt — Verlauf und Befund sind leer.`, "ok", 6000);
 }
 

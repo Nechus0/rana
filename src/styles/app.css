@@ -183,6 +183,7 @@
 .rail-collapsed { display: none; flex-direction: column; align-items: stretch; height: 100%; }
 
 .rail.collapsed { width: 34px; min-width: 34px; }
+.rail.collapsed .rail-tabs,
 .rail.collapsed .rail-body,
 .rail.collapsed .rail-foot { display: none; }
 .rail.collapsed .rail-collapsed { display: flex; }
@@ -916,7 +917,9 @@
   background: var(--paper);
   box-shadow: 0 4px 12px rgba(0,0,0,0.02);
   z-index: 10;
+  position: relative;
 }
+.work-head[hidden] { display: none; }
 
 /* Die Titelzeile sitzt jetzt unter der Schrittleiste. */
 .work-head-titel {
@@ -938,14 +941,9 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* Der Speicherstand und das Menü stehen übereinander am rechten Rand. */
-.work-actions {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
-  flex: none;
-}
+/* Der Speicherstand steht am rechten Ende derselben Zeile, auf der
+   Grundlinie der Überschrift. */
+.work-head-titel .save-indicator { flex: none; align-self: flex-end; padding-bottom: 4px; }
 .work-head h2 { font-size: var(--t-xl); }
 
 .work-body {

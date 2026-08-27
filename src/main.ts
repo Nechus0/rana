@@ -121,6 +121,20 @@ function zeichneGeruest(): void {
       ${railHtml()}
       <main class="work">
         <header class="work-head">
+          <div class="menuwrap" style="position: absolute; top: 16px; right: 24px; z-index: 50;">
+            <button class="btn btn-quiet btn-icon" id="btnMehr"
+                    title="Menü" aria-label="Menü"
+                    aria-haspopup="menu" aria-expanded="false">${icon.dots}</button>
+            <div class="menu" id="mehrMenu" role="menu" hidden>
+              <button class="menu-item" role="menuitem" id="mnuEinstellungen">${icon.gear}<span>Einstellungen</span></button>
+              <button class="menu-item" role="menuitem" id="mnuSicherung">${icon.save}<span>Sicherung</span></button>
+              <button class="menu-item" role="menuitem" id="mnuPapierkorb">${icon.trash}<span>Papierkorb</span></button>
+              <div class="menu-sep"></div>
+              <button class="menu-item" role="menuitem" id="mnuZuordnen" hidden>
+                ${icon.merge}<span id="mnuZuordnenText">Berichte zuordnen</span>
+              </button>
+            </div>
+          </div>
           <nav class="stepbar" role="tablist" aria-label="Arbeitsschritte">
             ${SCHRITTE.map((s, i) => `
               <button class="stepbar-step" role="tab" data-schritt="${i}" aria-selected="false"
@@ -139,26 +153,10 @@ function zeichneGeruest(): void {
               <h2 id="workTitel"></h2>
             </div>
             <span class="spacer"></span>
-            <div class="work-actions">
-              <div class="menuwrap">
-                <button class="btn btn-quiet btn-icon" id="btnMehr"
-                        title="Menü" aria-label="Menü"
-                        aria-haspopup="menu" aria-expanded="false">${icon.dots}</button>
-                <div class="menu" id="mehrMenu" role="menu" hidden>
-                  <button class="menu-item" role="menuitem" id="mnuEinstellungen">${icon.gear}<span>Einstellungen</span></button>
-                  <button class="menu-item" role="menuitem" id="mnuSicherung">${icon.save}<span>Sicherung</span></button>
-                  <button class="menu-item" role="menuitem" id="mnuPapierkorb">${icon.trash}<span>Papierkorb</span></button>
-                  <div class="menu-sep"></div>
-                  <button class="menu-item" role="menuitem" id="mnuZuordnen" hidden>
-                    ${icon.merge}<span id="mnuZuordnenText">Berichte zuordnen</span>
-                  </button>
-                </div>
-              </div>
-              <span class="save-indicator" id="saveIndicator">
-                <span class="save-dot"></span>
-                <span class="save-text">Gespeichert</span>
-              </span>
-            </div>
+            <span class="save-indicator" id="saveIndicator">
+              <span class="save-dot"></span>
+              <span class="save-text">Gespeichert</span>
+            </span>
           </div>
         </header>
         <div class="work-body" id="work-body" tabindex="-1">
@@ -242,6 +240,7 @@ function railHtml(): string {
 
 function bindeRail(): void {
   on(el("btnNeuerFall"), "click", () => { void neuerFall(); });
+  window.addEventListener("bausteine-geandert", () => { void zeichneBausteine(); });
 
   // Kein Umweg über Rust mehr: die Übersichten liegen bereits im
   // Speicher, gefiltert wird hier. Damit entfällt auch die Verzögerung
@@ -260,7 +259,7 @@ function bindeRail(): void {
     zeichneFallListe();
   });
 
-  for (const b of qsa<HTMLButtonElement>("[data-schritt]")) {
+  for (const b of qsa<HTMLButtonElement>(".stepbar-step")) {
     on(b, "click", () => geheZu(parseInt(b.dataset.schritt!, 10)));
   }
 
@@ -644,15 +643,14 @@ async function oeffneFall(id: string): Promise<void> {
   S.state.patientAnsicht = null;
   if (id === S.state.activeId) { zeichneFallListe(); zeichneSchritt(); return; }
   await S.ladeFall(id);
+  // Alle anderen zugeklappt lassen:
+  S.state.offen.clear();
   zeichneFallListe();
   zeichneSchritt();
 }
 
 /**
  * Zeigt die Übersicht einer Patientin im Arbeitsbereich.
- *
- * Der offene Bericht bleibt dabei offen — man kehrt mit einem Klick auf
- * seinen Antrag dorthin zurück, ohne etwas zu verlieren.
  */
 async function zeigePatient(patientId: string): Promise<void> {
   if (patientId === "__ohne__") {
@@ -665,6 +663,8 @@ async function zeigePatient(patientId: string): Promise<void> {
 
   await S.speichereJetzt();
   S.state.patientAnsicht = patientId;
+  S.state.activeId = "";
+  S.state.offen.clear();
   S.state.offen.add(patientId);
   zeichneFallListe();
   await zeichnePatientAnsicht();
@@ -798,7 +798,7 @@ function aktualisiereRand(): void {
 }
 
 function aktualisiereSchrittleiste(): void {
-  const schritte = qsa<HTMLElement>("[data-schritt]");
+  const schritte = qsa<HTMLElement>(".stepbar-step");
   if (!schritte.length) return;
 
   schritte.forEach((b, i) => {
@@ -948,17 +948,28 @@ async function zeichneBausteine(): Promise<void> {
   box.innerHTML = [...nachFeld.entries()].map(([feld, liste]) => `
     <section class="ctx-block">
       <span class="record">${esc(S.FELD_NAMEN[feld] ?? feld)}</span>
-      <div class="baustein-liste">
+      <div class="baustein-liste" style="display:flex; flex-direction:column; gap:6px;">
         ${liste.map(([id, text]) => `
-          <button class="baustein" data-baustein="${esc(id)}" title="An der Schreibmarke einfügen">
-            ${esc(text.length > 160 ? text.slice(0, 160) + " …" : text)}
-          </button>`).join("")}
+          <div class="baustein-row" style="display:flex; gap:6px; align-items:flex-start;">
+            <button class="baustein" style="flex:1; text-align:left;" data-baustein="${esc(id)}" title="An der Schreibmarke einfügen">
+              ${esc(text.length > 160 ? text.slice(0, 160) + " …" : text)}
+            </button>
+            <button class="btn btn-quiet btn-icon" data-baustein-weg="${esc(id)}" title="Baustein löschen" aria-label="Löschen" style="flex:none; opacity:0.6;">
+              ${icon.trash}
+            </button>
+          </div>`).join("")}
       </div>
     </section>`).join("");
 
   const texte = new Map(alle.map(([id, , text]) => [id, text]));
   for (const b of qsa<HTMLButtonElement>("[data-baustein]", box)) {
     on(b, "click", () => fuegeBausteinEin(texte.get(b.dataset.baustein!) ?? ""));
+  }
+  for (const b of qsa<HTMLButtonElement>("[data-baustein-weg]", box)) {
+    on(b, "click", async () => {
+      await api.deleteSnippet(b.dataset.bausteinWeg!);
+      void zeichneBausteine();
+    });
   }
 }
 
