@@ -1,6 +1,6 @@
 [package]
 name = "rana"
-version = "2.0.0"
+version = "2.1.0"
 description = "Rana — Assistent für Berichte an den Gutachter"
 authors = ["Rana"]
 edition = "2021"
@@ -53,6 +53,11 @@ chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1", features = ["v4"] }
 thiserror = "2"
 log = "0.4"
+
+# Text extraction from previous reports
+pdf-extract = "0.7"
+zip = "2.2"
+quick-xml = "0.36"
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]

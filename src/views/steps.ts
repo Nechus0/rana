@@ -17,6 +17,7 @@ import { expandPrompt, klarnamen, systemPrompt, userPrompt } from "../report/pro
 import { fileBase, metrik, renderDocHTML } from "../report/render";
 import * as S from "../core/state";
 import { confirmDialog, dialog, download, el, esc, icon, on, qs, qsa, toast } from "../ui/kit";
+import { open } from "@tauri-apps/plugin-dialog";
 
 export const SCHRITTE = [
   { titel: "Fall-Stammdaten",           kurz: "Stammdaten" },
@@ -162,6 +163,11 @@ function schritt2(): string {
 
     <div id="vorberichtBlock" class="${hat ? "" : "hidden"}">
       ${gruppe(null, "Text des letzten Berichts", `
+        <div class="row" style="margin-bottom:12px">
+          <button class="btn btn-sm" id="btnUploadVorbericht" type="button" title="Word (.docx) oder PDF laden">
+            ${icon.word} Datei einlesen (Word / PDF)
+          </button>
+        </div>
         <div class="field">
           <label for="f_lastreport">
             Hier einfügen
@@ -270,12 +276,19 @@ function schritt4(): string {
         ${icon.wand} Bericht formulieren
       </button>
       <button class="btn hidden" id="btnAbbrechen">${icon.stop} Abbrechen</button>
-      <button class="btn" id="btnNachfassen" ${S.state.report.trim() ? "" : "disabled"}
-              title="Einen zu knappen Entwurf ausführen lassen — kostet einen weiteren Aufruf">
-        Ausführlicher
-      </button>
       <span class="spacer"></span>
       <button class="btn btn-quiet btn-sm" id="btnPromptZeigen">Anfrage ansehen</button>
+    </div>
+
+    <div class="progress-ring-container hidden" id="formulierenProgress">
+      <div class="progress-ring">
+        <svg viewBox="0 0 36 36" class="progress-ring-svg">
+          <circle class="progress-ring-bg" cx="18" cy="18" r="15.9" />
+          <circle class="progress-ring-fill" cx="18" cy="18" r="15.9"
+                  stroke-dasharray="100" stroke-dashoffset="100" id="progressCircle" />
+        </svg>
+        <span class="progress-ring-text" id="progressText">Formuliere …</span>
+      </div>
     </div>
 
     ${b && !b.may_send ? `
@@ -338,17 +351,11 @@ function schritt5(): string {
       </div>
 
       <div class="notice notice-info" style="margin-top:20px">
-        <b>Einreichung (Umschlag PTV 8):</b> dieser Bericht · PTV 2b
-        ${konsiliar
-          ? " · Konsiliarbericht (Muster 22b) · ggf. pseudonymisierte Kopien ergänzender Befunde"
-          : " · ggf. pseudonymisierte Kopien ergänzender Befunde. Als Ärztin ist der somatische Befund im Bericht enthalten — kein Muster 22b nötig."}
+        <b>Einzureichen:</b> Bericht, PTV 2b${konsiliar ? ", Konsiliarbericht (Muster 22b)" : ""}, ggf. Befundkopien (pseudonymisiert).
       </div>
 
       ${gruppe(null, "Beiblatt PTV 2b", `
-        <p class="hint">
-          Die Angaben, die auf dem PTV 2b wiederholt werden müssen — hier zum Abschreiben
-          oder Kopieren beisammen, damit nichts doppelt getippt werden muss.
-        </p>
+        <p class="hint">Angaben für das PTV 2b — zum Kopieren.</p>
         <div class="paper-tray" style="padding:16px">
           <table style="width:100%;border-collapse:collapse;font-size:var(--t-sm)" class="selectable">
             ${ptv2bZeilen().map(([k, v]) => `
@@ -514,6 +521,33 @@ function bindeSchritt2(): void {
     // Zuklappen heisst nur ausblenden — eingetragene Texte bleiben erhalten.
     el("vorberichtBlock").classList.toggle("hidden", !cb.checked);
   });
+
+  const btnUpload = document.getElementById("btnUploadVorbericht");
+  if (btnUpload) {
+    on(btnUpload, "click", async () => {
+      try {
+        const file = await open({
+          multiple: false,
+          filters: [{ name: "Dokumente", extensions: ["pdf", "docx"] }],
+        });
+        if (file && typeof file === "string") {
+          toast("Lese Datei aus …");
+          const text = await api.extractReportText(file);
+          if (text) {
+            const ta = document.getElementById("f_lastreport") as HTMLTextAreaElement;
+            const current = ta.value.trim();
+            ta.value = current ? current + "\n\n" + text : text;
+            S.setzeFeld("f_lastreport", ta.value);
+            toast("Text erfolgreich eingefügt.", "ok");
+          } else {
+            toast("Kein Text in der Datei gefunden.", "info");
+          }
+        }
+      } catch (e) {
+        toast(api.errorText(e), "danger");
+      }
+    });
+  }
 }
 
 // ---------------------------------------------------------------
@@ -540,7 +574,6 @@ function bindeSchritt4(neuZeichnen: () => void): void {
   });
 
   on(el("btnFormulieren"), "click", () => { void formuliere("report", neuZeichnen); });
-  on(el("btnNachfassen"), "click", () => { void formuliere("expand", neuZeichnen); });
   on(el("btnAbbrechen"), "click", () => { abbruch = true; toast("Wird abgebrochen …"); });
   on(el("btnPromptZeigen"), "click", () => { void zeigePrompt(); });
 }
@@ -552,9 +585,6 @@ async function formuliere(kind: "report" | "expand", neuZeichnen: () => void): P
   const entwurf = el("entwurf");
   const btn = el<HTMLButtonElement>("btnFormulieren");
   const btnAb = el<HTMLButtonElement>("btnAbbrechen");
-  const btnNach = el<HTMLButtonElement>("btnNachfassen");
-
-  if (kind === "expand" && !S.state.report.trim()) return;
 
   // Der Klarname darf die Anfrage nicht erreichen. Rust prüft das noch
   // einmal, aber hier lässt sich früher und freundlicher warnen.
@@ -579,15 +609,24 @@ async function formuliere(kind: "report" | "expand", neuZeichnen: () => void): P
 
   abbruch = false;
   btn.disabled = true;
-  btnNach.disabled = true;
   btnAb.classList.remove("hidden");
+
   if (kind === "report") entwurf.textContent = "";
+
+  const progress = document.getElementById("formulierenProgress");
+  const circle = document.getElementById("progressCircle") as SVGCircleElement | null;
+  const pText = document.getElementById("progressText");
+  if (progress) progress.classList.remove("hidden");
 
   let gesammelt = kind === "expand" ? "" : "";
   const stopStream = await api.onStream((chunk) => {
     if (abbruch) return;
     gesammelt += chunk;
     entwurf.textContent = gesammelt;
+    const zielZeichen = 4000;
+    const fortschritt = Math.min(95, Math.round((gesammelt.length / zielZeichen) * 100));
+    if (circle) circle.style.strokeDashoffset = String(100 - fortschritt);
+    if (pText) pText.textContent = `${fortschritt} %`;
     // Mitlaufen lassen: der Blick bleibt am entstehenden Text.
     entwurf.scrollIntoView({ block: "end", behavior: "smooth" });
     el("berichtZaehler").innerHTML = zaehlerText(metrik(gesammelt, p));
@@ -615,12 +654,10 @@ async function formuliere(kind: "report" | "expand", neuZeichnen: () => void): P
       m.urteil === "gut" ? "ok" : "info"
     );
 
-    if (m.urteil === "kurz") {
-      toast("Der Entwurf ist knapp geraten. „Ausführlicher“ lässt Claude nachfassen — das kostet einen weiteren Aufruf.", "info", 9000);
-    }
   } catch (e) {
     toast(api.errorText(e), "danger");
   } finally {
+    if (progress) progress.classList.add("hidden");
     stopStream();
     btn.disabled = false;
     btnAb.classList.add("hidden");

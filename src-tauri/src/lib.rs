@@ -395,7 +395,57 @@ pub fn run() {
             list_auto_backups,
             restore_auto_backup,
             import_legacy,
+            extract_report_text,
         ])
         .run(tauri::generate_context!())
         .expect("Rana konnte nicht gestartet werden");
+}
+
+#[tauri::command]
+fn extract_report_text(path: String) -> Result<String> {
+    let ext = std::path::Path::new(&path)
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+
+    match ext.as_str() {
+        "pdf" => {
+            let bytes = std::fs::read(&path)?;
+            pdf_extract::extract_text_from_mem(&bytes)
+                .map_err(|e| RanaError::Message(format!("PDF auswerten: {}", e)))
+        }
+        "docx" => {
+            let file = std::fs::File::open(&path)?;
+            let mut archive = zip::ZipArchive::new(file)
+                .map_err(|e| RanaError::Message(format!("Word-Archiv lesen: {}", e)))?;
+            let mut document = archive.by_name("word/document.xml")
+                .map_err(|e| RanaError::Message(format!("document.xml nicht gefunden: {}", e)))?;
+            let mut xml_content = String::new();
+            use std::io::Read;
+            document.read_to_string(&mut xml_content)?;
+            
+            let mut text = String::new();
+            let mut reader = quick_xml::Reader::from_str(&xml_content);
+            reader.config_mut().trim_text(true);
+            let mut buf = Vec::new();
+            
+            loop {
+                match reader.read_event_into(&mut buf) {
+                    Ok(quick_xml::events::Event::Text(e)) => {
+                        text.push_str(&e.unescape().unwrap_or(std::borrow::Cow::Borrowed("")));
+                    }
+                    Ok(quick_xml::events::Event::Start(ref e)) if e.name().as_ref() == b"w:p" => {
+                        text.push_str("\n");
+                    }
+                    Ok(quick_xml::events::Event::Eof) => break,
+                    Err(_) => break,
+                    _ => (),
+                }
+                buf.clear();
+            }
+            Ok(text.trim().to_string())
+        }
+        _ => Err(RanaError::Message("Nur .docx und .pdf werden unterstützt.".into())),
+    }
 }

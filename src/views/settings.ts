@@ -14,7 +14,7 @@ import { confirmDialog, dialog, esc, eur, icon, on, qs, qsa, relDate, toast } fr
 const CONSOLE_LIMITS = "https://platform.claude.com/settings/limits";
 
 /** Steht auch in package.json, Cargo.toml und tauri.conf.json. */
-export const EIGENE_VERSION = "1.2.0";
+export const EIGENE_VERSION = "2.1.0";
 
 // ===============================================================
 // Einstellungen
@@ -23,11 +23,12 @@ export const EIGENE_VERSION = "1.2.0";
 export async function zeigeEinstellungen(neuZeichnen: () => void): Promise<void> {
   const p = await api.getProfile();
   const key = await api.apiKeyStatus();
+  const b = await api.budgetState();
 
   const bereiche: { id: string; name: string; zeichen: string }[] = [
     { id: "praxis",  name: "Praxis",         zeichen: icon.gear },
     { id: "zugang",  name: "Claude-Zugang",  zeichen: icon.key },
-    { id: "grenzen", name: "Grenzen",        zeichen: icon.chart },
+    { id: "grenzen", name: "Verbrauch",      zeichen: icon.chart },
     { id: "ansicht", name: "Erscheinungsbild", zeichen: icon.moon },
     { id: "daten",   name: "Daten",          zeichen: icon.save },
     { id: "update",  name: "Aktualisierung", zeichen: icon.restore },
@@ -104,6 +105,26 @@ export async function zeigeEinstellungen(neuZeichnen: () => void): Promise<void>
 
       <section data-bereich="grenzen">
       <div class="group">
+        <div class="group-head"><span class="group-title">Aktueller Verbrauch</span></div>
+        <div class="budget">
+          <div class="budget-row">
+            <span class="budget-amount">${eur(b.month_spent_eur)}</span>
+            <span class="budget-of">von ${eur(b.month_limit_eur)}</span>
+          </div>
+          <div class="budget-bar">
+            <div class="budget-fill ${b.level === "gestoppt" ? "stop" : b.level === "warnung" ? "warn" : ""}"
+                 style="--used:${Math.min(100, b.month_pct)}%"></div>
+          </div>
+          <p class="hint" style="margin-top:8px">
+            ${b.today_reports} von ${b.daily_limit} Berichten heute
+          </p>
+        </div>
+        <p class="hint" style="margin-top:14px">
+          <button class="btn btn-sm" id="e_btnVerbrauch" type="button">Verbrauch der letzten Monate</button>
+        </p>
+      </div>
+
+      <div class="group">
         <div class="group-head"><span class="group-title">Grenzen</span></div>
         <div class="grid-2">
           ${num("e_budget", "Monatsbudget (€)", p.budget.monthly_eur)}
@@ -114,10 +135,6 @@ export async function zeigeEinstellungen(neuZeichnen: () => void): Promise<void>
           <a href="#" id="e_console">Dort prüfen</a>.
         </p>
       </div>
-
-        <p class="hint" style="margin-top:14px">
-          <button class="btn btn-sm" id="e_btnVerbrauch" type="button">Verbrauch der letzten Monate</button>
-        </p>
       </section>
 
       <section data-bereich="ansicht">
@@ -164,7 +181,22 @@ export async function zeigeEinstellungen(neuZeichnen: () => void): Promise<void>
       <section data-bereich="ueber">
       <div class="group">
         <div class="group-head"><span class="group-title">Über Rana</span></div>
-        <button class="btn" id="e_btnUeber" type="button">Angaben zum Programm</button>
+        <p style="font-family:var(--face-display);font-size:var(--t-lg);font-weight:600;letter-spacing:-.02em">Rana</p>
+        <p style="font-family:var(--face-display);font-style:italic;color:var(--reed);margin-top:2px">
+          arvalis · ${esc(EIGENE_VERSION)}
+        </p>
+        <p class="hint" style="margin-top:16px">
+          Rana arvalis, der Moorfrosch, ist ein unauffälliges braunes Tier, das sich
+          für wenige Tage im Frühjahr leuchtend blau färbt und danach wieder verblasst.
+          Diese Anwendung hält es genauso: sie bleibt ruhig, und sie wird blau
+          genau dann, wenn Daten das Gerät verlassen.
+        </p>
+        <div class="notice" style="margin-top:16px">
+          <b>Wo die Daten liegen.</b> Verschlüsselt im Benutzerprofil.
+          Der Schlüssel steht im Schlüsselbund.<br><br>
+          <b>Was hinausgeht.</b> Beim Formulieren die klinischen Angaben und die Chiffre —
+          nie der Klarname. Sonst nichts: keine Nutzungsstatistik, keine Absturzberichte.
+        </div>
       </div>
       </section>
 
@@ -203,7 +235,6 @@ export async function zeigeEinstellungen(neuZeichnen: () => void): Promise<void>
       });
 
       on(qs<HTMLElement>("#e_btnUpdate", root)!, "click", () => { void zeigeAktualisierung(); });
-      on(qs<HTMLElement>("#e_btnUeber", root)!, "click", () => { void zeigeUeber(); });
 
       on(qs<HTMLElement>("#e_console", root)!, "click", (e) => {
         e.preventDefault();

@@ -5,13 +5,116 @@
 
 #app { height: 100vh; display: flex; flex-direction: column; }
 
+/* ============================================================
+   Kopfleiste
+   ============================================================ */
+.topbar {
+  height: var(--bar-h);
+  min-height: var(--bar-h);
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--s4);
+  gap: var(--s3);
+  flex-shrink: 0;
+  z-index: 40;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+  flex-shrink: 0;
+}
+
+.topbar-left .brand-name {
+  font-family: var(--face-display);
+  font-size: var(--t-md);
+  font-weight: 600;
+  letter-spacing: -.015em;
+  color: var(--peat);
+}
+.topbar-left .brand-version {
+  font-family: var(--face-display);
+  font-size: var(--t-xs);
+  font-style: italic;
+  color: var(--reed);
+}
+.brand-ver-num {
+  font-family: var(--face-record);
+  font-size: var(--t-2xs);
+  color: var(--reed-faint);
+  margin-left: var(--s1);
+}
+
+.topbar-rail-toggle,
+.topbar-ctx-toggle {
+  border: none;
+  background: transparent;
+  color: var(--reed);
+  width: 28px; height: 28px;
+  display: grid; place-items: center;
+  cursor: pointer;
+  border-radius: var(--r-sm);
+  transition: color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+  padding: 0;
+}
+.topbar-rail-toggle:hover,
+.topbar-ctx-toggle:hover { color: var(--peat); background: var(--sphagnum); }
+.topbar-rail-toggle svg,
+.topbar-ctx-toggle svg { width: 16px; height: 16px; }
+
+.topbar-center {
+  flex: 1;
+  text-align: center;
+  min-width: 0;
+}
+.topbar-patient {
+  font-family: var(--face-ui);
+  font-size: var(--t-sm);
+  font-weight: 550;
+  color: var(--peat);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  flex-shrink: 0;
+}
+
+/* ---- Gespeichert-Anzeige ------------------------------------ */
+.save-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+  font-family: var(--face-record);
+  font-size: var(--t-2xs);
+  color: var(--reed-faint);
+  white-space: nowrap;
+  width: 84px;
+  justify-content: flex-end;
+}
+.save-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--moss);
+  flex-shrink: 0;
+}
+.save-dot.unsaved { background: var(--amber); }
+
+
 .shell {
   flex: 1 1 auto;
   display: grid;
-  grid-template-columns: var(--rail-w) minmax(0, 1fr) var(--ctx-w);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   min-height: 0;
 }
-.shell.no-context { grid-template-columns: var(--rail-w) minmax(0, 1fr); }
+.shell.no-context { grid-template-columns: auto minmax(0, 1fr); }
 
 /* ============================================================
    Seitenschiene
@@ -22,30 +125,49 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  transition: width var(--dur) var(--ease), min-width var(--dur) var(--ease);
+  width: var(--rail-w);
+  min-width: var(--rail-w);
+}
+.rail-body { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.rail-collapsed { display: none; flex-direction: column; align-items: stretch; height: 100%; }
+
+.rail.collapsed { width: 34px; min-width: 34px; }
+.rail.collapsed .rail-body,
+.rail.collapsed .rail-foot { display: none; }
+.rail.collapsed .rail-collapsed { display: flex; }
+
+.rail-tab {
+  border: 0; background: transparent;
+  padding: var(--s5) 0; flex: 1 1 auto; min-height: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--reed); cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.rail-tab:hover { background: var(--paper); color: var(--peat); }
+.rail-tab-label {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-family: var(--face-record);
+  font-size: var(--t-2xs);
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
-/* ---- Kennung ---------------------------------------------- */
-.brand {
-  padding: var(--s5) var(--s4) var(--s4);
-  display: flex;
-  align-items: baseline;
-  gap: var(--s2);
+/* ---- Einklappbare Kontextspalte ----------------------------- */
+.context {
+  transition: width var(--dur) var(--ease), min-width var(--dur) var(--ease);
+  width: var(--ctx-w);
+  min-width: var(--ctx-w);
 }
-.brand-name {
-  font-family: var(--face-display);
-  font-size: var(--t-lg);
-  font-weight: 600;
-  letter-spacing: -.015em;
-  color: var(--peat);
-}
-/* Der Artname als Versionsbezeichnung — kursiv, wie in der Systematik. */
-.brand-version {
-  font-family: var(--face-display);
-  font-size: var(--t-sm);
-  font-style: italic;
-  color: var(--reed);
-  letter-spacing: .005em;
-}
+.context-body { display: flex; flex-direction: column; gap: var(--s5); flex: 1; overflow-y: auto; }
+.context-collapsed { display: none; flex-direction: column; height: 100%; }
+
+.context.collapsed { width: 34px; min-width: 34px; padding: 0; }
+.context.collapsed .context-body { display: none; }
+.context.collapsed .context-collapsed { display: flex; }
 
 /* ---- Fallauswahl ------------------------------------------ */
 .rail-section { padding: 0 var(--s3) var(--s3); }
@@ -55,52 +177,43 @@
 }
 .rail-head .record { flex: 1; }
 
-/* ---- Sortierung ------------------------------------------
-   Sitzt zwischen Suche und Liste, damit beide Werkzeuge für die
-   Fallauswahl beieinanderstehen. Gleiche Formensprache wie die
-   übrigen Bedienelemente: Aktenebene, klein, versal, gesperrt. */
-.rail-sort {
-  display: flex;
-  align-items: center;
-  gap: var(--s2);
-  margin: 0 var(--s3) var(--s2);
+.rail-foot {
+  display: flex; flex-direction: column; gap: var(--s2);
+  padding: var(--s3);
+  border-top: 1px solid var(--line);
+  background: var(--sphagnum-deep);
 }
-.rail-sort > .record { flex: none; }
-.rail-sort select {
-  flex: 1;
-  min-width: 0;
-  padding: 5px 26px 5px 8px;
-  font-family: var(--face-record);
-  font-size: var(--t-xs);
-  letter-spacing: .04em;
-  background-color: var(--paper);
-  background-position: right 7px center;
-}
-.rail-sort button {
-  flex: none;
-  width: 27px; height: 27px;
-  display: grid; place-items: center;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--r);
-  background: var(--paper);
-  color: var(--reed);
-  cursor: pointer;
-  transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
-}
-.rail-sort button:hover { color: var(--peat); border-color: var(--reed-faint); }
-.rail-sort button svg { width: 14px; height: 14px; transition: transform var(--dur) var(--ease); }
-.rail-sort button[data-richtung="auf"] svg { transform: rotate(180deg); }
+.rail-foot .btn { justify-content: flex-start; padding-left: 12px; }
+.rail-foot svg { margin-right: 6px; }
+
+.rail-filters { margin: 0 var(--s3) var(--s3); }
+
+
 
 .case-search {
-  margin: 0 var(--s3) var(--s2);
+  margin: 0 var(--s3) var(--s4);
   position: relative;
 }
 .case-search input {
-  padding-left: 32px;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 8px 12px 8px 34px;
+  background: var(--surface);
+  outline: none;
+  font-family: inherit;
+  font-size: var(--t-sm);
+  color: var(--peat);
+  transition: all var(--dur-fast) var(--ease);
+}
+.case-search input:focus {
+  border-color: var(--arvalis);
+  box-shadow: 0 0 0 3px var(--arvalis-wash);
+  background: #fff;
 }
 .case-search svg {
-  position: absolute; left: 9px; top: 50%; transform: translateY(-50%);
-  width: 14px; height: 14px; color: var(--reed-faint); pointer-events: none;
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  width: 16px; height: 16px; color: var(--reed-faint); pointer-events: none;
 }
 
 .case-list {
@@ -326,7 +439,7 @@
 .stepbar {
   display: flex;
   align-items: flex-start;
-  justify-content: flex-end;
+  justify-content: center;
   flex-wrap: nowrap;
 }
 
@@ -453,28 +566,7 @@
 }
 
 
-/* ---- Fuss der Schiene -------------------------------------- */
-.rail-foot {
-  border-top: 1px solid var(--line);
-  padding: var(--s3);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.rail-link {
-  display: flex; align-items: center; gap: var(--s3);
-  padding: 8px var(--s3);
-  border: none; background: transparent;
-  border-radius: var(--r);
-  font: inherit; font-size: var(--t-sm);
-  color: var(--peat-soft);
-  cursor: pointer;
-  text-align: left;
-  transition: background var(--dur-fast) var(--ease);
-}
-.rail-link:hover { background: var(--paper); color: var(--peat); }
-.rail-link svg { width: 16px; height: 16px; flex: none; opacity: .7; }
-.rail-link .spacer { flex: 1; }
+
 
 /* ============================================================
    Arbeitsfläche
@@ -492,15 +584,17 @@
 }
 
 /* Kopf und Fuss behalten ihre Höhe; nur der Rumpf gibt nach und scrollt. */
-.work-head, .work-foot { flex: none; }
+.work-head { flex: none; }
 
 .work-head {
   display: flex;
   flex-direction: column;
   gap: var(--s4);
-  padding: var(--s4) var(--s6);
+  padding: var(--s4) var(--s6) 16px;
   border-bottom: 1px solid var(--line);
-  background: var(--sphagnum);
+  background: var(--paper);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+  z-index: 10;
 }
 
 /* Die Titelzeile sitzt jetzt unter der Schrittleiste. */
@@ -528,14 +622,7 @@
 .work-inner { max-width: var(--work-max); margin: 0 auto; }
 .work-inner.wide { max-width: 1000px; }
 
-.work-foot {
-  display: flex;
-  align-items: center;
-  gap: var(--s3);
-  padding: var(--s4) var(--s6);
-  border-top: 1px solid var(--line);
-  background: var(--sphagnum-deep);
-}
+
 
 /* ---- Gruppen innerhalb eines Schrittes ---------------------- */
 .group { margin-bottom: var(--s6); }
@@ -615,10 +702,16 @@ details.fold > summary:hover { background: var(--sphagnum); }
 .ctx-block.ctx-unten {
   margin-top: auto;
   padding-top: var(--s4);
-  border-top: 1px solid var(--line);
 }
-.ctx-block { display: flex; flex-direction: column; gap: var(--s3); }
-.ctx-block > .record { padding-bottom: var(--s2); border-bottom: 1px solid var(--line); }
+.ctx-block { 
+  display: flex; flex-direction: column; gap: var(--s3); 
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+}
+.ctx-block > .record { padding-bottom: 12px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
 
 /* ---- Vollständigkeit als Balken, nicht als Ring -------------
    Ein Ring zeigt eine Zahl. Ein Balken zeigt, was fehlt.       */
@@ -659,11 +752,14 @@ details.fold > summary:hover { background: var(--sphagnum); }
   border-radius: var(--r-sm);
 }
 .gap-item:hover { color: var(--arvalis); }
-.gap-item::before {
-  content: "";
-  width: 4px; height: 4px; border-radius: 50%;
-  background: var(--amber);
-  flex: none; margin-top: 8px;
+.gap-num {
+  font-family: var(--face-record);
+  font-size: var(--t-2xs);
+  font-weight: 600;
+  color: var(--arvalis);
+  flex: none;
+  width: 16px;
+  text-align: center;
 }
 
 /* ---- Verbrauch --------------------------------------------- */
@@ -826,10 +922,7 @@ details.fold > summary:hover { background: var(--sphagnum); }
 /* ============================================================
    Enges Fenster
    ============================================================ */
-@media (max-width: 1240px) {
-  .shell { grid-template-columns: var(--rail-w) minmax(0, 1fr); }
-  .context { display: none; }
-}
+
 @media (max-width: 900px) {
   .shell { grid-template-columns: 1fr; }
   .rail {
@@ -839,7 +932,7 @@ details.fold > summary:hover { background: var(--sphagnum); }
     box-shadow: var(--lift-high);
   }
   .rail.is-open { transform: none; }
-  .work-head, .work-body, .work-foot { padding-left: var(--s4); padding-right: var(--s4); }
+  .work-head, .work-body { padding-left: var(--s4); padding-right: var(--s4); }
 }
 
 
@@ -907,3 +1000,40 @@ details.fold > summary:hover { background: var(--sphagnum); }
 /* Innerhalb eines Bereichs braucht es keine zweite Überschriftenebene
    mehr — der Bereichsname steht ja links. */
 .settings-pane .group-head { margin-bottom: var(--s3); }
+
+/* ---- Ladekreis für Berichterstellung ----------------------- */
+.progress-ring-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s5) 0;
+}
+.progress-ring {
+  position: relative;
+  width: 100px; height: 100px;
+  display: flex; align-items: center; justify-content: center;
+}
+.progress-ring-svg {
+  width: 100%; height: 100%;
+  transform: rotate(-90deg);
+}
+.progress-ring-bg {
+  fill: none;
+  stroke: var(--line-strong);
+  stroke-width: 2.5;
+}
+.progress-ring-fill {
+  fill: none;
+  stroke: var(--arvalis);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  transition: stroke-dashoffset var(--dur) var(--ease);
+}
+.progress-ring-text {
+  position: absolute;
+  font-family: var(--face-record);
+  font-size: var(--t-sm);
+  color: var(--peat);
+  font-variant-numeric: tabular-nums;
+}
+:root[data-transmitting="true"] .progress-ring-fill { stroke: var(--bloom); }

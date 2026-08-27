@@ -32,10 +32,8 @@ import * as api from "./core/ipc";
 import * as S from "./core/state";
 import { runSetup } from "./setup/wizard";
 import { bindeSchritt, fallInPapierkorb, renderSchritt, SCHRITTE } from "./views/steps";
-import { offeneZuordnungen, zeigeZuordnung } from "./views/patients";
-import {
-  zeigeEinstellungen, zeigePapierkorb, zeigeSicherung
-} from "./views/settings";
+
+import { zeigeEinstellungen, EIGENE_VERSION } from "./views/settings";
 import { el, esc, eur, icon, on, qsa, relDate, toast } from "./ui/kit";
 
 // ===============================================================
@@ -85,7 +83,31 @@ async function starteArbeitsansicht(): Promise<void> {
 
 function zeichneGeruest(): void {
   el("app").innerHTML = `
-    <div class="shell">
+    <header class="topbar" id="topbar">
+      <div class="topbar-left">
+        <button class="topbar-rail-toggle" id="btnRailToggle"
+                title="Seitenschiene ein-/ausklappen" aria-label="Seitenschiene ein-/ausklappen"
+                aria-expanded="true">${icon.panelL}</button>
+        <span class="brand-name">Rana</span>
+        <span class="brand-version">arvalis</span>
+        <span class="brand-ver-num">${esc(EIGENE_VERSION)}</span>
+      </div>
+      <div class="topbar-center">
+        <span class="topbar-patient" id="topbarPatient"></span>
+      </div>
+      <div class="topbar-right">
+        <span class="save-indicator" id="saveIndicator">
+          <span class="save-dot"></span>
+          <span class="save-text">Gespeichert</span>
+        </span>
+        <button class="btn btn-sm btn-quiet btn-icon" id="btnEinstellungen"
+                title="Einstellungen" aria-label="Einstellungen">${icon.dots}</button>
+        <button class="topbar-ctx-toggle" id="btnCtxToggle"
+                title="Übersicht ein-/ausklappen" aria-label="Übersicht ein-/ausklappen"
+                aria-expanded="true">${icon.panelR}</button>
+      </div>
+    </header>
+    <div class="shell" id="shell">
       ${railHtml()}
       <main class="work">
         <header class="work-head">
@@ -104,24 +126,24 @@ function zeichneGeruest(): void {
               <h2 id="workTitel"></h2>
             </div>
             <span class="spacer"></span>
-            <span class="record" id="speicherStand"></span>
           </div>
         </header>
         <div class="work-body" id="work-body" tabindex="-1">
           <div class="work-inner" id="workInner"></div>
         </div>
-        <footer class="work-foot">
-          <button class="btn" id="btnZurueck">${icon.back} Zurück</button>
-          <span class="spacer"></span>
-          <span class="hint" id="fussHinweis"></span>
-          <button class="btn btn-primary" id="btnWeiter">Weiter ${icon.fwd}</button>
-        </footer>
       </main>
-      <aside class="context" id="context" aria-label="Übersicht"></aside>
+      <aside class="context" id="context" aria-label="Übersicht">
+        <div class="context-body" id="contextBody"></div>
+        <div class="context-collapsed" id="contextCollapsed">
+          <button class="rail-tab" id="btnCtxExpand" title="Übersicht anzeigen">
+            <span class="rail-tab-label">Übersicht</span>
+          </button>
+        </div>
+      </aside>
     </div>`;
 
+  bindeTopbar();
   bindeRail();
-  bindeFuss();
   zeichneSchritt();
   tastenkuerzel();
 }
@@ -132,51 +154,47 @@ function zeichneGeruest(): void {
 
 function railHtml(): string {
   return `
-    <nav class="rail" aria-label="Fälle und Schritte">
-      <div class="brand">
-        <span class="brand-name">Rana</span>
-        <span class="brand-version">arvalis</span>
+    <nav class="rail" id="rail" aria-label="Fälle">
+      <div class="rail-body" id="railBody">
+        <div class="rail-head">
+          <span class="record">Fälle</span>
+          <span class="record-num small muted" id="fallZaehler"></span>
+        </div>
+
+        <div class="case-search">
+          ${icon.search}
+          <input type="search" id="fallSuche" placeholder="Suchen …" aria-label="Fälle durchsuchen">
+        </div>
+
+        <div class="row rail-filters">
+          <select id="fallSort" aria-label="Fälle ordnen nach" style="flex:1;">
+            ${(Object.keys(S.SORT_NAMEN) as S.SortSchluessel[]).map((k) => `
+              <option value="${k}" ${S.state.sortierung === k ? "selected" : ""}>Sortierung: ${esc(S.SORT_NAMEN[k])}</option>`).join("")}
+          </select>
+          <select id="fallFilter" aria-label="Fälle filtern" style="flex:1;">
+            <option value="alle">Alle zeigen</option>
+          </select>
+        </div>
+
+        <ul class="case-list" id="fallListe" role="list"></ul>
       </div>
-
-      <div class="rail-head">
-        <span class="record">Fälle</span>
-        <span class="record-num small muted" id="fallZaehler"></span>
-        <button class="btn btn-sm btn-quiet btn-icon" id="btnNeuerFall"
-                title="Neuen Fall anlegen (Strg+N)" aria-label="Neuen Fall anlegen">${icon.plus}</button>
-      </div>
-
-      <div class="case-search">
-        ${icon.search}
-        <input type="search" id="fallSuche" placeholder="Suchen …" aria-label="Fälle durchsuchen">
-      </div>
-
-      <div class="rail-sort">
-        <span class="record">Ordnen</span>
-        <select id="fallSort" aria-label="Fälle ordnen nach">
-          ${(Object.keys(S.SORT_NAMEN) as S.SortSchluessel[]).map((k) => `
-            <option value="${k}" ${S.state.sortierung === k ? "selected" : ""}>${esc(S.SORT_NAMEN[k])}</option>`).join("")}
-        </select>
-        <button id="fallSortRichtung" type="button"
-                data-richtung="${S.state.sortAuf ? "auf" : "ab"}"
-                title="Reihenfolge umkehren"
-                aria-label="Reihenfolge umkehren">${icon.sortDown}</button>
-      </div>
-
-      <ul class="case-list" id="fallListe" role="list"></ul>
-
+      
       <div class="rail-foot">
-        <button class="rail-link rail-link-hinweis" id="lnkZuordnen" hidden>
-          ${icon.merge} <span id="zuordnenText">Berichte zuordnen</span>
+        <button class="btn btn-sm" id="btnNeuerFall" title="Neuen Fall anlegen (Strg+N)">${icon.plus} Neuer Patient</button>
+        <button class="btn btn-sm btn-quiet" id="btnOrdner" title="Patienten aus Ordner laden">${icon.save} Aus Ordner</button>
+      </div>
+
+      <div class="rail-collapsed" id="railCollapsed">
+        <button class="rail-tab" id="btnRailExpand" title="Fälle anzeigen">
+          <span class="rail-tab-label">Fälle</span>
         </button>
-        <button class="rail-link" id="lnkSicherung">${icon.save} Sicherung</button>
-        <button class="rail-link" id="lnkPapierkorb">${icon.trash} Papierkorb</button>
-        <button class="rail-link" id="lnkEinstellungen">${icon.gear} Einstellungen</button>
       </div>
     </nav>`;
 }
 
 function bindeRail(): void {
   on(el("btnNeuerFall"), "click", () => { void neuerFall(); });
+  on(el("btnOrdner"), "click", () => { toast("Verzeichnisauswahl folgt in Kürze."); });
 
   // Kein Umweg über Rust mehr: die Übersichten liegen bereits im
   // Speicher, gefiltert wird hier. Damit entfällt auch die Verzögerung
@@ -203,45 +221,39 @@ function bindeRail(): void {
     S.setzeSortierung(el<HTMLSelectElement>("fallSort").value as S.SortSchluessel, S.state.sortAuf);
     zeichneFallListe();
   });
-  on(el("fallSortRichtung"), "click", () => {
-    S.setzeSortierung(S.state.sortierung, !S.state.sortAuf);
-    el("fallSortRichtung").dataset.richtung = S.state.sortAuf ? "auf" : "ab";
-    zeichneFallListe();
-  });
 
-  on(el("lnkZuordnen"), "click", () => {
-    void zeigeZuordnung().then(async (n) => {
-      if (n) await S.refreshCases();
-      await pruefeZuordnung();
-      zeichneFallListe();
-    });
-  });
 
-  on(el("lnkSicherung"),     "click", () => { void zeigeSicherung(neuZeichnen); });
-  on(el("lnkPapierkorb"),    "click", () => { void zeigePapierkorb(neuZeichnen); });
-  on(el("lnkEinstellungen"), "click", () => { void zeigeEinstellungen(neuZeichnen); });
-
-  void pruefeZuordnung();
   zeichneFallListe();
 }
 
-/**
- * Blendet den Hinweis auf unzugeordnete Berichte ein oder aus.
- *
- * Bewusst kein Dialog beim Start: nach dem Umstieg von 1.2 auf 2.0
- * sind zunächst alle Berichte unzugeordnet, und wer dann zuerst
- * arbeiten will, soll das dürfen. Der Hinweis wartet in der Schiene.
- */
-async function pruefeZuordnung(): Promise<void> {
-  const knopf = document.getElementById("lnkZuordnen");
-  const text = document.getElementById("zuordnenText");
-  if (!knopf || !text) return;
+function bindeTopbar(): void {
+  on(el("btnEinstellungen"), "click", () => { void zeigeEinstellungen(neuZeichnen); });
 
-  const n = await offeneZuordnungen();
-  knopf.hidden = n === 0;
-  text.textContent = n === 1
-    ? "1 Bericht zuordnen"
-    : `${n} Berichte zuordnen`;
+  // Sidebar ein-/ausklappen
+  on(el("btnRailToggle"), "click", toggleRail);
+
+  // Kontextspalte ein-/ausklappen
+  on(el("btnCtxToggle"), "click", toggleContext);
+  const expandCtx = document.getElementById("btnCtxExpand");
+  if (expandCtx) on(expandCtx, "click", toggleContext);
+}
+
+function toggleRail(): void {
+  const rail = el("rail");
+  const collapsed = rail.classList.toggle("collapsed");
+  el("btnRailToggle").setAttribute("aria-expanded", String(!collapsed));
+
+  const expandBtn = document.getElementById("btnRailExpand");
+  if (expandBtn && !expandBtn.dataset.bound) {
+    expandBtn.dataset.bound = "1";
+    on(expandBtn, "click", toggleRail);
+  }
+}
+
+function toggleContext(): void {
+  const ctx = el("context");
+  const collapsed = ctx.classList.toggle("collapsed");
+  el("btnCtxToggle").setAttribute("aria-expanded", String(!collapsed));
 }
 
 function zeichneFallListe(): void {
@@ -370,8 +382,11 @@ async function neuerFall(): Promise<void> {
 }
 
 async function wechsleFall(id: string): Promise<void> {
-  if (id === S.state.activeId) return;
-  await S.ladeFall(id);
+  if (id === S.state.activeId) {
+    await S.schliesseFall();
+  } else {
+    await S.ladeFall(id);
+  }
   zeichneFallListe();
   zeichneSchritt();
 }
@@ -399,6 +414,36 @@ function geheZu(n: number): void {
 const neuZeichnen = () => { zeichneSchritt(); zeichneFallListe(); };
 
 function zeichneSchritt(): void {
+  const stepbar = document.querySelector(".stepbar") as HTMLElement | null;
+  const ctx = document.querySelector(".context") as HTMLElement | null;
+
+  if (!S.state.activeId) {
+    el("workEyebrow").textContent = "";
+    el("workTitel").textContent = "Willkommen bei Rana";
+    el("workInner").className = "work-inner";
+    el("workInner").innerHTML = `
+      <div style="text-align:center; padding: 120px 20px; color: var(--peat);">
+        <svg width="48" height="48" viewBox="0 0 24 24" style="margin-bottom: 20px; color: var(--reed);">
+          <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2"/>
+        </svg>
+        <h3>Kein Fall ausgewählt</h3>
+        <p style="margin-bottom: 24px; color: var(--reed);">Wählen Sie einen Patienten aus der Liste<br>oder legen Sie einen neuen Fall an.</p>
+        <button class="btn btn-primary" id="btnEmptyNeuerFall">Neuen Fall anlegen</button>
+      </div>
+    `;
+    if (stepbar) stepbar.style.display = "none";
+    if (ctx) ctx.style.display = "none";
+    
+    // Bind button
+    const btn = document.getElementById("btnEmptyNeuerFall");
+    if (btn) btn.addEventListener("click", () => { void neuerFall(); });
+    
+    return;
+  }
+
+  if (stepbar) stepbar.style.display = "";
+  if (ctx) ctx.style.display = "";
+
   const n = S.state.step;
 
   el("workEyebrow").textContent = `Schritt ${n + 1} von ${SCHRITTE.length}`;
@@ -409,17 +454,10 @@ function zeichneSchritt(): void {
   el("workInner").innerHTML = renderSchritt(n);
   bindeSchritt(n, neuZeichnen);
 
-  el<HTMLButtonElement>("btnZurueck").disabled = n === 0;
-  const weiter = el<HTMLButtonElement>("btnWeiter");
-  weiter.classList.toggle("hidden", n === SCHRITTE.length - 1);
-
   aktualisiereRand();
 }
 
-function bindeFuss(): void {
-  on(el("btnZurueck"), "click", () => geheZu(S.state.step - 1));
-  on(el("btnWeiter"),  "click", () => geheZu(S.state.step + 1));
-}
+
 
 // ---------------------------------------------------------------
 // Alles am Rand: Spur, Kontextspalte, Speicherstand
@@ -429,6 +467,12 @@ function aktualisiereRand(): void {
   aktualisiereSchrittleiste();
   aktualisiereKontext();
   aktualisiereSpeicherstand();
+  aktualisiereTopbar();
+}
+
+function aktualisiereTopbar(): void {
+  const tp = document.getElementById("topbarPatient");
+  if (tp) tp.textContent = S.state.fields.f_name || "";
 }
 
 function aktualisiereSchrittleiste(): void {
@@ -448,7 +492,7 @@ function aktualisiereSchrittleiste(): void {
 }
 
 function aktualisiereKontext(): void {
-  const box = document.getElementById("context");
+  const box = document.getElementById("contextBody");
   if (!box) return;
 
   const pct = S.vollstaendigkeit();
@@ -468,6 +512,7 @@ function aktualisiereKontext(): void {
         <ul class="gap-list">
           ${offen.map((l) => `
             <li><button class="gap-item" data-luecke="${esc(l.feld)}" data-schritt="${l.schritt}">
+              <span class="gap-num">${l.schritt + 1}</span>
               ${esc(l.label)}
             </button></li>`).join("")}
         </ul>`
@@ -480,23 +525,7 @@ function aktualisiereKontext(): void {
         ${S.state.fields.f_chiffre ? `Chiffre ${esc(S.state.fields.f_chiffre)}<br>` : ""}
         Zuletzt geändert ${esc(relDate(Date.now()))}
       </p>
-    </section>
-    
-    ${b ? `
-      <section class="ctx-block ctx-unten">
-        <span class="record">Verbrauch</span>
-        <div class="budget">
-          <div class="budget-row">
-            <span class="budget-amount">${eur(b.month_spent_eur)}</span>
-            <span class="budget-of">von ${eur(b.month_limit_eur)}</span>
-          </div>
-          <div class="budget-bar">
-            <div class="budget-fill ${b.level === "gestoppt" ? "stop" : b.level === "warnung" ? "warn" : ""}"
-                 style="--used:${Math.min(100, b.month_pct)}%"></div>
-          </div>
-          <p class="hint">${b.today_reports} von ${b.daily_limit} Berichten heute</p>
-        </div>
-      </section>` : ""}`;
+    </section>`;
 
   // Ein Klick auf eine Lücke springt genau dorthin.
   for (const g of qsa<HTMLButtonElement>("[data-luecke]", box)) {
@@ -515,13 +544,16 @@ function aktualisiereKontext(): void {
 }
 
 function aktualisiereSpeicherstand(): void {
-  const n = document.getElementById("speicherStand");
-  if (!n) return;
-  
+  const dot = document.querySelector(".save-dot");
+  const txt = document.querySelector(".save-text");
+  if (!dot || !txt) return;
+
   if (S.state.dirty) {
-    n.innerHTML = `<span style="color:var(--amber)">● Ungespeichert</span>`;
+    dot.classList.add("unsaved");
+    (txt as HTMLElement).textContent = "Ungespeichert";
   } else {
-    n.innerHTML = `<span style="color:var(--reed)">✔ Gespeichert</span>`;
+    dot.classList.remove("unsaved");
+    (txt as HTMLElement).textContent = "Gespeichert";
   }
 }
 

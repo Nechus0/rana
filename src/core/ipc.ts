@@ -250,3 +250,5 @@ export const restoreAutoBackup = (path: string) =>
   call<number>("restore_auto_backup", { path });
 
 export const importLegacy = (json: string) => call<number>("import_legacy", { json });
+
+export const extractReportText = (path: string) => call<string>("extract_report_text", { path });

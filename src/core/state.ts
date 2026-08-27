@@ -480,6 +480,17 @@ function zieleAusBericht(text: string): string {
   return ziele.join("\n");
 }
 
+export async function schliesseFall(): Promise<void> {
+  await speichereJetzt();
+  patch({
+    activeId: null,
+    patientId: null,
+    fields: leererFall(state.profile),
+    step: 0,
+    dirty: false
+  });
+}
+
 export async function ladeFall(id: string): Promise<void> {
   // Ein noch nicht gespeicherter Stand darf beim Wechsel nicht verloren
   // gehen — deshalb zuerst sichern, dann wechseln.
