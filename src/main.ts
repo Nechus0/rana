@@ -40,7 +40,7 @@ import { offeneZuordnungen, zeigeZuordnung } from "./views/patients";
 import { bindePatient, ladePatient, renderPatient } from "./views/patientview";
 import { confirmDialog, el, esc, icon, marke, on, qsa, relDate, toast } from "./ui/kit";
 
-// ===============================================================
+import { zeigePatientStammdaten } from "./views/patient_dialog";
 // Start
 // ===============================================================
 
@@ -626,13 +626,22 @@ async function patientinInPapierkorb(patientId: string, name: string): Promise<v
   else { await S.refreshCases(); zeichneFallListe(); }
 }
 
+
+
 async function neuerFall(): Promise<void> {
-  await S.neuerFall();
-  S.state.offen.clear();
-  zeichneFallListe();
-  zeichneSchritt();
-  toast("Neuer Fall angelegt.", "ok", 2500);
-  (document.getElementById("f_name") as HTMLInputElement | null)?.focus();
+  // Wenn kein aktiver Patient ausgewählt ist, legen wir zuerst einen an
+  // oder wenn explizit der Button "Neuer Patient" geklickt wird.
+  await zeigePatientStammdaten(null, async (patient) => {
+    // Nach dem Speichern des neuen Patienten:
+    // Leeren Fall anlegen und zuordnen.
+    const caseId = await S.neuerFall();
+    await api.assignReport(caseId, patient.id);
+    await S.refreshCases();
+    S.state.offen.clear();
+    zeichneFallListe();
+    toast("Neue Patientin angelegt.", "ok", 2500);
+    await oeffneFall(caseId);
+  });
 }
 
 /**

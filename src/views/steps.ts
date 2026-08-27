@@ -100,21 +100,14 @@ const gruppe = (num: string | null, titel: string, body: string) => `
 // ===============================================================
 
 function schritt1(): string {
-  return gruppe(null, "Grunddaten des Falls", `
+  return gruppe(null, "Falldaten für diesen Antrag", `
+    <p class="hint" style="margin-bottom: var(--s5)">
+      Die Grunddaten der Patientin (Name, Geburtsdatum, Chiffre, etc.) sind fest 
+      mit der Person verknüpft. Du kannst sie in der Patienten-Übersicht bearbeiten.
+      Hier trägst du nur ein, was spezifisch für diesen Antrag ist.
+    </p>
     <div class="grid-3">
-      ${input("f_name", "Patient:in", { span: 3, note: "Klarname, nur zur Fallauswahl und für den Dateinamen. Steht nie im Bericht und geht nie an die Schnittstelle." })}
-      ${input("f_chiffre", "Chiffre / Pseudonym", { ph: "A.M.-1974" })}
-      ${input("f_nr", "Lfd. Nr. des Fortführungsantrags", { typ: "number", ph: "1", note: "je Antrag hochzählen" })}
-      ${input("f_gebdatum", "Geburtsdatum", { typ: "date" })}
-      ${input("f_beginn", "Therapiebeginn", { typ: "date", note: "Datum der ersten Sitzung" })}
-      <div class="field">
-        <label for="f_geschlecht">Geschlecht</label>
-        <select id="f_geschlecht" data-feld="f_geschlecht">
-          ${["", "weiblich", "männlich", "divers"].map((o) =>
-            `<option value="${esc(o)}" ${f("f_geschlecht") === o ? "selected" : ""}>${o || "—"}</option>`).join("")}
-        </select>
-      </div>
-      ${input("f_kasse", "Krankenkasse / Kostenträger", { span: 2, ph: "Beihilfe / AOK Niedersachsen" })}
+      ${input("f_nr", "Lfd. Nr. des Fortführungsantrags", { span: 3, typ: "number", ph: "1", note: "je Antrag hochzählen" })}
       ${input("f_bewilligt", "Bisher bewilligt", { typ: "number", note: "Std." })}
       ${input("f_verbraucht", "Davon verbraucht", { typ: "number", note: "Std." })}
       ${input("f_beantragt", "Jetzt beantragt", { typ: "number", note: "weitere Std." })}
@@ -129,11 +122,6 @@ function schritt1(): string {
           "in der Regel wöchentlicher Frequenz",
         ],
       })}
-      ${input("f_sozio", "Soziodemographische Angaben", {
-        span: 3,
-        note: "eine kurze Zeile im Berichtskopf — pseudonymisiert",
-        ph: "Lehrerin, in Partnerschaft, keine Kinder",
-      })}
     </div>
     <div id="warnungen"></div>
     <div class="row" style="margin-top: var(--s5)">
@@ -141,7 +129,7 @@ function schritt1(): string {
               title="Legt den nächsten Antrag derselben Patientin an und übernimmt, was gleich bleibt">
         ${icon.plus} Folgeantrag aus diesem Fall
       </button>
-      <span class="hint">Stammdaten, Ausgangslage und Psychodynamik werden übernommen.</span>
+      <span class="hint">Patientendaten, Ausgangslage und Psychodynamik werden übernommen.</span>
     </div>`);
 }
 

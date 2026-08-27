@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="./src/styles/tokens.css">
+  <link rel="stylesheet" href="./src/styles/base.css">
+  <link rel="stylesheet" href="./src/styles/app.css">
+  <style>
+    body, html { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; }
+    #app { height: 100vh; display: flex; flex-direction: column; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="topbar-rail-toggle"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 4h5v12H3zM10 4h7M10 8h7M10 12h5" stroke="currentColor" fill="none"/></svg></button>
+      <span class="brand-name">Rana</span>
+      <span class="brand-version">arvalis</span>
+      <span class="brand-ver-num">2.1.0</span>
+    </div>
+    <div class="topbar-center">
+      <span class="topbar-patient">Max Mustermann</span>
+    </div>
+    <div class="topbar-right">
+      <span class="save-indicator">
+        <span class="save-dot"></span>
+        <span class="save-text">Gespeichert</span>
+      </span>
+      <div class="menuwrap">
+        <button class="btn btn-sm btn-quiet btn-icon"><svg width="20" height="20"><circle cx="10" cy="5" r="1.3" fill="currentColor"/><circle cx="10" cy="10" r="1.3" fill="currentColor"/><circle cx="10" cy="15" r="1.3" fill="currentColor"/></svg></button>
+      </div>
+      <button class="topbar-ctx-toggle"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M12 4h5v12h-5zM3 4h7M3 8h7M3 12h5" stroke="currentColor" fill="none"/></svg></button>
+    </div>
+  </header>
+  <div class="shell" style="grid-template-columns: auto minmax(0, 1fr) auto;">
+    <nav class="rail collapsed">
+      <div class="rail-collapsed" style="display:flex;">
+        <button class="rail-tab"><span class="rail-tab-label">FÄLLE</span></button>
+      </div>
+    </nav>
+    <main class="work">
+      <header class="work-head">
+        <nav class="stepbar">
+          <button class="stepbar-step" aria-selected="false"><span class="stepbar-node">1</span><span class="stepbar-label">Stammdaten</span></button>
+          <button class="stepbar-step" aria-selected="true"><span class="stepbar-node">2</span><span class="stepbar-label">Vorbericht</span></button>
+        </nav>
+        <div class="work-head-titel"><div class="work-title"><h2>Letzter Bericht</h2></div></div>
+      </header>
+      <div class="work-body">
+        <div class="work-inner">
+          <label class="switch" style="margin-bottom:24px">
+            <input type="checkbox" checked>
+            <span class="switch-track"></span>
+            <span>Ein Vorbericht liegt vor</span>
+          </label>
+          <section class="group">
+            <div class="group-head"><span class="group-title">Text des letzten Berichts</span></div>
+            <div class="group-body">
+              <div class="row" style="margin-bottom:12px">
+                <button class="btn btn-sm" type="button" title="Word (.docx) oder PDF laden">
+                  <svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M15.2,20H13.8L12,13.2L10.2,20H8.8L6.6,11H8.1L9.5,17.8L11.3,11H12.6L14.4,17.8L15.8,11H17.3L15.2,20M13,9V3.5L18.5,9H13Z"/></svg> Datei einlesen (Word / PDF)
+                </button>
+              </div>
+              <div class="field">
+                <label>Hier einfügen <span class="field-note">bleibt auf dem Gerät...</span></label>
+                <textarea style="min-height:150px; border-radius:12px;"></textarea>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+    <aside class="context collapsed">
+      <div class="context-collapsed" style="display:flex;">
+        <button class="rail-tab"><span class="rail-tab-label">ÜBERSICHT</span></button>
+      </div>
+    </aside>
+  </div>
+</div>
+</body>
+</html>

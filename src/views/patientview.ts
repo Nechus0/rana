@@ -16,6 +16,7 @@
 import * as api from "../core/ipc";
 import * as S from "../core/state";
 import { confirmDialog, esc, icon, on, qsa, relDate, toast } from "../ui/kit";
+import { zeigePatientStammdaten } from "./patient_dialog";
 
 export interface PatientAnsichtHandler {
   /** Einen Antrag öffnen. */
@@ -65,6 +66,10 @@ export function renderPatient(d: PatientDaten): string {
     <section class="group">
       <div class="group-head">
         <span class="group-title">Stammdaten</span>
+        <span class="spacer"></span>
+        <button class="btn btn-sm btn-quiet btn-icon" data-patientedit="${esc(d.patient.id)}" title="Stammdaten bearbeiten" aria-label="Stammdaten bearbeiten">
+          ${icon.pen}
+        </button>
       </div>
 
       <dl class="stammblatt">
@@ -148,7 +153,17 @@ export function renderPatient(d: PatientDaten): string {
 // Ereignisse
 // ---------------------------------------------------------------
 
+
+
 export function bindePatient(d: PatientDaten, h: PatientAnsichtHandler): void {
+  for (const b of qsa<HTMLButtonElement>("[data-patientedit]")) {
+    on(b, "click", () => {
+      void zeigePatientStammdaten(b.dataset.patientedit!, () => {
+        h.neuZeichnen();
+      });
+    });
+  }
+
   for (const b of qsa<HTMLButtonElement>("[data-oeffnen]")) {
     on(b, "click", () => h.oeffnen(b.dataset.oeffnen!));
   }

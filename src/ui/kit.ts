@@ -72,6 +72,7 @@ export const icon = {
   archive: svg('<rect x="3.5" y="5" width="13" height="3" rx="1"/><path d="M5 8v7.5h10V8M8.2 11h3.6"/>'),
   back:    svg('<path d="M11.5 5L6.5 10l5 5"/>'),
   fwd:     svg('<path d="M8.5 5l5 5-5 5"/>'),
+  pen:     svg('<path d="M12 4l4 4-9 9H3v-4l9-9z"/>'),
   moon:    svg('<path d="M15.5 11.4A6 6 0 0 1 8.6 4.5a6 6 0 1 0 6.9 6.9z"/>'),
   check:   svg('<path d="M4.5 10.5l3.5 3.5 7.5-8"/>'),
   warn:    svg('<path d="M10 3.5l7 12.5H3z"/><path d="M10 8v3.4M10 13.6v.1"/>'),
