@@ -514,6 +514,8 @@
 
 .menu {
   position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
   min-width: 212px;
   background: var(--paper);
   border: 1px solid var(--line);
@@ -526,7 +528,7 @@
 
 /* Am unteren Rand klappt es nach oben auf, sonst stünde es ausserhalb
    des Fensters. Waagerecht am Knopf ausgerichtet. */
-.menu-auf { bottom: calc(100% + 6px); left: 0; }
+.menu-auf { top: auto; bottom: calc(100% + 6px); right: auto; left: 0; }
 
 .menu-item {
   width: 100%;
@@ -939,6 +941,7 @@
 /* Der Speicherstand steht am rechten Ende derselben Zeile, auf der
    Grundlinie der Überschrift. */
 .work-head-titel .save-indicator { flex: none; align-self: flex-end; padding-bottom: 4px; }
+.work-head-titel .menuwrap { flex: none; align-self: flex-end; padding-bottom: 2px; }
 .work-head h2 { font-size: var(--t-xl); }
 
 .work-body {

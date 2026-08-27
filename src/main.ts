@@ -143,6 +143,20 @@ function zeichneGeruest(): void {
               <span class="save-dot"></span>
               <span class="save-text">Gespeichert</span>
             </span>
+            <div class="menuwrap">
+              <button class="btn btn-quiet btn-icon" id="btnMehr"
+                      title="Menü" aria-label="Menü"
+                      aria-haspopup="menu" aria-expanded="false">${icon.dots}</button>
+              <div class="menu" id="mehrMenu" role="menu" hidden>
+                <button class="menu-item" role="menuitem" id="mnuEinstellungen">${icon.gear}<span>Einstellungen</span></button>
+                <button class="menu-item" role="menuitem" id="mnuSicherung">${icon.save}<span>Sicherung</span></button>
+                <button class="menu-item" role="menuitem" id="mnuPapierkorb">${icon.trash}<span>Papierkorb</span></button>
+                <div class="menu-sep"></div>
+                <button class="menu-item" role="menuitem" id="mnuZuordnen" hidden>
+                  ${icon.merge}<span id="mnuZuordnenText">Berichte zuordnen</span>
+                </button>
+              </div>
+            </div>
           </div>
         </header>
         <div class="work-body" id="work-body" tabindex="-1">
@@ -210,22 +224,6 @@ function railHtml(): string {
       <div class="rail-foot">
         <button class="btn btn-primary" id="btnNeuerFall"
                 title="Neuen Patienten anlegen (Strg+N)">${icon.plus} Neuer Patient</button>
-
-        <div class="menuwrap">
-          <button class="btn btn-quiet btn-icon" id="btnMehr"
-                  title="Menü" aria-label="Menü"
-                  aria-haspopup="menu" aria-expanded="false">${icon.dots}</button>
-          <!-- Klappt nach oben auf: der Knopf steht am unteren Rand. -->
-          <div class="menu menu-auf" id="mehrMenu" role="menu" hidden>
-            <button class="menu-item" role="menuitem" id="mnuEinstellungen">${icon.gear}<span>Einstellungen</span></button>
-            <button class="menu-item" role="menuitem" id="mnuSicherung">${icon.save}<span>Sicherung</span></button>
-            <button class="menu-item" role="menuitem" id="mnuPapierkorb">${icon.trash}<span>Papierkorb</span></button>
-            <div class="menu-sep"></div>
-            <button class="menu-item" role="menuitem" id="mnuZuordnen" hidden>
-              ${icon.merge}<span id="mnuZuordnenText">Berichte zuordnen</span>
-            </button>
-          </div>
-        </div>
 
         <button class="btn btn-quiet btn-icon" id="btnRailToggle"
                 title="Seitenschiene einklappen" aria-label="Seitenschiene einklappen"
@@ -362,7 +360,7 @@ function zeigeAnsicht(neu: Ansicht): void {
   el("railFaelle").hidden = neu !== "faelle";
   el("railFortschritt").hidden = neu !== "fortschritt";
   el("railBausteine").hidden = neu !== "bausteine";
-  el("btnNeuerFall").parentElement!.hidden = neu !== "faelle";
+  (el("btnNeuerFall") as HTMLElement).hidden = neu !== "faelle";
 
   if (neu === "fortschritt") zeichneFortschritt();
   if (neu === "bausteine") void zeichneBausteine();
