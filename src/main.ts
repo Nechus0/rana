@@ -95,9 +95,6 @@ function zeichneGeruest(): void {
          sich nichts mehr anklicken. -->
     <header class="topbar" id="topbar" data-tauri-drag-region>
       <div class="topbar-left" data-tauri-drag-region>
-        <button class="topbar-rail-toggle" id="btnRailToggle"
-                title="Seitenschiene ein-/ausklappen" aria-label="Seitenschiene ein-/ausklappen"
-                aria-expanded="true">${icon.panelL}</button>
         <span class="brand" data-tauri-drag-region>
           ${marke}
           <span class="brand-name">Rana</span>
@@ -213,12 +210,16 @@ function railHtml(): string {
       <div class="rail-body rail-scroll" id="railFortschritt" role="tabpanel" hidden></div>
       <div class="rail-body rail-scroll" id="railBausteine" role="tabpanel" hidden></div>
 
-      <!-- Hier stand ein zweiter Knopf „Aus Ordner". Er zeigte nur
-           die Meldung, dass die Funktion noch fehle — und nahm dem
-           einzigen Knopf, der etwas tut, die halbe Breite. -->
+      <!-- Der Knopf zum Einklappen sass in der Fensterleiste ganz oben
+           — weit weg von der Spalte, die er einklappt, und in einer
+           Zeile, die sonst nur Marke, Name und Fensterknöpfe trägt.
+           Hier steht er am Fuss der Schiene selbst. -->
       <div class="rail-foot">
         <button class="btn btn-primary" id="btnNeuerFall"
                 title="Neuen Patienten anlegen (Strg+N)">${icon.plus} Neuer Patient</button>
+        <button class="btn btn-quiet btn-icon" id="btnRailToggle"
+                title="Seitenschiene einklappen" aria-label="Seitenschiene einklappen"
+                aria-expanded="true">${icon.panelL}</button>
       </div>
 
       <div class="rail-collapsed" id="railCollapsed">
@@ -307,7 +308,9 @@ function bindeTopbar(): void {
 
   void pruefeZuordnung();
 
-  // Sidebar ein-/ausklappen
+  // Der Einklapp-Knopf sitzt jetzt am Fuss der Schiene. Angemeldet
+  // wird er weiterhin hier, weil das Gerüst zu diesem Zeitpunkt
+  // vollständig steht — die Schiene eingeschlossen.
   on(el("btnRailToggle"), "click", toggleRail);
 
   bindeFensterknoepfe();

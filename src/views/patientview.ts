@@ -99,7 +99,13 @@ export function renderPatient(d: PatientDaten): string {
           <tbody>
             ${d.berichte.map((c) => `
               <tr ${c.id === S.state.activeId ? 'class="ist-offen"' : ""}>
-                <td class="nr">${c.antrag_nr ? `${esc(c.antrag_nr)}.` : "—"}</td>
+                <!-- Die Nummer stand hier als eigene, schmale Spalte.
+                     Ihre Überschrift war breiter als ihr Inhalt, und die
+                     Ziffer sass verloren am linken Rand. Sie steht jetzt
+                     in der Bezeichnung, so wie in der Seitenschiene. -->
+                <td class="antrag">${c.antrag_nr
+                  ? `<b>${esc(c.antrag_nr)}.</b> Fortführungsantrag`
+                  : "Antrag ohne Nummer"}</td>
                 <td>${esc(relDate(c.created_at))}</td>
                 <td>${esc(relDate(c.updated_at))}</td>
                 <td>${c.has_report

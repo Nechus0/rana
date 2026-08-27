@@ -70,7 +70,7 @@ const antraege = [
 document.getElementById("app").innerHTML = `
 <header class="topbar">
   <div class="topbar-left">
-    <button class="topbar-rail-toggle" aria-expanded="true">${icon.panelL}</button>
+    
     <span class="brand">
       ${marke}
       <span class="brand-name">Rana</span>
@@ -113,6 +113,7 @@ document.getElementById("app").innerHTML = `
 
     <div class="rail-foot">
       <button class="btn btn-primary">${icon.plus} Neuer Patient</button>
+      <button class="btn btn-quiet btn-icon">${icon.panelL}</button>
     </div>
   </nav>
 
@@ -150,7 +151,7 @@ document.getElementById("app").innerHTML = `
             <tbody>
               ${antraege.map(([nr, a, g, fertig]) => `
                 <tr ${nr === 3 ? 'class="ist-offen"' : ""}>
-                  <td class="nr">${nr}.</td>
+                  <td class="antrag"><b>${nr}.</b> Fortf&uuml;hrungsantrag</td>
                   <td>${a}</td>
                   <td>${g}</td>
                   <td>${fertig ? `<span class="ist-fertig">${icon.check} formuliert</span>` : `<span class="ist-offen-text">offen</span>`}</td>
