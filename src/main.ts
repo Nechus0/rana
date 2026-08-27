@@ -176,7 +176,6 @@ function railHtml(): string {
       <div class="rail-tabs" id="railTabs" role="tablist" aria-label="Ansicht der Seitenschiene">
         <button role="tab" data-ansicht="faelle" aria-selected="true">Patienten</button>
         <button role="tab" data-ansicht="fortschritt" aria-selected="false">Fortschritt</button>
-        <button role="tab" data-ansicht="bausteine" aria-selected="false">Bausteine</button>
       </div>
 
       <div class="rail-body" id="railFaelle" role="tabpanel">
@@ -205,7 +204,6 @@ function railHtml(): string {
       <!-- Die weiteren Ansichten derselben Schiene. „Fortschritt"
            ersetzt die Spalte, die bis 2.1 rechts stand. -->
       <div class="rail-body rail-scroll" id="railFortschritt" role="tabpanel" hidden></div>
-      <div class="rail-body rail-scroll" id="railBausteine" role="tabpanel" hidden></div>
 
       <!-- Der Knopf zum Einklappen sass in der Fensterleiste ganz oben
            — weit weg von der Spalte, die er einklappt, und in einer
@@ -230,7 +228,7 @@ function railHtml(): string {
 
 function bindeRail(): void {
   on(el("btnNeuerFall"), "click", () => { void neuerFall(); });
-  window.addEventListener("bausteine-geandert", () => { void zeichneBausteine(); });
+
 
   // Kein Umweg über Rust mehr: die Übersichten liegen bereits im
   // Speicher, gefiltert wird hier. Damit entfällt auch die Verzögerung
@@ -286,13 +284,13 @@ function bindeTopbar(): void {
 // Was in der Seitenschiene steht
 // ---------------------------------------------------------------
 
-type Ansicht = "faelle" | "fortschritt" | "bausteine";
+type Ansicht = "faelle" | "fortschritt";
 
 const ANSICHT_KEY = "rana-rail-ansicht";
 let ansicht: Ansicht = (() => {
   try {
     const g = globalThis.localStorage?.getItem(ANSICHT_KEY);
-    return g === "fortschritt" || g === "bausteine" ? g : "faelle";
+    return g === "fortschritt" ? g : "faelle";
   } catch { return "faelle"; }
 })();
 
@@ -312,10 +310,8 @@ function zeigeAnsicht(neu: Ansicht): void {
   }
   el("railFaelle").hidden = neu !== "faelle";
   el("railFortschritt").hidden = neu !== "fortschritt";
-  el("railBausteine").hidden = neu !== "bausteine";
 
   if (neu === "fortschritt") zeichneFortschritt();
-  if (neu === "bausteine") void zeichneBausteine();
 }
 
 /**
@@ -850,116 +846,7 @@ function zeichneFortschritt(): void {
 
 }
 
-// ---------------------------------------------------------------
-// Textbausteine in der Seitenschiene
-// ---------------------------------------------------------------
 
-/**
- * Wohin ein Baustein eingefügt wird.
- *
- * Ein Klick in die Seitenschiene nimmt dem Textfeld den Fokus. Deshalb
- * wird gemerkt, wo die Schreibmarke zuletzt stand — sonst wüsste die
- * Liste nach dem Klick nicht mehr, wohin sie schreiben soll.
- */
-let letztesFeld: HTMLTextAreaElement | HTMLInputElement | null = null;
-
-document.addEventListener("focusin", (e) => {
-  const z = e.target as HTMLElement;
-  if (!z.closest("#workInner")) return;
-  if (z instanceof HTMLTextAreaElement || z instanceof HTMLInputElement) letztesFeld = z;
-});
-
-/**
- * Alle eigenen Formulierungen an einer Stelle, nach Feld gruppiert.
- *
- * Bisher lagen sie hinter je einem Knopf im jeweiligen Feld — man fand
- * sie nur, wenn man schon wusste, wo sie liegen. Ein Klick hier fügt an
- * der Schreibmarke ein; das Verwalten bleibt beim Feld.
- */
-async function zeichneBausteine(): Promise<void> {
-  const box = document.getElementById("railBausteine");
-  if (!box) return;
-
-  let alle: [string, string, string][];
-  try {
-    alle = await api.listAllSnippets();
-  } catch (e) {
-    box.innerHTML = `<p class="hint" style="padding:var(--s3)">${esc(api.errorText(e))}</p>`;
-    return;
-  }
-
-  if (!alle.length) {
-    box.innerHTML = `
-      <div class="rail-leer">
-        <p class="hint">
-          Noch keine Bausteine. Formulierungen, die immer wiederkehren,
-          legen Sie über „Bausteine" am jeweiligen Feld ab — hier stehen
-          sie dann alle beisammen.
-        </p>
-      </div>`;
-    return;
-  }
-
-  const nachFeld = new Map<string, [string, string][]>();
-  for (const [id, feld, text] of alle) {
-    const liste = nachFeld.get(feld) ?? [];
-    liste.push([id, text]);
-    nachFeld.set(feld, liste);
-  }
-
-  box.innerHTML = [...nachFeld.entries()].map(([feld, liste]) => `
-    <section class="ctx-block">
-      <span class="record">${esc(S.FELD_NAMEN[feld] ?? feld)}</span>
-      <div class="baustein-liste" style="display:flex; flex-direction:column; gap:6px;">
-        ${liste.map(([id, text]) => `
-          <div class="baustein-row" style="display:flex; gap:6px; align-items:flex-start;">
-            <button class="baustein" style="flex:1; text-align:left;" data-baustein="${esc(id)}" title="An der Schreibmarke einfügen">
-              ${esc(text.length > 160 ? text.slice(0, 160) + " …" : text)}
-            </button>
-            <button class="btn btn-quiet btn-icon" data-baustein-weg="${esc(id)}" title="Baustein löschen" aria-label="Löschen" style="flex:none; opacity:0.6;">
-              ${icon.close}
-            </button>
-          </div>`).join("")}
-      </div>
-    </section>`).join("");
-
-  const texte = new Map(alle.map(([id, , text]) => [id, text]));
-  for (const b of qsa<HTMLButtonElement>("[data-baustein]", box)) {
-    on(b, "click", () => fuegeBausteinEin(texte.get(b.dataset.baustein!) ?? ""));
-  }
-  for (const b of qsa<HTMLButtonElement>("[data-baustein-weg]", box)) {
-    on(b, "click", async () => {
-      await api.deleteSnippet(b.dataset.bausteinWeg!);
-      void zeichneBausteine();
-    });
-  }
-}
-
-function fuegeBausteinEin(text: string): void {
-  const feld = letztesFeld;
-  if (!feld || !feld.isConnected) {
-    toast("Bitte zuerst in das Feld klicken, in das der Baustein soll.", "info");
-    return;
-  }
-
-  const a = feld.selectionStart ?? feld.value.length;
-  const b = feld.selectionEnd ?? a;
-  const davor = feld.value.slice(0, a);
-  const danach = feld.value.slice(b);
-
-  // Ein Leerzeichen dazwischen, wo keines ist — sonst klebt der
-  // Baustein am vorigen Wort.
-  const luecke = davor && !/\s$/.test(davor) ? " " : "";
-  feld.value = davor + luecke + text + danach;
-
-  const marke = (davor + luecke + text).length;
-  feld.setSelectionRange(marke, marke);
-  feld.focus();
-
-  const name = feld.dataset.feld ?? feld.id;
-  if (name) S.setzeFeld(name, feld.value);
-  feld.dispatchEvent(new Event("input", { bubbles: true }));
-}
 
 function aktualisiereSpeicherstand(): void {
   const dot = document.querySelector(".save-dot");
