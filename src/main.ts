@@ -133,22 +133,21 @@ function zeichneGeruest(): void {
           <!-- Der Zusammenhang steht über der Arbeit, nicht über dem
                Fenster: wessen Antrag hier offen ist, welcher Schritt es
                ist, und ob alles gesichert ist. -->
-          <div class="work-head-titel">
-            <div class="work-title">
+          <div class="work-head-row" style="display: flex; align-items: flex-end;">
+            <div class="work-title" style="flex: 0 0 auto; margin-right: 48px; padding-bottom: 6px;">
               <span class="work-eyebrow" id="workEyebrow"></span>
-              <h2 id="workTitel"></h2>
+              <h2 id="workTitel" style="margin: 0; line-height: 1;"></h2>
             </div>
-            <span class="spacer"></span>
+            <nav class="stepbar" role="tablist" aria-label="Arbeitsschritte" style="flex: 1; justify-content: flex-start; transform: none; margin: 0;">
+              ${SCHRITTE.map((s, i) => `
+                <button class="stepbar-step" role="tab" data-schritt="${i}" aria-selected="false"
+                        title="${esc(s.titel)}">
+                  <span class="stepbar-node">${i + 1}</span>
+                  <span class="stepbar-label">${esc(s.kurz)}</span>
+                  <span class="stepbar-flag" aria-hidden="true"></span>
+                </button>`).join("")}
+            </nav>
           </div>
-          <nav class="stepbar" role="tablist" aria-label="Arbeitsschritte">
-            ${SCHRITTE.map((s, i) => `
-              <button class="stepbar-step" role="tab" data-schritt="${i}" aria-selected="false"
-                      title="${esc(s.titel)}">
-                <span class="stepbar-node">${i + 1}</span>
-                <span class="stepbar-label">${esc(s.kurz)}</span>
-                <span class="stepbar-flag" aria-hidden="true"></span>
-              </button>`).join("")}
-          </nav>
         </header>
         <div class="work-body" id="work-body" tabindex="-1">
           <div class="work-inner" id="workInner"></div>

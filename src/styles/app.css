@@ -805,8 +805,8 @@
 }
 .stepbar-step::before { left: 0;   right: 50%; margin-right: 17px; }
 .stepbar-step::after  { left: 50%; right: 0;   margin-left: 17px; }
-.stepbar-step:first-of-type::before { display: none; }
-.stepbar-step:last-of-type::after   { display: none; }
+.stepbar-step:first-child::before { display: none !important; content: none !important; }
+.stepbar-step:last-child::after   { display: none !important; content: none !important; }
 
 /* Zurückgelegte Strecke */
 .stepbar-step.is-done::before,
@@ -918,7 +918,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--s4);
-  padding: var(--s4) var(--s6) 16px;
+  padding: var(--s4) var(--s6) 12px;
   border-bottom: 1px solid var(--line);
   background: var(--paper);
   box-shadow: 0 4px 12px rgba(0,0,0,0.02);
