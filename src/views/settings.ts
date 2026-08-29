@@ -14,7 +14,7 @@ import { confirmDialog, dialog, esc, eur, icon, on, qs, qsa, relDate, toast } fr
 const CONSOLE_LIMITS = "https://platform.claude.com/settings/limits";
 
 /** Steht auch in package.json, Cargo.toml und tauri.conf.json. */
-export const EIGENE_VERSION = "2.6.0";
+export const EIGENE_VERSION = "2.6.1";
 
 // ===============================================================
 // Einstellungen
