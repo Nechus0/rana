@@ -15,10 +15,11 @@
 
 import type { Felder, Profile } from "../core/ipc";
 import {
-  ABSCHNITTE, dateLong, esc, fmtDate, parseSections, sozioText,
+  dateLong, esc, fmtDate, parseSections, sozioText,
   splitLabel, splitParas, toList,
 } from "./render";
 import { verfahrenZeile } from "./prompt";
+import { ANTRAGSWORT, BERICHTSWORT, artVon, gliederung, untertitel } from "./gliederung";
 
 // ---------------------------------------------------------------
 // ZIP ohne Kompression
@@ -346,7 +347,9 @@ function wInfoBox(f: Felder, p: Profile): string {
 // ---------------------------------------------------------------
 
 function wDocBody(report: string, f: Felder, p: Profile): string {
-  const secs = parseSections(report);
+  const art = artVon(f);
+  const punkte = gliederung(art, p);
+  const secs = parseSections(report, punkte);
   const nr = gf(f, "f_nr") || "1";
   const ort = p.praxis.brief_ort || p.praxis.ort;
   const ortDatum = (ort ? `${ort}, ` : "") + dateLong();
@@ -359,7 +362,8 @@ function wDocBody(report: string, f: Felder, p: Profile): string {
     wpara("", { bottom: 1, bcolor: WC.hdrRule, bspace: 2, after: 0, line: 120 }),
 
     wpara(
-      wrun(`${nr}. Fortführungsantrag`, { font: W_SANS, sz: 16, caps: 1, sp: 14, c: WC.label })
+      wrun(art === "umwandlung" ? ANTRAGSWORT.umwandlung : `${nr}. ${ANTRAGSWORT.fortfuehrung}`,
+           { font: W_SANS, sz: 16, caps: 1, sp: 14, c: WC.label })
         + WTAB
         + wrun(ortDatum, { font: W_SANS, sz: 16, caps: 1, sp: 14, c: WC.label }),
       { tabs: wRightTab, before: 200, after: 160, line: 240 }
@@ -367,15 +371,15 @@ function wDocBody(report: string, f: Felder, p: Profile): string {
 
     wpara(wrun("Bericht an die Gutachterin / den Gutachter", { sz: 32, b: 1, c: WC.dark }),
           { after: 60, line: 264 }),
-    wpara(wrun(p.layout.untertitel || "zum Fortführungsantrag", { sz: 21, c: WC.sec }),
+    wpara(wrun(untertitel(art, p), { sz: 21, c: WC.sec }),
           { after: 200, line: 264 }),
 
     wInfoBox(f, p),
     wpara("", { after: 0, line: 120 }),
 
-    wh2("1", ABSCHNITTE[0]), wSection(secs[0]),
-    wh2("2", ABSCHNITTE[1]), wSection(secs[1]),
-    wh2("3", ABSCHNITTE[2]), wSection(secs[2]),
+    // Drei Punkte beim Fortführungs-, sieben beim Umwandlungsbericht.
+    // Die Zahl steht nicht hier, sondern in gliederung.ts.
+    punkte.map((x, i) => wh2(String(i + 1), x.titel) + wSection(secs[i] ?? "")).join(""),
 
     // Unterschriftsblock: grosszügiger Abstand nach oben, damit von Hand
     // unterschrieben werden kann, und durch keepNext zusammengehalten —
@@ -453,7 +457,7 @@ export function buildDocx(report: string, f: Felder, p: Profile): Blob {
   const core = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
     + '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" '
     + 'xmlns:dc="http://purl.org/dc/elements/1.1/">'
-    + `<dc:title>Fortführungsbericht ${esc(gf(f, "f_chiffre"))}</dc:title>`
+    + `<dc:title>${esc(BERICHTSWORT[artVon(f)])} ${esc(gf(f, "f_chiffre"))}</dc:title>`
     + `<dc:creator>${esc(p.behandler.name)}</dc:creator></cp:coreProperties>`;
 
   return zipStore([

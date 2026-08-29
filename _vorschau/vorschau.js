@@ -102,10 +102,16 @@ document.getElementById("app").innerHTML = `
         <input type="search" placeholder="Patient suchen …">
       </div>
       <div class="rail-filters">
-        <select class="rail-select">${["Zuletzt","Name","Angelegt","Anträge"].map((v) => `<option>${v}</option>`).join("")}</select>
-        <select class="rail-select">${["Alle","Offene","Erledigte"].map((v) => `<option>${v}</option>`).join("")}</select>
+        <div class="rail-chips" role="group">
+          ${["Alle","Zu schreiben","Geschrieben"].map((v, i) =>
+            `<button class="rail-chip" aria-pressed="${i === 0}">${v}</button>`).join("")}
+        </div>
       </div>
-      <div class="rail-zaehler"><span>11 Patienten · 15 Anträge</span></div>
+      <div class="rail-zaehler">
+        <span>11 Patienten · 15 Anträge</span>
+        <span class="spacer"></span>
+        <select class="rail-sort">${["Zuletzt","Name"].map((v) => `<option>${v}</option>`).join("")}</select>
+      </div>
       <ul class="case-list">${fallListe}</ul>
     </div>
 
@@ -118,28 +124,54 @@ document.getElementById("app").innerHTML = `
 
   <main class="work">
     <header class="work-head">
-      <div class="work-head-oben">
-        <nav class="stepbar" role="tablist">
-          ${SCHRITTE.map((s, i) => `
-            <button class="stepbar-step ${i === 3 ? "is-current" : ""} ${i < 3 ? "is-done" : ""} ${i === 2 ? "has-gap" : ""}" role="tab">
-              <span class="stepbar-node">${i + 1}</span>
-              <span class="stepbar-label">${s}</span>
-              <span class="stepbar-flag"></span>
-            </button>`).join("")}
-        </nav>
-      </div>
-      <div class="work-head-titel">
-        <div class="work-title">
-          <span class="work-eyebrow">Meike von Fintel · 1. Fortführungsantrag · Schritt 4 von 5</span>
-          <h2>Bericht formulieren</h2>
-        </div>
+      <div class="doczeile">
+        <button class="btn btn-quiet btn-sm doczeile-zurueck">${icon.panelL} <span>Patienten</span></button>
+        <span class="doczeile-trenner"></span>
+        <span class="doczeile-wer">Meike von Fintel · 1. Fortführungsantrag</span>
         <span class="spacer"></span>
         <span class="save-indicator"><span class="save-dot"></span><span class="save-text">Gespeichert</span></span>
         <button class="btn btn-quiet btn-icon">${icon.dots}</button>
       </div>
+      <nav class="stepbar" role="tablist">
+        ${SCHRITTE.map((s, i) => `
+          <button class="stepbar-step ${i === 3 ? "is-current" : ""} ${i < 3 ? "is-done" : ""} ${i === 2 ? "has-gap" : ""}" role="tab">
+            <span class="stepbar-node">${i + 1}</span>
+            <span class="stepbar-label">${s}</span>
+            <span class="stepbar-flag"></span>
+          </button>`).join("")}
+      </nav>
     </header>
     <div class="work-body">
       <div class="work-inner">
+        <h2 class="work-title">Bericht formulieren</h2>
+
+        <!-- Schritt 4, wie er wirklich aussieht: Laufbalken und
+             zweizeilige Entwurfskopfzeile. -->
+        <div class="lauf">
+          <div class="lauf-zeile">
+            <span class="lauf-text">Formuliere …</span>
+            <span class="lauf-zahl">64 %</span>
+          </div>
+          <div class="lauf-bahn"><div class="lauf-fuell" style="width:64%"></div></div>
+        </div>
+        <div class="entwurf-kopf">
+          <div class="entwurf-kopf-zeile">
+            <span class="entwurf-titel">Entwurf</span>
+            <span class="field-note">direkt bearbeitbar</span>
+            <span class="spacer"></span>
+            <span class="record-num small"><span style="color:var(--brick)">6.104 Zeichen</span> <span class="muted">· 791 Wörter</span></span>
+          </div>
+          <div class="entwurf-urteil"><span style="color:var(--brick)">rund 2,1 Seiten · über dem Korridor, läuft womöglich auf eine dritte Seite</span> <span style="color:var(--amber)">· 1 offene Stelle</span></div>
+        </div>
+
+        <!-- Schritt 5, das Beiblatt. -->
+        <dl class="ptv-liste" style="margin-bottom:var(--s6)">
+          <dt>Chiffre</dt><dd>V36-025825A09.10.1962</dd>
+          <dt>Kostenträger</dt><dd>Beihilfe</dd>
+          <dt>Verfahren</dt><dd>Tiefenpsychologisch fundierte Psychotherapie, Einzeltherapie</dd>
+          <dt>Diagnose(n)</dt><dd>Dysthymia F34.1 · Undifferenzierte Somatisierungsstörung bei emotionaler Belastung (F45.1)</dd>
+        </dl>
+
         <section class="group">
           <div class="group-head"><span class="group-title">Vißer, Claudia</span></div>
           <dl class="stammblatt">

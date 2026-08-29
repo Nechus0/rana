@@ -31,7 +31,7 @@ import "./styles/document.css";
 import * as api from "./core/ipc";
 import * as S from "./core/state";
 import { runSetup } from "./setup/wizard";
-import { bindeSchritt, fallInPapierkorb, renderSchritt, SCHRITTE } from "./views/steps";
+import { bindeSchritt, fallInPapierkorb, renderSchritt, SCHRITTE, schritte } from "./views/steps";
 
 import {
   EIGENE_VERSION, zeigeEinstellungen,
@@ -58,6 +58,41 @@ async function main(): Promise<void> {
     return;
   }
   await starteArbeitsansicht();
+
+  // Die Prüfung läuft NACH dem Aufbau der Ansicht und stört sie nicht:
+  // sie fragt bei GitHub nach und meldet sich nur, wenn es etwas gibt.
+  // Bis 2.6.1 fand sie ausschliesslich auf Knopfdruck in den
+  // Einstellungen statt — wer nicht dorthin ging, erfuhr nie von einer
+  // neuen Fassung.
+  void pruefeUpdate();
+}
+
+/**
+ * Sieht beim Start nach, ob eine neuere Fassung vorliegt.
+ *
+ * Kein Dialog, der sich vor die Arbeit schiebt: eine Meldung unten,
+ * die von selbst verschwindet, und ein Weg in die Einstellungen, wo
+ * die Installation steht. Fehlt das Netz, passiert schlicht nichts —
+ * eine Fehlermeldung über einen Dienst, nach dem niemand gefragt hat,
+ * wäre eine Zumutung.
+ */
+async function pruefeUpdate(): Promise<void> {
+  try {
+    const { check } = await import("@tauri-apps/plugin-updater");
+    // Dieselbe Zielangabe wie in den Einstellungen: der NSIS-Installer
+    // läuft im Benutzerprofil und kommt ohne Rückfrage der
+    // Benutzerkontensteuerung aus.
+    const gefunden = await check({ target: "windows-x86_64-nsis" });
+    if (!gefunden) return;
+
+    toast(
+      `Fassung ${gefunden.version} liegt vor — installiert ist ${EIGENE_VERSION}. `
+      + "Unter Einstellungen → Aktualisierung lässt sie sich einspielen.",
+      "info", 14000,
+    );
+  } catch {
+    // Kein Netz, keine Meldung.
+  }
 }
 
 async function starteArbeitsansicht(): Promise<void> {
@@ -122,45 +157,70 @@ function zeichneGeruest(): void {
         <!-- Zwei Zeilen, nicht eine.
              Titel und Schrittleiste standen nebeneinander auf einer
              Grundlinie: die grosse Serifenschrift links, die fünf Kreise
-             rechts daneben. Zwei Dinge gingen dabei schief. Die Leiste
-             begann dort, wo der Titel endete — also bei „Ausgabe" an
-             anderer Stelle als bei „Verlauf und aktueller Stand", und
-             sie sprang bei jedem Schrittwechsel. Und ein zwanzig Punkt
-             hoher Titel neben zwölf Punkt hohen Beschriftungen ergibt
-             keine gemeinsame Zeile, sondern zwei, die sich stören.
+             rechts daneben. Das ist seit 2.7.0 anders. -->
+        <!-- Zwei Zeilen mit je einer Aufgabe.
 
-             Jetzt: die Schrittleiste als eigene Zeile, mittig und
-             ortsfest. Darunter der Titel mit dem Zusammenhang darüber,
-             rechts der Speicherstand und das Menü. -->
+             Zeile 1 — die Dokumentzeile — beantwortet, woran gerade
+             gearbeitet wird: links der Weg zurück zur Liste, dann
+             Patientin und Antrag, rechts der Speicherstand und das
+             Menü. Das Menü sass bis 2.6.1 in derselben Zeile wie der
+             grosse Serifentitel, ganz aussen rechts neben dem Wort
+             „Gespeichert"; ein Knopf ohne Nachbarn am Rand einer sonst
+             leeren Zeile sieht verrutscht aus, weil er es ist.
+
+             Zeile 2 ist die Schrittleiste über die volle Breite. Der
+             Titel des Schritts steht nicht mehr hier, sondern als
+             Überschrift im Inhalt — dort, wo er hingehört, und wo er
+             beim Blättern mitwandert statt Platz festzuhalten. -->
         <header class="work-head">
-          <div class="work-head-oben">
-            <nav class="stepbar" role="tablist" aria-label="Arbeitsschritte">
-              ${SCHRITTE.map((s, i) => `
-                <button class="stepbar-step" role="tab" data-schritt="${i}" aria-selected="false"
-                        title="${esc(s.titel)}">
-                  <span class="stepbar-node">${i + 1}</span>
-                  <span class="stepbar-label">${esc(s.kurz)}</span>
-                  <span class="stepbar-flag" aria-hidden="true"></span>
-                </button>`).join("")}
-            </nav>
-          </div>
-
-          <div class="work-head-titel">
-            <div class="work-title">
-              <span class="work-eyebrow" id="workEyebrow"></span>
-              <h2 id="workTitel"></h2>
-            </div>
+          <div class="doczeile">
+            <button class="btn btn-quiet btn-sm doczeile-zurueck" id="btnZurListe"
+                    title="Zur Patientenliste (Strg+L)">
+              ${icon.panelL} <span>Patienten</span>
+            </button>
+            <span class="doczeile-trenner" aria-hidden="true"></span>
+            <span class="doczeile-wer" id="workEyebrow"></span>
             <span class="spacer"></span>
             <span class="save-indicator" id="saveIndicator">
               <span class="save-dot"></span>
               <span class="save-text">Gespeichert</span>
             </span>
             <button class="btn btn-quiet btn-icon" id="btnSettings"
-                    title="Einstellungen" aria-label="Einstellungen">${icon.dots}</button>
+                    title="Menü und Einstellungen" aria-label="Menü und Einstellungen"
+                    aria-haspopup="menu">${icon.dots}</button>
           </div>
+
+          <nav class="stepbar" role="tablist" aria-label="Arbeitsschritte">
+            ${SCHRITTE.map((s, i) => `
+              <button class="stepbar-step" role="tab" data-schritt="${i}" aria-selected="false"
+                      title="${esc(s.titel)}">
+                <span class="stepbar-node">${i + 1}</span>
+                <span class="stepbar-label">${esc(s.kurz)}</span>
+                <span class="stepbar-flag" aria-hidden="true"></span>
+              </button>`).join("")}
+          </nav>
         </header>
         <div class="work-body" id="work-body" tabindex="-1">
-          <div class="work-inner" id="workInner"></div>
+          <div class="work-inner">
+            <h2 class="work-title" id="workTitel"></h2>
+            <div id="workInner"></div>
+          </div>
+
+          <!-- Vor und zurück, mit dem NAMEN des Ziels. Die Schrittleiste
+               oben sagt, wo man ist; hier steht, wohin es weitergeht.
+               Beides zugleich am oberen Rand unterzubringen hiesse, den
+               Weg dort zu suchen, wo man gerade nicht liest. -->
+          <nav class="schrittnav" aria-label="Schritt wechseln">
+            <button class="btn schrittnav-zurueck" id="btnSchrittZurueck">
+              ${icon.caretL} <span class="schrittnav-wort">Zurück</span>
+              <span class="schrittnav-ziel" id="zielZurueck"></span>
+            </button>
+            <span class="spacer"></span>
+            <button class="btn btn-primary schrittnav-weiter" id="btnSchrittWeiter">
+              <span class="schrittnav-wort">Weiter</span>
+              <span class="schrittnav-ziel" id="zielWeiter"></span> ${icon.caretR}
+            </button>
+          </nav>
         </div>
       </main>
     </div>`;
@@ -195,18 +255,30 @@ function railHtml(): string {
                  aria-label="Patienten durchsuchen">
         </div>
 
+        <!-- Der Filter als drei Schalter statt als Auswahlfeld: bei
+             drei Möglichkeiten ist ein Aufklappmenü ein Klick zu viel,
+             und man sieht nie, was sonst noch zur Wahl stünde. Die
+             Ordnung bleibt ein Feld — sie wird selten geändert. -->
         <div class="rail-filters">
-          <select id="fallSort" class="rail-select" aria-label="Patienten ordnen nach">
+          <div class="rail-chips" role="group" aria-label="Patienten filtern">
+            ${(Object.keys(S.FILTER_NAMEN) as S.FilterSchluessel[]).map((k) => `
+              <button class="rail-chip" data-filter="${k}" type="button"
+                      aria-pressed="${S.state.filter === k}">${esc(S.FILTER_NAMEN[k])}</button>`).join("")}
+          </div>
+        </div>
+
+        <!-- Die Ordnung steht in der Zählerzeile, nicht neben den
+             Schaltern: dort blieben für drei Beschriftungen und ein
+             Auswahlfeld zusammen 220 Pixel, und „Zu schreiben" wurde
+             zu „Zu s…". Hier hat jedes von beiden seine Breite. -->
+        <div class="rail-zaehler">
+          <span id="fallZaehler"></span>
+          <span class="spacer"></span>
+          <select id="fallSort" class="rail-sort" aria-label="Patienten ordnen nach">
             ${(Object.keys(S.SORT_NAMEN) as S.SortSchluessel[]).map((k) => `
               <option value="${k}" ${S.state.sortierung === k ? "selected" : ""}>${esc(S.SORT_KURZ[k])}</option>`).join("")}
           </select>
-          <select id="fallFilter" class="rail-select" aria-label="Patienten filtern">
-            ${(Object.keys(S.FILTER_NAMEN) as S.FilterSchluessel[]).map((k) => `
-              <option value="${k}" ${S.state.filter === k ? "selected" : ""}>${esc(S.FILTER_NAMEN[k])}</option>`).join("")}
-          </select>
         </div>
-
-        <div class="rail-zaehler"><span id="fallZaehler"></span></div>
 
         <ul class="case-list" id="fallListe" role="list"></ul>
       </div>
@@ -219,6 +291,11 @@ function railHtml(): string {
            — weit weg von der Spalte, die er einklappt, und in einer
            Zeile, die sonst nur Marke, Name und Fensterknöpfe trägt.
            Hier steht er am Fuss der Schiene selbst. -->
+      <!-- „Neuer Patient" gehört zur Patientenliste, nicht zum
+           Fortschritt: unter einer Lückenliste beantwortet der Knopf
+           keine Frage, die man dort stellt. Er wird deshalb mit der
+           Ansicht ausgeblendet. Der Einklapp-Knopf bleibt immer da —
+           er gilt der Schiene selbst. -->
       <div class="rail-foot">
         <button class="btn btn-primary" id="btnNeuerFall"
                 title="Neuen Patienten anlegen (Strg+N)">${icon.plus} Neuer Patient</button>
@@ -265,10 +342,15 @@ function bindeRail(): void {
     S.setzeSortierung(el<HTMLSelectElement>("fallSort").value as S.SortSchluessel, S.state.sortAuf);
     zeichneFallListe();
   });
-  on(el("fallFilter"), "change", () => {
-    S.setzeFilter(el<HTMLSelectElement>("fallFilter").value as S.FilterSchluessel);
-    zeichneFallListe();
-  });
+  for (const chip of qsa<HTMLButtonElement>("[data-filter]")) {
+    on(chip, "click", () => {
+      S.setzeFilter(chip.dataset.filter as S.FilterSchluessel);
+      for (const c of qsa<HTMLButtonElement>("[data-filter]")) {
+        c.setAttribute("aria-pressed", String(c === chip));
+      }
+      zeichneFallListe();
+    });
+  }
 
 
   zeichneFallListe();
@@ -281,6 +363,18 @@ function bindeTopbar(): void {
   // wird er weiterhin hier, weil das Gerüst zu diesem Zeitpunkt
   // vollständig steht — die Schiene eingeschlossen.
   on(el("btnRailToggle"), "click", toggleRail);
+
+  // Der Weg zurück zur Liste. Ist sie eingeklappt, holt er sie
+  // hervor; ist sie da, führt er zur Übersicht der Patientin.
+  on(el("btnZurListe"), "click", () => {
+    const rail = el("rail");
+    if (rail.classList.contains("collapsed")) { toggleRail(); return; }
+    const pid = S.state.cases.find((c) => c.id === S.state.activeId)?.patient_id;
+    if (pid) void zeigePatient(pid);
+  });
+
+  on(el("btnSchrittZurueck"), "click", () => geheZu(S.state.step - 1));
+  on(el("btnSchrittWeiter"), "click", () => geheZu(S.state.step + 1));
 
   bindeFensterknoepfe();
 
@@ -405,10 +499,8 @@ function zeichneFallListe(): void {
   // die Sortierung an den Einträgen selbst und nicht nur am Auswahlfeld.
   const zusatz = (c: api.CaseSummary): string => {
     switch (S.state.sortierung) {
-      case "angelegt": return `angelegt ${relDate(c.created_at)}`;
-      case "nummer":   return c.antrag_nr ? `${c.antrag_nr}. Antrag` : "ohne Nummer";
-      case "name":     return c.chiffre || "";
-      default:         return relDate(c.updated_at);
+      case "name": return c.chiffre || "";
+      default:     return relDate(c.updated_at);
     }
   };
 
@@ -708,57 +800,83 @@ function zeichneSchritt(): void {
   // gerade offenen Schritt.
   if (S.state.patientAnsicht) { void zeichnePatientAnsicht(); return; }
 
-  const stepbar = document.querySelector(".stepbar") as HTMLElement | null;
+  const kopf = document.querySelector(".work-head") as HTMLElement | null;
+  const nav = document.querySelector(".schrittnav") as HTMLElement | null;
 
   if (!S.state.activeId) {
     el("workEyebrow").textContent = "";
-    el("workTitel").textContent = "Willkommen bei Rana";
-    el("workInner").className = "work-inner";
+    el("workTitel").textContent = "";
     el("workInner").innerHTML = `
-      <div style="text-align:center; padding: 120px 20px; color: var(--peat);">
-        <svg width="48" height="48" viewBox="0 0 24 24" style="margin-bottom: var(--s5); color: var(--reed);">
-          <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2"/>
-        </svg>
-        <h3>Kein Fall ausgewählt</h3>
-        <p style="margin-bottom: var(--s5); color: var(--reed);">Wählen Sie einen Patienten aus der Liste<br>oder legen Sie einen neuen Fall an.</p>
-        <button class="btn btn-primary" id="btnEmptyNeuerFall">Neuen Fall anlegen</button>
-      </div>
-    `;
-    if (stepbar) stepbar.style.display = "none";
-    const whr = document.querySelector(".work-head-row") as HTMLElement | null;
-    if (whr) whr.style.display = "none";
-    
-    // Bind button
+      <div class="leerstelle">
+        <h3>Kein Antrag geöffnet</h3>
+        <p>Wählen Sie links eine Patientin aus oder legen Sie eine neue an.</p>
+        <button class="btn btn-primary" id="btnEmptyNeuerFall">${icon.plus} Neuer Patient</button>
+      </div>`;
+    if (kopf) kopf.classList.add("leer");
+    if (nav) nav.hidden = true;
+
     const btn = document.getElementById("btnEmptyNeuerFall");
     if (btn) btn.addEventListener("click", () => { void neuerFall(); });
-    
     return;
   }
 
-  if (stepbar) stepbar.style.display = "";
-  const whr = document.querySelector(".work-head-row") as HTMLElement | null;
-  if (whr) whr.style.display = "flex";
+  if (kopf) kopf.classList.remove("leer");
+  if (nav) nav.hidden = false;
 
   const n = S.state.step;
+  const SS = schritte();
 
-  // Die Augenbraue trägt den Zusammenhang: an wessen Antrag hier
-  // gearbeitet wird, und an welchem. Der Name stand bis 2.3 in der
-  // Fensterleiste — dort steht er weit weg von der Arbeit und
-  // konkurriert mit dem Fenstertitel.
+  // Die Dokumentzeile trägt den Zusammenhang: an wessen Antrag hier
+  // gearbeitet wird, und an welchem. Beim Umwandlungsantrag ohne
+  // laufende Nummer — es gibt nur einen.
   const nr = S.state.fields.f_nr?.trim();
   const wer = S.state.fields.f_name?.trim();
+  const umw = S.antragsart() === "umwandlung";
   el("workEyebrow").textContent = [
     wer || null,
-    nr ? `${nr}. Fortführungsantrag` : null,
+    umw ? "Umwandlungsantrag" : nr ? `${nr}. Fortführungsantrag` : null,
   ].filter(Boolean).join(" · ");
-  el("workTitel").textContent = SCHRITTE[n].titel;
+  el("workTitel").textContent = SS[n].titel;
 
-  // Schritt 5 braucht mehr Platz: dort liegt das Blatt.
-  el("workInner").className = "work-inner" + (n >= 3 ? " wide" : "");
+  // Die Schrittleiste trägt beim Umwandlungsantrag andere Namen.
+  qsa<HTMLElement>(".stepbar-step").forEach((b, i) => {
+    const s = SS[i];
+    if (!s) return;
+    const lab = b.querySelector(".stepbar-label");
+    if (lab) lab.textContent = s.kurz;
+    b.title = s.titel;
+  });
+
+  // Schritt 4 und 5 brauchen mehr Platz: dort liegt das Blatt.
+  const inner = el("workInner").parentElement;
+  if (inner) inner.className = "work-inner" + (n >= 3 ? " wide" : "");
   el("workInner").innerHTML = renderSchritt(n);
   bindeSchritt(n, neuZeichnen);
 
+  aktualisiereSchrittnav(n, SS);
   aktualisiereRand();
+}
+
+/**
+ * Beschriftet „Zurück" und „Weiter" mit dem Namen des Ziels.
+ *
+ * „Weiter" allein sagt nur, dass es weitergeht. „Weiter · Verlauf"
+ * sagt, wohin — und das ist der Unterschied zwischen einer Schaltung
+ * und einer Wegweisung. Am Anfang und am Ende fällt der jeweilige
+ * Knopf weg statt untätig dazustehen.
+ */
+function aktualisiereSchrittnav(n: number, SS: { titel: string; kurz: string }[]): void {
+  const zur = document.getElementById("btnSchrittZurueck") as HTMLButtonElement | null;
+  const wei = document.getElementById("btnSchrittWeiter") as HTMLButtonElement | null;
+  if (!zur || !wei) return;
+
+  zur.hidden = n <= 0;
+  wei.hidden = n >= SS.length - 1;
+
+  const zz = document.getElementById("zielZurueck");
+  const zw = document.getElementById("zielWeiter");
+  if (zz) zz.textContent = n > 0 ? SS[n - 1].kurz : "";
+  if (zw) zw.textContent = n < SS.length - 1 ? SS[n + 1].kurz : "";
 }
 
 
@@ -811,7 +929,7 @@ function gapListe(offen: S.Luecke[]): string {
       <div class="gap-gruppe">
         <div class="gap-kopf">
           <span class="gap-num">${schritt + 1}</span>
-          <span class="gap-schritt">${esc(SCHRITTE[schritt]?.titel ?? "")}</span>
+          <span class="gap-schritt">${esc(schritte()[schritt]?.titel ?? "")}</span>
         </div>
         <ul class="gap-list">
           ${liste.map((l) => `
@@ -828,26 +946,24 @@ function zeichneFortschritt(): void {
 
   const pct = S.vollstaendigkeit();
   const offen = S.luecken();
-  const dieser = S.state.cases.find((c) => c.id === S.state.activeId);
 
+  // Der Block „Dieser Fall" ist mit 2.7.0 entfallen. Er zeigte die
+  // Chiffre und das Änderungsdatum — die Chiffre steht in Schritt 1
+  // und im Bericht, das Datum in der Patientenübersicht. Hier stand
+  // beides ohne Bezug zur Überschrift „Fortschritt" und beantwortete
+  // keine Frage, die man an dieser Stelle stellt.
   box.innerHTML = `
     <section class="ctx-block">
-      <span class="record">Vollständigkeit</span>
-      <div class="completeness">
-        <div class="comp-value">${pct}<small> %</small></div>
-        <div class="comp-bar">
-          <div class="comp-fill ${pct === 100 ? "is-full" : ""}" style="--comp:${pct}%"></div>
-        </div>
+      <div class="fort-kopf">
+        <span class="record">Vollständigkeit</span>
+        <span class="fort-pct ${pct === 100 ? "is-full" : ""}">${pct} %</span>
       </div>
-      ${offen.length ? gapListe(offen) : `<p class="hint">Alle Pflichtangaben liegen vor.</p>`}
-    </section>
-
-    <section class="ctx-block">
-      <span class="record">Dieser Fall</span>
-      <p class="hint">
-        ${S.state.fields.f_chiffre ? `Chiffre ${esc(S.state.fields.f_chiffre)}<br>` : ""}
-        Zuletzt geändert ${esc(relDate(dieser?.updated_at ?? 0))}
-      </p>
+      <div class="comp-bar">
+        <div class="comp-fill ${pct === 100 ? "is-full" : ""}" style="--comp:${pct}%"></div>
+      </div>
+      ${offen.length
+        ? `<p class="fort-lead">${offen.length} ${offen.length === 1 ? "Angabe fehlt" : "Angaben fehlen"}. Ein Klick führt hin.</p>${gapListe(offen)}`
+        : `<p class="fort-lead is-voll">Alle Pflichtangaben liegen vor.</p>`}
     </section>`;
 
   // Ein Klick auf eine Lücke springt genau dorthin.

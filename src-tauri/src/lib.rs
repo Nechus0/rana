@@ -277,6 +277,38 @@ fn restore_auto_backup(app: State<App>, path: String) -> Result<usize> {
 }
 
 // ===============================================================
+// Datei speichern, wohin die Behandlerin will
+// ===============================================================
+
+/// Schreibt Bytes an einen vom Speicherdialog gelieferten Pfad.
+///
+/// Bis 2.6.1 legte Rana die Word-Datei still in den Download-Ordner
+/// des Browsers ab — der Weg, den eine Webseite nimmt. In einem
+/// Programm, das auf dem eigenen Rechner läuft, gehört stattdessen
+/// gefragt, wohin. Der Pfad kommt vom Speicherdialog des Systems und
+/// damit von der Behandlerin selbst; hier wird nur geschrieben.
+///
+/// Bewusst ohne Prüfung des Zielorts: sie wäre eine Scheinsicherheit.
+/// Wer den Dialog bedient, hat den Ort ausgewählt.
+#[tauri::command]
+fn save_bytes(path: String, bytes: Vec<u8>) -> Result<()> {
+    let p = std::path::Path::new(&path);
+    if let Some(dir) = p.parent() {
+        std::fs::create_dir_all(dir).map_err(|e| {
+            RanaError::Message(format!(
+                "Der Ordner liess sich nicht anlegen. Bitte einen anderen Ort wählen. Technische Angabe: {e}"
+            ))
+        })?;
+    }
+    std::fs::write(p, &bytes).map_err(|e| {
+        RanaError::Message(format!(
+            "Die Datei liess sich nicht schreiben. Vielleicht ist sie gerade in Word geöffnet. Technische Angabe: {e}"
+        ))
+    })?;
+    Ok(())
+}
+
+// ===============================================================
 // Übernahme aus dem Vorgängerprogramm
 // ===============================================================
 
@@ -403,6 +435,7 @@ pub fn run() {
             restore_auto_backup,
             import_legacy,
             extract_report_text,
+            save_bytes,
         ])
         .run(tauri::generate_context!())
         .expect("Rana konnte nicht gestartet werden");

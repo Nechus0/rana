@@ -33,6 +33,19 @@ export const FELDER = [
   // Seit 2.6.0. Steht am Fall, nicht am Profil: dieselbe Praxis stellt
   // beides, und welcher Antrag es ist, entscheidet sich je Behandlung.
   "f_antragsart",
+  // Seit 2.7.0, für den Umwandlungsbericht. Der Leitfaden verlangt für
+  // ihn die sieben Punkte des Erstberichts, und vier davon hatte Rana
+  // gar nicht erst abgefragt — allen voran den Konsiliarbericht. Was
+  // nicht abgefragt wird, kann im Bericht nicht stehen.
+  "f_symptomatik",            // Punkt 2: Symptomatik mit Schwere und Verlauf
+  "f_krankheitsverstaendnis", // Punkt 2: Krankheitsverständnis
+  "f_somatisch",              // Punkt 3: somatischer Befund, Konsiliarbericht, Medikation
+  "f_vorbehandlung",          // Punkt 3: frühere Behandlungen
+  "f_lebensgeschichte",       // Punkt 4: Lebensgeschichte und Krankheitsanamnese
+  "f_diag_psychodyn",         // Punkt 5: psychodynamische Diagnose (TP/AP)
+  "f_differenzial",           // Punkt 5: Differenzialdiagnostik
+  "f_kooperation",            // Punkt 6: Kooperation mit anderen Berufsgruppen
+  "f_umwandlungsgrund",       // Punkt 7: warum die Kurzzeittherapie nicht ausreicht
 ] as const;
 
 /**
@@ -54,19 +67,25 @@ export const ANTRAGSART_NAMEN: Record<Antragsart, string> = {
 
 /** Die Art des gerade offenen Falls. Vorgabe ist die Fortführung. */
 export function antragsart(): Antragsart {
-  return state.fields.f_antragsart === "umwandlung" ? "umwandlung" : "fortfuehrung";
+  return state?.fields?.f_antragsart === "umwandlung" ? "umwandlung" : "fortfuehrung";
 }
 
 export type FeldName = (typeof FELDER)[number];
 
-/** Was für einen vollständigen Bericht wirklich vorliegen muss. */
-export const PFLICHT: { feld: FeldName; label: string; schritt: number }[] = [
+export interface Pflichtangabe { feld: FeldName; label: string; schritt: number }
+
+/** Was jeder Bericht braucht, gleich welcher Art. */
+const PFLICHT_GEMEINSAM: Pflichtangabe[] = [
   { feld: "f_chiffre",     label: "Chiffre",                 schritt: 0 },
   { feld: "f_gebdatum",    label: "Geburtsdatum",            schritt: 0 },
   { feld: "f_bewilligt",   label: "Bisher bewilligte Stunden", schritt: 0 },
   { feld: "f_verbraucht",  label: "Davon verbraucht",        schritt: 0 },
   { feld: "f_beantragt",   label: "Jetzt beantragt",         schritt: 0 },
   { feld: "f_frequenz",    label: "Frequenz",                schritt: 0 },
+];
+
+const PFLICHT_FORT: Pflichtangabe[] = [
+  ...PFLICHT_GEMEINSAM,
   { feld: "f_ausgangslage", label: "Ausgangslage bei Therapiebeginn", schritt: 2 },
   { feld: "f_verlauf",     label: "Behandlungsverlauf",      schritt: 2 },
   { feld: "f_zielstatus",  label: "Stand der zuletzt vereinbarten Therapieziele", schritt: 2 },
@@ -78,6 +97,52 @@ export const PFLICHT: { feld: FeldName; label: string; schritt: number }[] = [
 ];
 
 /**
+ * Der Umwandlungsbericht hat andere Pflichtangaben.
+ *
+ * Sie folgen den sieben Gliederungspunkten des Leitfadens. Vier davon
+ * fehlten in Rana bis 2.6.1 vollständig — der somatische Befund samt
+ * Konsiliarbericht, das Krankheitsverständnis, die Lebensgeschichte
+ * und die Begründung der Umwandlung. Ohne sie ist der Antrag
+ * unvollständig, und Rana hat das nicht einmal gemerkt.
+ */
+const PFLICHT_UMW: Pflichtangabe[] = [
+  ...PFLICHT_GEMEINSAM,
+  { feld: "f_sozio",        label: "Beruf, Familienstand, Kinder", schritt: 0 },
+  { feld: "f_symptomatik",  label: "Symptomatik mit Schwere und Verlauf", schritt: 1 },
+  { feld: "f_krankheitsverstaendnis", label: "Krankheitsverständnis", schritt: 1 },
+  { feld: "f_somatisch",    label: "Somatischer Befund und Konsiliarbericht", schritt: 1 },
+  { feld: "f_lebensgeschichte", label: "Lebensgeschichte und Krankheitsanamnese", schritt: 1 },
+  { feld: "f_psychodyn",    label: "Psychodynamik / Bedingungsmodell", schritt: 1 },
+  { feld: "f_ziele_alt",    label: "Ziele der Kurzzeittherapie", schritt: 1 },
+  { feld: "f_befund",       label: "Psychischer Befund",      schritt: 2 },
+  { feld: "f_diag_neu",     label: "Aktuelle Diagnose(n)",    schritt: 2 },
+  { feld: "f_verlauf",      label: "Bisheriger Behandlungsverlauf", schritt: 2 },
+  { feld: "f_zielstatus",   label: "Stand der Ziele der Kurzzeittherapie", schritt: 2 },
+  { feld: "f_umwandlungsgrund", label: "Warum die Kurzzeittherapie nicht ausreicht", schritt: 2 },
+  { feld: "f_begruendung",  label: "Behandlungsplan und weitere Ziele", schritt: 2 },
+  { feld: "f_methoden",     label: "Begründung von Setting, Sitzungszahl und Frequenz", schritt: 2 },
+  { feld: "f_prognose",     label: "Prognose",                schritt: 2 },
+  { feld: "f_abschluss",    label: "Planung des Therapieabschlusses", schritt: 2 },
+];
+
+/** Die Pflichtangaben des gerade offenen Falls. */
+export function pflicht(art: Antragsart = antragsart()): Pflichtangabe[] {
+  return art === "umwandlung" ? PFLICHT_UMW : PFLICHT_FORT;
+}
+
+/**
+ * Bleibt als Name erhalten, zeigt aber jetzt auf die Liste des
+ * offenen Falls. Alle bisherigen Aufrufstellen lesen sie nur.
+ */
+export const PFLICHT = new Proxy([] as Pflichtangabe[], {
+  get(_t, k) {
+    const l = pflicht();
+    const v = (l as unknown as Record<string | symbol, unknown>)[k];
+    return typeof v === "function" ? v.bind(l) : v;
+  },
+}) as Pflichtangabe[];
+
+/**
  * Lesbare Namen für alle Felder.
  *
  * Die Bausteinliste in der Seitenschiene gruppiert nach Feld und
@@ -86,6 +151,15 @@ export const PFLICHT: { feld: FeldName; label: string; schritt: number }[] = [
  */
 export const FELD_NAMEN: Record<string, string> = {
   f_antragsart: "Art des Antrags",
+  f_symptomatik: "Symptomatik",
+  f_krankheitsverstaendnis: "Krankheitsverständnis",
+  f_somatisch: "Somatischer Befund und Konsiliarbericht",
+  f_vorbehandlung: "Frühere Behandlungen",
+  f_lebensgeschichte: "Lebensgeschichte und Krankheitsanamnese",
+  f_diag_psychodyn: "Psychodynamische Diagnose",
+  f_differenzial: "Differenzialdiagnostik",
+  f_kooperation: "Kooperation mit anderen Berufsgruppen",
+  f_umwandlungsgrund: "Begründung der Umwandlung",
   f_name: "Patient:in",
   f_chiffre: "Chiffre",
   f_nr: "Lfd. Nummer",
@@ -117,34 +191,27 @@ export const FELD_NAMEN: Record<string, string> = {
 /**
  * Wonach die Fallliste geordnet wird.
  *
- * „zuletzt“ ist die Vorgabe, weil man beim Öffnen fast immer da
- * weitermacht, wo man aufgehört hat. Die übrigen sind zum Suchen:
- * nach Namen, wenn man jemanden bestimmten sucht; nach Anlage,
- * wenn man wissen will was neu ist; nach Antragsnummer, wenn man
- * sehen will, wer beim ersten und wer beim dritten Antrag steht.
+ * Von vier Ordnungen sind zwei geblieben. „angelegt" beantwortete
+ * praktisch dieselbe Frage wie „zuletzt" — bei einer Praxis mit
+ * zwölf Patientinnen liegt zwischen Anlage und letzter Bearbeitung
+ * selten etwas. Und „nummer" ordnete Patientinnen nach einer Zahl,
+ * die gar nicht ihnen gehört, sondern ihren einzelnen Anträgen; wer
+ * drei Anträge hat, hat drei Nummern.
+ *
+ * Übrig bleiben die beiden Fragen, die man wirklich stellt: „woran
+ * habe ich zuletzt gearbeitet" und „wo steht Frau M. in der Liste".
  */
-export type SortSchluessel = "zuletzt" | "name" | "angelegt" | "nummer";
+export type SortSchluessel = "zuletzt" | "name";
 
 export const SORT_NAMEN: Record<SortSchluessel, string> = {
   zuletzt:  "Zuletzt bearbeitet",
   name:     "Name",
-  angelegt: "Angelegt",
-  nummer:   "Antragsnummer",
 };
 
-/**
- * Dieselben Ordnungen, nur in einem Wort.
- *
- * In der Seitenschiene ist das Auswahlfeld rund 120 Pixel breit. Ein
- * `<select>` schneidet zu langen Text ohne Auslassungszeichen ab, und
- * der Pfeil legt sich obendrauf — es sieht dann aus, als sei etwas
- * kaputt. Deshalb hier die Kurzform.
- */
+/** Dieselben Ordnungen, nur in einem Wort. */
 export const SORT_KURZ: Record<SortSchluessel, string> = {
   zuletzt:  "Zuletzt",
   name:     "Name",
-  angelegt: "Angelegt",
-  nummer:   "Anträge",
 };
 
 /**
@@ -155,13 +222,16 @@ export const SORT_KURZ: Record<SortSchluessel, string> = {
  * dann nur einen, und es sah aus, als fehlten die anderen. Gefragt ist
  * aber „wo habe ich noch etwas zu tun", und das ist eine Frage an die
  * Person.
+ *
+ * Die Beschriftungen sagen jetzt, was sie meinen: „Offene" konnte
+ * ebenso gut heissen, dass der Antrag noch nicht bewilligt ist.
  */
 export type FilterSchluessel = "alle" | "offen" | "fertig";
 
 export const FILTER_NAMEN: Record<FilterSchluessel, string> = {
   alle:   "Alle",
-  offen:  "Offene",
-  fertig: "Erledigte",
+  offen:  "Zu schreiben",
+  fertig: "Geschrieben",
 };
 
 const SORT_KEY = "rana-sortierung";
@@ -267,30 +337,16 @@ export const state: State = {
 const RICHTUNG: Record<SortSchluessel, 1 | -1> = {
   name:     1,
   zuletzt: -1,
-  angelegt: -1,
-  nummer:  -1,
 };
 
 export function sortiereFaelle(liste: CaseSummary[]): CaseSummary[] {
   const richtung = RICHTUNG[state.sortierung] ?? -1;
-  const zahl = (v: string) => {
-    const n = parseInt(v, 10);
-    return isNaN(n) ? 0 : n;
-  };
 
   const sortiert = [...liste].sort((a, b) => {
     switch (state.sortierung) {
       case "name":
         // Nach deutschem Alphabet, damit Ö nicht hinter Z landet.
         return a.label.localeCompare(b.label, "de", { sensitivity: "base" }) * richtung;
-      case "angelegt":
-        return (a.created_at - b.created_at) * richtung;
-      case "nummer": {
-        const d = zahl(a.antrag_nr) - zahl(b.antrag_nr);
-        // Bei gleicher Nummer nach Namen, sonst springt die Liste.
-        return d !== 0 ? d * richtung
-                       : a.label.localeCompare(b.label, "de", { sensitivity: "base" });
-      }
       default:
         return (a.updated_at - b.updated_at) * richtung;
     }
@@ -445,14 +501,6 @@ function vergleicheGruppen(a: Gruppe, b: Gruppe): number {
   switch (state.sortierung) {
     case "name":
       return a.label.localeCompare(b.label, "de", { sensitivity: "base" }) * r;
-    case "angelegt":
-      return ((a.patient?.created_at ?? 0) - (b.patient?.created_at ?? 0)) * r;
-    case "nummer":
-      // Nach Zahl der Anträge: wer am längsten in Behandlung ist,
-      // steht oben. Bei gleicher Zahl nach Namen, sonst springt die
-      // Liste bei jedem Neuzeichnen.
-      return (a.berichte.length - b.berichte.length) * r
-        || a.label.localeCompare(b.label, "de", { sensitivity: "base" });
     default:
       return ((a.patient?.updated_at ?? 0) - (b.patient?.updated_at ?? 0)) * r;
   }

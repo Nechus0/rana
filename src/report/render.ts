@@ -16,6 +16,13 @@
 
 import type { Felder, Profile } from "../core/ipc";
 import { verfahrenZeile } from "./prompt";
+import {
+  ANTRAGSWORT, BERICHTSWORT, DATEIWORT, FORTFUEHRUNG, artVon, gliederung, untertitel,
+} from "./gliederung";
+import type { Punkt } from "./gliederung";
+
+/** Die drei Überschriften des Fortführungsberichts, ohne Profil. */
+const FORTFUEHRUNG_TITEL = FORTFUEHRUNG.map((x) => x.titel);
 
 const MONATE = [
   "Januar", "Februar", "März", "April", "Mai", "Juni",
@@ -25,15 +32,12 @@ const MONATE = [
 /**
  * Die Überschriften im fertigen Bericht.
  *
- * Wortlaut nach dem Leitfaden (Muster PTV 3, Version 4.2017). Sie
- * muessen mit den Überschriften uebereinstimmen, die der Prompt vom
- * Modell verlangt — siehe PROMPT_TITLES weiter unten.
+ * Sie stehen seit 2.7.0 nicht mehr hier, sondern in gliederung.ts —
+ * weil es zwei Gliederungen gibt und nicht eine. Diese Konstante
+ * bleibt als die des Fortführungsberichts erhalten, damit älterer
+ * Code und die Abnahmeprüfungen weiterlaufen.
  */
-export const ABSCHNITTE = [
-  "Behandlungsverlauf seit dem letzten Bericht und Erreichung der Therapieziele",
-  "Aktuelle Diagnosen gemäß ICD-10 und aktueller psychischer Befund",
-  "Begründung der Fortführung, weitere Therapieplanung und Prognose",
-];
+export const ABSCHNITTE = FORTFUEHRUNG_TITEL;
 
 // ---------------------------------------------------------------
 // Werkzeug
@@ -340,22 +344,19 @@ function numberGoals(raw: string): string {
  * gespeichert wurden, sollen sich unveraendert oeffnen lassen, ohne
  * dass ihre alte Überschrift als Text im Absatz stehen bleibt.
  */
-const PROMPT_TITLES: string[][] = [
-  [
-    "Behandlungsverlauf seit dem letzten Bericht und Erreichung der Therapieziele",
-    "Bisheriger Behandlungsverlauf seit dem letzten Bericht",
-  ],
-  [
-    "Aktuelle Diagnosen gemäß ICD-10 und aktueller psychischer Befund",
-    "Aktuelle Diagnose(n) und aktueller psychischer Befund",
-  ],
-  [
-    "Begründung der Fortführung, weitere Therapieplanung und Prognose",
-    "Begründung der Notwendigkeit der Fortführung, weitere Planung und Prognose",
-  ],
-];
+/**
+ * Zerlegt den Rohtext in die Gliederungspunkte.
+ *
+ * `punkte` bestimmt, wie viele erwartet werden und welche
+ * Überschriften abzustreifen sind. Ohne Angabe sind es die drei des
+ * Fortführungsberichts — so bleibt jeder alte Aufruf gültig.
+ */
+export function parseSections(raw: string, punkte?: Punkt[]): string[] {
+  const gl: Punkt[] = punkte?.length ? punkte : FORTFUEHRUNG;
+  const anzahl = gl.length;
 
-export function parseSections(raw: string): [string, string, string] {
+  // Zu jedem Punkt der eigene Titel und seine früheren Schreibweisen.
+  const PROMPT_TITLES: string[][] = gl.map((x) => [x.titel, ...(x.alt ?? [])]);
   let r = (raw ?? "").replace(/\r/g, "").replace(/^﻿/, "");
 
   // Nachbemerkung am Ende entfernen — Modelle hängen gern
@@ -369,7 +370,7 @@ export function parseSections(raw: string): [string, string, string] {
     .replace(/^\s*#{1,6}\s*/gm, "")
     .replace(/\*\*/g, " ")
     .replace(
-      /([^\n])\s*#{0,6}\s*([123])[.)]\s+(?=(?:Bisher|Aktuelle\s+Diagnos|Begründ|Diagnose\(n\)|Behandlungsverlauf))/g,
+      /([^\n])\s*#{0,6}\s*([1-9])[.)]\s+(?=(?:Bisher|Aktuelle\s+Diagnos|Begründ|Diagnose|Behandlungsverlauf|Relevante\s+sozio|Soziodemogra|Symptomatik|Somatischer|Behandlungsrelevante|Lebensgeschichte|Behandlungsplan|Zusätzlich))/g,
       "$1\n$2. "
     );
 
@@ -385,10 +386,13 @@ export function parseSections(raw: string): [string, string, string] {
   };
 
   const lines = r.split(/\n/);
-  const secs: [string, string, string] = ["", "", ""];
+  const secs: string[] = Array.from({ length: anzahl }, () => "");
   let cur = -1, want = 1;
   let buf: string[] = [];
-  const headRe = /^\s*([123])[.)]\s+/;
+  // Nur so viele Ziffern, wie die Gliederung Punkte hat. Sonst würde
+  // beim Fortführungsbericht ein Behandlungsziel „4. …“ am Zeilenanfang
+  // als vierte Überschrift gelesen.
+  const headRe = new RegExp(`^\\s*([1-${anzahl}])[.)]\\s+`);
   const flush = () => { if (cur >= 0) secs[cur] = buf.join("\n").trim(); buf = []; };
 
   for (const ln of lines) {
@@ -407,7 +411,7 @@ export function parseSections(raw: string): [string, string, string] {
   }
   flush();
 
-  if (!secs[0] && !secs[1] && !secs[2]) secs[0] = r.trim();
+  if (secs.every((s) => !s)) secs[0] = r.trim();
   return secs;
 }
 
@@ -461,7 +465,7 @@ function verfahrenLine(f: Felder, p: Profile): string {
 }
 
 function footerInner(f: Felder, p: Profile, fixed: boolean): string {
-  const L = "Fortführungsbericht"
+  const L = BERICHTSWORT[artVon(f)]
           + (g(f, "f_chiffre") ? ` · Anonymisierungscode ${esc(g(f, "f_chiffre"))}` : "");
   const R = esc(p.behandler.name) + (p.behandler.funktion ? `, ${esc(p.behandler.funktion)}` : "");
   const cls = fixed ? "" : ' class="doc-foot"';
@@ -490,7 +494,9 @@ export function renderDocHTML(
   p: Profile,
   opts: { footer?: "none" | "normal" } = {}
 ): string {
-  const secs = parseSections(report);
+  const art = artVon(f);
+  const punkte = gliederung(art, p);
+  const secs = parseSections(report, punkte);
   const nr = g(f, "f_nr") || "1";
   const ort = p.praxis.brief_ort || p.praxis.ort;
   const ortDatum = (ort ? `${esc(ort)}, ` : "") + dateLong();
@@ -506,11 +512,16 @@ export function renderDocHTML(
      + `<td class="contact">${anschrift(p)}</td></tr></table>`;
 
   h += '<div class="doc-rule"></div>';
-  h += `<table class="doc-subrow"><tr><td>${esc(nr)}. Fortführungsantrag</td>`
+  // Der Umwandlungsantrag wird nicht fortlaufend nummeriert: es gibt
+  // nur einen. Die Nummer gehört zur Reihe der Fortführungsanträge.
+  const kopfzeile = art === "umwandlung"
+    ? ANTRAGSWORT.umwandlung
+    : `${esc(nr)}. ${ANTRAGSWORT.fortfuehrung}`;
+  h += `<table class="doc-subrow"><tr><td>${kopfzeile}</td>`
      + `<td class="r">${ortDatum}</td></tr></table>`;
 
   h += '<div class="doc-title">Bericht an die Gutachterin / den Gutachter</div>';
-  h += `<div class="doc-subtitle">${esc(p.layout.untertitel || "zum Fortführungsantrag")}</div>`;
+  h += `<div class="doc-subtitle">${esc(untertitel(art, p))}</div>`;
 
   h += '<div class="doc-meta"><table>'
      + `<tr><td class="k">Anonymisierungscode</td><td class="v">`
@@ -521,9 +532,9 @@ export function renderDocHTML(
      + `<tr><td class="k">Stundenkontingent</td><td class="v">${metaValStunden(f)}</td></tr>`
      + "</table></div>";
 
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < punkte.length; i++) {
     h += `<div class="doc-sec"><table class="doc-sech"><tr>`
-       + `<td class="n">${i + 1}</td><td class="t">${esc(ABSCHNITTE[i])}</td></tr></table>`;
+       + `<td class="n">${i + 1}</td><td class="t">${esc(punkte[i].titel)}</td></tr></table>`;
     const body = renderProse(secs[i]);
     h += (body || '<p class="doc-p"><span class="doc-ph">[Noch nicht formuliert]</span></p>')
        + "</div>";
@@ -548,7 +559,7 @@ export function fileBase(f: Felder): string {
   let nm = g(f, "f_name") || g(f, "f_chiffre") || "Fall";
   nm = nm.replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim();
   const d = new Date().toISOString().slice(0, 10);
-  return `Fortfuehrungsbericht ${nm} ${d}`;
+  return `${DATEIWORT[artVon(f)]} ${nm} ${d}`;
 }
 
 // ---------------------------------------------------------------

@@ -18,7 +18,7 @@ import { expandPrompt, klarnamen, kuerzePrompt, systemPrompt, userPrompt } from 
 import { fileBase, metrik, renderDocHTML } from "../report/render";
 import * as S from "../core/state";
 import { confirmDialog, dialog, download, el, esc, icon, on, qs, qsa, toast } from "../ui/kit";
-import { open } from "@tauri-apps/plugin-dialog";
+import { open, save } from "@tauri-apps/plugin-dialog";
 
 export const SCHRITTE = [
   { titel: "Fall-Stammdaten",           kurz: "Stammdaten" },
@@ -27,6 +27,24 @@ export const SCHRITTE = [
   { titel: "Bericht formulieren",        kurz: "Formulieren" },
   { titel: "Ausgabe",                    kurz: "Ausgabe" },
 ];
+
+/**
+ * Beim Umwandlungsantrag heissen die Schritte 2 und 3 anders, weil
+ * sie anderes enthalten: es gibt keinen Vorbericht, dafür die
+ * Vorgeschichte, und Schritt 3 trägt Plan und Umwandlungsbegründung.
+ */
+const SCHRITTE_UMW = [
+  { titel: "Fall-Stammdaten",             kurz: "Stammdaten" },
+  { titel: "Vorgeschichte und Befund",    kurz: "Vorgeschichte" },
+  { titel: "Behandlungsplan und Umwandlung", kurz: "Plan" },
+  { titel: "Bericht formulieren",         kurz: "Formulieren" },
+  { titel: "Ausgabe",                     kurz: "Ausgabe" },
+];
+
+/** Die Schrittnamen des gerade offenen Falls. */
+export function schritte(): { titel: string; kurz: string }[] {
+  return S.antragsart() === "umwandlung" ? SCHRITTE_UMW : SCHRITTE;
+}
 
 // ---------------------------------------------------------------
 // Feldbausteine
@@ -201,61 +219,107 @@ function schritt1(): string {
 // Schritt 2 · Vorbericht
 // ===============================================================
 
+/**
+ * Schritt 2 trägt beim Umwandlungsantrag etwas völlig anderes.
+ *
+ * Beim Fortführungsantrag geht es um den letzten Bericht — es MUSS
+ * einen geben, sonst wäre es keine Fortführung. Die Frage „liegt ein
+ * Vorbericht vor?" ist deshalb entfallen; sie hatte nur eine Antwort.
+ *
+ * Beim Umwandlungsantrag gibt es keinen. Dafür verlangt der Leitfaden
+ * die Angaben des Erstberichts, und die stehen jetzt hier statt den
+ * Schritt leer zu lassen: Symptomatik, Krankheitsverständnis,
+ * somatischer Befund, Lebensgeschichte, Psychodynamik, Ziele der
+ * Kurzzeittherapie.
+ */
 function schritt2(): string {
-  const hat = f("f_vorbericht") === "ja";
+  return umwandlung() ? schritt2Umwandlung() : schritt2Fortfuehrung();
+}
+
+function schritt2Fortfuehrung(): string {
   return `
     <p class="hint" style="margin-bottom: var(--s5)">
-      Dieser Schritt ist freiwillig. Ohne Vorbericht kann er übersprungen werden — die
-      Angaben dienen nur als Hintergrund für die Formulierung und stehen nicht wörtlich
-      im Bericht.
+      Der Bericht knüpft an den letzten an. Was hier steht, dient als Hintergrund
+      für die Formulierung und wird nicht wörtlich übernommen.
     </p>
 
-    ${umwandlung() ? `
-      <div class="notice notice-info" style="margin-bottom: var(--s5)">
-        <b>Umwandlungsantrag.</b> Zur Kurzzeittherapie gab es keinen Bericht an
-        den Gutachter — sie braucht keinen. Dieser Schritt darf deshalb leer
-        bleiben. Was aus der bisherigen Behandlung in den Bericht gehört,
-        tragen Sie in Schritt 3 ein.
-      </div>` : ""}
-
-    <div class="field" style="margin-bottom: var(--s5)">
-      <div class="row" style="gap: var(--s2); align-items: center">
-        <label class="switch" style="margin: 0">
-          <input type="checkbox" id="cbVorbericht" ${hat ? "checked" : ""}>
-          <span class="switch-track"></span>
-          <span>Ein Vorbericht liegt vor</span>
-        </label>
-        ${leitfadenZeichen("f_vorbericht")}
+    ${gruppe(null, "Text des letzten Berichts", `
+      <div class="row" style="margin-bottom: var(--s3)">
+        <button class="btn btn-sm" id="btnUploadVorbericht" type="button" title="Word (.docx) oder PDF laden">
+          ${icon.word} Datei einlesen (Word / PDF)
+        </button>
       </div>
-      ${leitfadenBlase("f_vorbericht")}
-    </div>
+      <div class="field">
+        <label for="f_lastreport" style="align-items: center;">
+          Hier einfügen
+          <span class="field-note">bleibt auf dem Gerät, geht nur als Hintergrund in die Formulierung</span>
+          ${leitfadenZeichen("f_lastreport")}
+        </label>
+        ${leitfadenBlase("f_lastreport")}
+        <textarea id="f_lastreport" data-feld="f_lastreport" style="min-height:190px"
+                  placeholder="Kompletten Text des letzten Berichts hier einfügen …">${esc(f("f_lastreport"))}</textarea>
+      </div>`)}
 
-    <div id="vorberichtBlock" class="${hat ? "" : "hidden"}">
-      ${gruppe(null, "Text des letzten Berichts", `
-        <div class="row" style="margin-bottom: var(--s3)">
-          <button class="btn btn-sm" id="btnUploadVorbericht" type="button" title="Word (.docx) oder PDF laden">
-            ${icon.word} Datei einlesen (Word / PDF)
-          </button>
-        </div>
-        <div class="field">
-          <label for="f_lastreport" style="align-items: center;">
-            Hier einfügen
-            <span class="field-note">bleibt auf dem Gerät, geht nur als Hintergrund in die Formulierung</span>
-            ${leitfadenZeichen("f_lastreport")}
-          </label>
-          ${leitfadenBlase("f_lastreport")}
-          <textarea id="f_lastreport" data-feld="f_lastreport" style="min-height:190px"
-                    placeholder="Kompletten Text des letzten Berichts hier einfügen …">${esc(f("f_lastreport"))}</textarea>
-        </div>`)}
+    ${gruppe(null, "Vorgeschichte", `
+      ${textarea("f_diag_alt", "Bisherige ICD-10-Diagnose(n)", { ph: "F33.1 rezidivierende depressive Störung, gegenwärtig mittelgradig …", icd10: true })}
+      ${textarea("f_psychodyn", psychodynLabel(), { ph: psychodynPh() })}
+      ${textarea("f_ziele_alt", "Zuletzt formulierte Therapieziele", { note: "Bezugspunkt für den Verlauf", ph: "Je Ziel eine Zeile …" })}`)}`;
+}
 
-      ${gruppe(null, "Vorgeschichte", `
-        <p class="hint">
-          Freiwillig. Dient als Hintergrund für die Formulierung und wird nicht wörtlich übernommen.
-        </p>
-        ${textarea("f_diag_alt", "Bisherige ICD-10-Diagnose(n)", { ph: "F33.1 rezidivierende depressive Störung, gegenwärtig mittelgradig …", icd10: true })}
-        ${textarea("f_psychodyn", psychodynLabel(), { ph: psychodynPh() })}
-        ${textarea("f_ziele_alt", "Zuletzt formulierte Therapieziele", { note: "Bezugspunkt für den Verlauf", ph: "Je Ziel eine Zeile …" })}`)}
-    </div>`;
+function schritt2Umwandlung(): string {
+  const tp = S.state.profile?.verfahren.art === "tp" || S.state.profile?.verfahren.art === "at";
+  return `
+    <p class="hint" style="margin-bottom: var(--s5)">
+      Zur Kurzzeittherapie gab es keinen Bericht an den Gutachter. Er kennt den Fall
+      also nicht — der Umwandlungsbericht muss ihn vollständig darstellen. Was hier
+      steht, wird zu den Gliederungspunkten 1 bis 5 des Berichts.
+    </p>
+
+    ${gruppe("2", "Symptomatik und Befund", `
+      ${textarea("f_symptomatik", "Geschilderte Symptomatik", {
+        note: "mit Schwere und Verlauf",
+        hoch: 150,
+        ph: "Was berichtet die Patientin? Seit wann, wie stark, gleichbleibend oder schwankend …",
+      })}
+      ${textarea("f_krankheitsverstaendnis", "Krankheitsverständnis", {
+        note: "wie sie sich die Beschwerden selbst erklärt",
+        ph: "Ihre eigene Deutung, auch wenn sie fachlich nicht trägt …",
+      })}`)}
+
+    ${gruppe("3", "Somatischer Befund und Konsiliarbericht", `
+      ${textarea("f_somatisch", "Somatischer Befund, Konsiliarbericht, Medikation", {
+        note: "Pflicht — auch wenn unauffällig",
+        ph: "Ergebnis des Konsiliarberichts, aktuelle Medikation, Suchtmittel soweit bedeutsam …",
+      })}
+      ${textarea("f_vorbehandlung", "Frühere Behandlungen", {
+        note: "psychotherapeutisch, psychosomatisch, psychiatrisch",
+        ph: "Art, Zeitraum, Ergebnis — oder „keine Vorbehandlungen“ …",
+      })}`)}
+
+    ${gruppe("4", `Lebensgeschichte und ${psychodynLabel()}`, `
+      ${textarea("f_lebensgeschichte", "Lebensgeschichte und Krankheitsanamnese", {
+        note: "nur was die Störung erklärt",
+        hoch: 150,
+        ph: "Herkunftsfamilie, prägende Beziehungserfahrungen, Beginn und Entwicklung der Beschwerden …",
+      })}
+      ${textarea("f_psychodyn", psychodynLabel(), { hoch: 150, ph: psychodynPh() })}`)}
+
+    ${gruppe("5", "Diagnose zum Zeitpunkt der Antragstellung", `
+      ${textarea("f_diag_neu", "ICD-10-Diagnose(n)", { note: "mit Diagnosesicherheit", ph: "F34.1 Dysthymia, gesichert …", icd10: true })}
+      ${tp ? textarea("f_diag_psychodyn", "Psychodynamische Diagnose", {
+        note: "vom Leitfaden für TP und AP verlangt",
+        ph: "Konflikt, Strukturniveau, vorherrschender Abwehrmodus …",
+      }) : ""}
+      ${textarea("f_differenzial", "Differenzialdiagnostik", {
+        note: "nur wenn für die Entscheidung nötig",
+        ph: "Abgrenzung gegen … weil …",
+      })}`)}
+
+    ${gruppe(null, "Ziele der Kurzzeittherapie", `
+      ${textarea("f_ziele_alt", "Für die Kurzzeittherapie vereinbarte Ziele", {
+        note: "Bezugspunkt für die Bilanz in Schritt 3",
+        ph: "Je Ziel eine Zeile …",
+      })}`)}`;
 }
 
 /** Die Beschriftung folgt dem eingerichteten Verfahren. */
@@ -279,30 +343,28 @@ function psychodynPh(): string {
 // ===============================================================
 
 function schritt3(): string {
+  return umwandlung() ? schritt3Umwandlung() : schritt3Fortfuehrung();
+}
+
+function schritt3Fortfuehrung(): string {
   return `
     <p class="hint" style="margin-bottom: var(--s5)">
       Stichworte genügen. Die Nummern zeigen, in welchen Gliederungspunkt
       des fertigen Berichts der Text einfliesst.
     </p>
 
-    ${gruppe("1", umwandlung()
-        ? "Bisheriger Behandlungsverlauf"
-        : "Behandlungsverlauf seit dem letzten Bericht", `
+    ${gruppe("1", "Behandlungsverlauf seit dem letzten Bericht", `
       ${textarea("f_ausgangslage", "Ausgangslage bei Therapiebeginn", {
         note: "auslösende Situation, Symptomatik, Psychodynamik",
         hoch: 150,
         ph: "Wodurch wurde die Behandlung ausgelöst? Symptomatik und Funktionsniveau zu Beginn, zugrunde liegender Konflikt …",
       })}
-      ${textarea("f_verlauf",
-        umwandlung() ? "Bisheriger Verlauf seit Therapiebeginn" : "Verlauf seit dem letzten Bericht", {
-        note: umwandlung() ? "Veränderung der Symptomatik in der Kurzzeittherapie" : undefined,
+      ${textarea("f_verlauf", "Verlauf seit dem letzten Bericht", {
+        note: "was sich verändert hat, nicht Sitzung für Sitzung",
         hoch: 190,
-        ph: umwandlung()
-          ? "Was wurde in der Kurzzeittherapie bearbeitet? Wie hat sich die Symptomatik seither verändert …"
-          : "Was wurde bearbeitet? Symptomveränderung im Behandlungszeitraum …",
+        ph: "Was wurde bearbeitet? Symptomveränderung im Behandlungszeitraum …",
       })}
-      ${textarea("f_zielstatus",
-        umwandlung() ? "Stand der Ziele der Kurzzeittherapie" : "Stand der zuletzt vereinbarten Therapieziele", {
+      ${textarea("f_zielstatus", "Stand der zuletzt vereinbarten Therapieziele", {
         note: "je Ziel: erreicht / teilweise erreicht / noch offen",
         hoch: 150,
         ph: "Ziel 1 … erreicht. Ziel 2 … teilweise, weil … Ziel 3 … noch offen, weil …",
@@ -313,21 +375,75 @@ function schritt3(): string {
       ${textarea("f_diag_neu", "Aktuelle ICD-10-Diagnose(n)", { ph: "Mit Code und Diagnosesicherheit …", icd10: true })}`)}
 
     ${gruppe("3", "Begründung, Planung und Prognose", `
-      ${textarea("f_begruendung",
-        umwandlung() ? "Begründung der Umwandlung und weitere Planung" : "Begründung und weitere Planung", {
-        note: umwandlung() ? "warum Langzeittherapie · weitere Ziele" : "Ziele, Methoden",
-        ph: umwandlung()
-          ? "Warum reicht die Kurzzeittherapie nicht aus? Was soll die Langzeittherapie leisten? Weitere Ziele …"
-          : "Warum ist die Fortführung nötig? Weitere Planung, angepasste Ziele …",
+      ${textarea("f_begruendung", "Begründung und weitere Planung", {
+        note: "Ziele, Methoden",
+        ph: "Warum ist die Fortführung nötig? Weitere Planung, angepasste Ziele …",
       })}
       ${textarea("f_methoden", "Methodik und Setting", {
-        note: "beim Fortführungsantrag nur bei Änderung · beim Umwandlungsantrag zu begründen",
-        ph: "Beim Umwandlungsantrag: warum Setting, Sitzungszahl und Frequenz für diesen Fall die richtigen sind …",
+        note: "nur bei Änderung",
+        ph: "Womit weitergearbeitet wird, falls sich etwas ändert …",
       })}
       ${textarea("f_prognose", "Prognose und geplanter Abschluss", { ph: "Günstige Faktoren, Veränderungshindernisse …" })}
       ${textarea("f_abschluss", "Planung des Therapieabschlusses", {
         note: "ggf. weiterführende Maßnahmen danach",
         ph: "Woran wird der Abschluss festgemacht? Was ist danach vorgesehen …",
+      })}`)}`;
+}
+
+/**
+ * Schritt 3 beim Umwandlungsantrag.
+ *
+ * Deutlich schlanker als beim Fortführungsantrag: Symptomatik, Befund
+ * und Diagnose stehen bereits in Schritt 2, weil sie dort zu den
+ * Gliederungspunkten 2 und 5 gehören. Hier bleiben die Punkte 6 und 7
+ * — der Behandlungsplan und die Zusatzangaben zur Umwandlung.
+ */
+function schritt3Umwandlung(): string {
+  return `
+    <p class="hint" style="margin-bottom: var(--s5)">
+      Stichworte genügen. Symptomatik, Befund und Diagnose stehen schon in
+      Schritt 2. Hier folgen die letzten beiden Gliederungspunkte.
+    </p>
+
+    ${gruppe("6", "Behandlungsplan und Prognose", `
+      ${textarea("f_begruendung", "Behandlungsplan und weitere Ziele", {
+        note: "was in der Langzeittherapie bearbeitet werden soll",
+        hoch: 150,
+        ph: "Individueller Behandlungsplan, dann die weiteren Ziele …",
+      })}
+      ${textarea("f_methoden", "Methodik und Setting", {
+        note: "Setting, Sitzungszahl und Frequenz BEGRÜNDEN — nicht nur nennen",
+        hoch: 150,
+        ph: "Warum dieses Setting, warum diese Zahl an Sitzungen, warum diese Frequenz für diesen Fall …",
+      })}
+      ${textarea("f_kooperation", "Kooperation mit anderen Berufsgruppen", {
+        note: "falls vorhanden",
+        ph: "Hausärztin, Fachärztin, Klinik …",
+      })}
+      ${textarea("f_prognose", "Prognose", {
+        note: "Motivation, Umstellungsfähigkeit, Veränderungshindernisse",
+        ph: "Günstige Faktoren, innere und äussere Hindernisse …",
+      })}
+      ${textarea("f_abschluss", "Planung des Therapieabschlusses", {
+        note: "ggf. weiterführende Maßnahmen danach",
+        ph: "Woran wird der Abschluss festgemacht? Was ist danach vorgesehen …",
+      })}`)}
+
+    ${gruppe("7", "Zusatzangaben zum Umwandlungsantrag", `
+      ${textarea("f_verlauf", "Bisheriger Verlauf seit Therapiebeginn", {
+        note: "was sich verändert hat, nicht Sitzung für Sitzung",
+        hoch: 190,
+        ph: "Was wurde in der Kurzzeittherapie bearbeitet? Wie hat sich die Symptomatik seither verändert …",
+      })}
+      ${textarea("f_zielstatus", "Stand der Ziele der Kurzzeittherapie", {
+        note: "je Ziel: erreicht / teilweise erreicht / noch offen",
+        hoch: 150,
+        ph: "Ziel 1 … erreicht. Ziel 2 … teilweise, weil … Ziel 3 … noch offen, weil …",
+      })}
+      ${textarea("f_umwandlungsgrund", "Begründung der Umwandlung", {
+        note: "die Frage, über die der Gutachter entscheidet",
+        hoch: 150,
+        ph: "Warum reicht der Umfang der Kurzzeittherapie nicht aus? Was kann nur über einen längeren Zeitraum bearbeitet werden …",
       })}`)}`;
 }
 
@@ -340,11 +456,13 @@ function schritt4(): string {
   const m = S.state.profile ? metrik(S.state.report, S.state.profile) : null;
   const offen = S.luecken();
 
+  const anzahl = umwandlung() ? "sieben" : "drei";
+
   return `
     <p class="hint" style="margin-bottom: var(--s5)">
-      Claude formuliert die drei Gliederungspunkte in freier Form. Briefkopf, Metabox,
-      Überschriften und Unterschrift kommen in Schritt 5 automatisch dazu. Der Text
-      unten ist danach direkt bearbeitbar.
+      Claude formuliert die ${anzahl} Gliederungspunkte in freier Form. Briefkopf, Metabox,
+      Überschriften und Unterschrift kommen in Schritt 5 automatisch dazu. Ist der Entwurf
+      zu lang, kürzt Rana ihn anschliessend selbst auf zwei Seiten.
     </p>
 
     ${offen.length ? `
@@ -354,7 +472,16 @@ function schritt4(): string {
         die Lücken lassen sich hinterher füllen.
       </div>` : ""}
 
-    <div class="row row-wrap" style="margin-bottom: var(--s5)">
+    ${b && !b.may_send ? `
+      <div class="notice notice-danger" style="margin-bottom: var(--s5)">
+        <b>Rana sendet gerade nichts.</b>
+        ${b.today_reports >= b.daily_limit
+          ? `Das Tageslimit von ${b.daily_limit} Berichten ist erreicht.`
+          : `Das Monatsbudget von ${b.month_limit_eur.toLocaleString("de-DE")} € ist ausgeschöpft.`}
+        Unter „Einstellungen → Verbrauch“ lässt sich die Grenze anheben.
+      </div>` : ""}
+
+    <div class="row row-wrap" style="margin-bottom: var(--s4)">
       <button class="btn btn-primary btn-lg" id="btnFormulieren"
               ${b && !b.may_send ? "disabled" : ""}>
         ${icon.wand} Bericht formulieren
@@ -374,33 +501,33 @@ function schritt4(): string {
       <button class="btn btn-quiet btn-sm" id="btnPromptZeigen">Anfrage ansehen</button>
     </div>
 
-    <div class="progress-ring-container hidden" id="formulierenProgress">
-      <div class="progress-ring">
-        <svg viewBox="0 0 36 36" class="progress-ring-svg">
-          <circle class="progress-ring-bg" cx="18" cy="18" r="15.9" />
-          <circle class="progress-ring-fill" cx="18" cy="18" r="15.9"
-                  stroke-dasharray="100" stroke-dashoffset="100" id="progressCircle" />
-        </svg>
-        <span class="progress-ring-text" id="progressText">Formuliere …</span>
+    <!-- Der Fortschritt lief bis 2.6.1 als grosses Rad in der Mitte
+         der Seite, mit dem Wort „Formuliere …" quer hineingesetzt. Ein
+         Kreis kann keinen Text tragen, und in der Mitte einer sonst
+         linksbündigen Seite stand er ohne Bezug. Jetzt: ein flacher
+         Balken über dem Entwurf, mit der Beschriftung daneben — dort,
+         wo das Ergebnis entsteht. -->
+    <div class="lauf hidden" id="formulierenProgress" role="status" aria-live="polite">
+      <div class="lauf-zeile">
+        <span class="lauf-text" id="progressText">Formuliere …</span>
+        <span class="lauf-zahl" id="progressPct"></span>
       </div>
+      <div class="lauf-bahn"><div class="lauf-fuell" id="progressCircle"></div></div>
     </div>
 
-    ${b && !b.may_send ? `
-      <div class="notice notice-danger" style="margin-bottom: var(--s5)">
-        <b>Rana sendet gerade nichts.</b>
-        ${b.today_reports >= b.daily_limit
-          ? `Das Tageslimit von ${b.daily_limit} Berichten ist erreicht.`
-          : `Das Monatsbudget von ${b.month_limit_eur.toLocaleString("de-DE")} € ist ausgeschöpft.`}
-        Unter „Einstellungen → Verbrauch“ lässt sich die Grenze anheben.
-      </div>` : ""}
-
-    <div class="field" style="margin-bottom:6px">
-      <label>
-        Entwurf
+    <!-- Die Kopfzeile des Entwurfs trug bisher alles in einer Zeile:
+         „ENTWURF direkt bearbeitbar 6.104 Zeichen · 791 Wörter · über
+         dem Korridor, läuft womöglich auf eine dritte Seite · 1 offen".
+         Das lief bis an den Rand. Jetzt zwei Zeilen: links die
+         Beschriftung, rechts die Zahlen, darunter das Urteil. -->
+    <div class="entwurf-kopf">
+      <div class="entwurf-kopf-zeile">
+        <span class="entwurf-titel">Entwurf</span>
         <span class="field-note">direkt bearbeitbar</span>
         <span class="spacer"></span>
-        <span class="record-num small" id="berichtZaehler">${m ? zaehlerText(m) : ""}</span>
-      </label>
+        <span class="record-num small" id="berichtZaehler">${m ? zaehlerZahlen(m) : ""}</span>
+      </div>
+      <div class="entwurf-urteil" id="berichtUrteil">${m ? zaehlerUrteil(m) : ""}</div>
     </div>
     <div class="paper-tray">
       <div class="paper-sheet" id="entwurf" contenteditable="true" spellcheck="true"
@@ -409,11 +536,29 @@ function schritt4(): string {
     </div>`;
 }
 
-function zaehlerText(m: ReturnType<typeof metrik>): string {
-  const farbe = m.urteil === "gut" ? "var(--moss)" : m.urteil === "kurz" ? "var(--amber)" : "var(--brick)";
-  return `<span style="color:${farbe}">${m.zeichen.toLocaleString("de-DE")} Zeichen</span>`
-    + ` <span class="muted">· ${m.woerter.toLocaleString("de-DE")} Wörter · ${esc(m.hinweis)}</span>`
-    + (m.luecken ? ` <span style="color:var(--amber)">· ${m.luecken} offen</span>` : "");
+function zaehlerFarbe(m: ReturnType<typeof metrik>): string {
+  return m.urteil === "gut" ? "var(--moss)" : m.urteil === "kurz" ? "var(--amber)" : "var(--brick)";
+}
+
+/** Zeile 1: nur die Zahlen. */
+function zaehlerZahlen(m: ReturnType<typeof metrik>): string {
+  return `<span style="color:${zaehlerFarbe(m)}">${m.zeichen.toLocaleString("de-DE")} Zeichen</span>`
+    + ` <span class="muted">· ${m.woerter.toLocaleString("de-DE")} Wörter</span>`;
+}
+
+/** Schreibt beide Zeilen der Entwurfskopfzeile, soweit sie da sind. */
+function zeigeZaehler(m: ReturnType<typeof metrik>): void {
+  const z = document.getElementById("berichtZaehler");
+  const u = document.getElementById("berichtUrteil");
+  if (z) z.innerHTML = zaehlerZahlen(m);
+  if (u) u.innerHTML = zaehlerUrteil(m);
+}
+
+/** Zeile 2: das Urteil in Worten, mit Platz zum Umbrechen. */
+function zaehlerUrteil(m: ReturnType<typeof metrik>): string {
+  const seiten = m.zeichen ? `rund ${(m.zeichen / 2840).toFixed(1).replace(".", ",")} Seiten · ` : "";
+  return `<span style="color:${zaehlerFarbe(m)}">${seiten}${esc(m.hinweis)}</span>`
+    + (m.luecken ? ` <span style="color:var(--amber)">· ${m.luecken} offene ${m.luecken === 1 ? "Stelle" : "Stellen"}</span>` : "");
 }
 
 // ===============================================================
@@ -448,19 +593,21 @@ function schritt5(): string {
         <b>Einzureichen:</b> Bericht, PTV 2b${konsiliar ? ", Konsiliarbericht (Muster 22b)" : ""}, ggf. Befundkopien (pseudonymisiert).
       </div>
 
+      <!-- Das Beiblatt stand bis 2.6.1 als Tabelle mit sechs Pixeln
+           Zeilenabstand in einer Ablage, deren Beschriftungsspalte
+           nicht umbrechen durfte. Bei „Diagnose(n)" mit zwei Diagnosen
+           lief der Wert dadurch bis an den Rand, und die zehn Zeilen
+           klebten aneinander. Jetzt ein zweispaltiges Raster mit
+           festen Spaltenbreiten und Luft dazwischen. -->
       ${gruppe(null, "Beiblatt PTV 2b", `
         <p class="hint">Angaben für das PTV 2b — zum Kopieren.</p>
-        <div class="paper-tray" style="padding: var(--s4)">
-          <table style="width:100%;border-collapse:collapse;font-size:var(--t-sm)" class="selectable">
-            ${ptv2bZeilen().map(([k, v]) => `
-              <tr>
-                <td style="padding:6px 14px 6px 0;color:var(--reed);white-space:nowrap;vertical-align:top;
-                           font-family:var(--face-record);font-size:var(--t-xs);letter-spacing:.06em;text-transform:uppercase">${esc(k)}</td>
-                <td style="padding:6px 0;vertical-align:top">${esc(v)}</td>
-              </tr>`).join("")}
-          </table>
-        </div>
-        <button class="btn btn-sm" id="btnPtv2b" style="align-self:flex-start">${icon.copy} Angaben kopieren</button>`)}
+        <dl class="ptv-liste selectable">
+          ${ptv2bZeilen().map(([k, v]) => `
+            <dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}
+        </dl>
+        <div class="row" style="margin-top: var(--s4)">
+          <button class="btn btn-sm" id="btnPtv2b">${icon.copy} Angaben kopieren</button>
+        </div>`)}
     `}`;
 }
 
@@ -712,14 +859,10 @@ function zeigeWarnungen(): void {
 }
 
 function bindeSchritt2(): void {
-  const cb = document.getElementById("cbVorbericht") as HTMLInputElement | null;
-  if (!cb) return;
-  on(cb, "change", () => {
-    S.setzeFeld("f_vorbericht", cb.checked ? "ja" : "nein");
-    // Zuklappen heisst nur ausblenden — eingetragene Texte bleiben erhalten.
-    el("vorberichtBlock").classList.toggle("hidden", !cb.checked);
-  });
-
+  // Die Frage „liegt ein Vorbericht vor?" ist mit 2.7.0 entfallen.
+  // Beim Fortführungsantrag muss es einen geben, sonst wäre es keine
+  // Fortführung; beim Umwandlungsantrag kann es keinen geben. In
+  // beiden Fällen hatte die Frage nur eine Antwort.
   const btnUpload = document.getElementById("btnUploadVorbericht");
   if (btnUpload) {
     on(btnUpload, "click", async () => {
@@ -760,7 +903,7 @@ function bindeSchritt4(neuZeichnen: () => void): void {
   on(entwurf, "input", () => {
     S.setzeBericht(entwurf.innerText);
     const p = S.state.profile;
-    if (p) el("berichtZaehler").innerHTML = zaehlerText(metrik(S.state.report, p));
+    if (p) zeigeZaehler(metrik(S.state.report, p));
   });
 
   // Einfügen nur als reiner Text — sonst gerät fremdes Markup in den
@@ -789,14 +932,17 @@ async function formuliere(
   const entwurf = el("entwurf");
   const btn = el<HTMLButtonElement>("btnFormulieren");
   const btnAb = el<HTMLButtonElement>("btnAbbrechen");
+  const b = S.state.budget;
+  let nachkuerzen = false;
 
   // Der Klarname darf die Anfrage nicht erreichen. Rust prüft das noch
   // einmal, aber hier lässt sich früher und freundlicher warnen.
   const namen = klarnamen(S.state.fields);
-  const system = systemPrompt(p);
+  const art = S.antragsart();
+  const system = systemPrompt(p, art);
   const user =
       kind === "expand"  ? expandPrompt(S.state.report, p)
-    : kind === "kuerzen" ? kuerzePrompt(S.state.report, p)
+    : kind === "kuerzen" ? kuerzePrompt(S.state.report, p, art)
     : userPrompt(S.state.fields, p);
 
   const treffer = await api.checkClearNames(`${system}\n${user}`, namen);
@@ -821,22 +967,28 @@ async function formuliere(
   if (kind === "report") entwurf.textContent = "";
 
   const progress = document.getElementById("formulierenProgress");
-  const circle = document.getElementById("progressCircle") as SVGCircleElement | null;
+  const circle = document.getElementById("progressCircle") as HTMLElement | null;
   const pText = document.getElementById("progressText");
   if (progress) progress.classList.remove("hidden");
 
-  let gesammelt = kind === "expand" ? "" : "";
+  const pZahl = document.getElementById("progressPct");
+  if (pText) {
+    pText.textContent = kind === "kuerzen" ? "Kürze auf zwei Seiten …" : "Formuliere …";
+  }
+
+  let gesammelt = "";
   const stopStream = await api.onStream((chunk) => {
     if (abbruch) return;
     gesammelt += chunk;
     entwurf.textContent = gesammelt;
-    const zielZeichen = 4000;
-    const fortschritt = Math.min(95, Math.round((gesammelt.length / zielZeichen) * 100));
-    if (circle) circle.style.strokeDashoffset = String(100 - fortschritt);
-    if (pText) pText.textContent = `${fortschritt} %`;
+    // Am Zielumfang gemessen, nicht an einer festen Zahl: beim
+    // Umwandlungsbericht sind sieben Abschnitte zu schreiben.
+    const fortschritt = Math.min(97, Math.round((gesammelt.length / p.layout.ziel_soll) * 100));
+    if (circle) circle.style.width = `${fortschritt}%`;
+    if (pZahl) pZahl.textContent = `${fortschritt} %`;
     // Mitlaufen lassen: der Blick bleibt am entstehenden Text.
     entwurf.scrollIntoView({ block: "end", behavior: "smooth" });
-    el("berichtZaehler").innerHTML = zaehlerText(metrik(gesammelt, p));
+    zeigeZaehler(metrik(gesammelt, p));
   });
 
   try {
@@ -866,6 +1018,21 @@ async function formuliere(
         + "Bitte den Entwurf prüfen und noch einmal formulieren lassen.",
         "danger", 12000,
       );
+    } else if (kind === "report" && m.urteil === "lang" && !abbruch && b?.may_send !== false) {
+      // Der Leitfaden gibt zwei Seiten vor, und das Modell hält sie
+      // aus eigener Kraft nicht ein — gemessen an den bisherigen
+      // Berichten überzieht es regelmässig um vierzig Prozent. Rana
+      // misst deshalb selbst und hängt die Kürzungsrunde an, statt
+      // einen zu langen Entwurf als fertig hinzustellen.
+      //
+      // Die Runde läuft NICHT von hier aus, sondern nach dem
+      // finally-Block: sonst liefe das Aufräumen der ersten Anfrage
+      // erst nach der zweiten, und der Ereignishorcher hinge doppelt.
+      nachkuerzen = true;
+      toast(
+        `${m.zeichen.toLocaleString("de-DE")} Zeichen — deutlich über zwei Seiten. Rana kürzt selbst nach.`,
+        "info", 6000,
+      );
     } else {
       toast(
         `Fertig. ${m.zeichen.toLocaleString("de-DE")} Zeichen, ${m.hinweis}. Kosten: ${kosten} €${gespart}`,
@@ -882,12 +1049,14 @@ async function formuliere(
     btnAb.classList.add("hidden");
     neuZeichnen(); window.dispatchEvent(new Event("bausteine-geandert"));
   }
+
+  if (nachkuerzen) await formuliere("kuerzen", neuZeichnen);
 }
 
 async function zeigePrompt(): Promise<void> {
   const p = S.state.profile;
   if (!p) return;
-  const system = systemPrompt(p);
+  const system = systemPrompt(p, S.antragsart());
   const user = userPrompt(S.state.fields, p);
 
   await dialog({
@@ -919,11 +1088,10 @@ function bindeSchritt5(): void {
   const word = document.getElementById("btnWord");
   if (!word) return;
 
-  on(word, "click", () => {
-    const blob = buildDocx(S.state.report, S.state.fields, p);
-    download(blob, `${fileBase(S.state.fields)}.docx`);
-    toast("Word-Datei gesichert.", "ok");
-  });
+  // Bis 2.6.1 landete die Datei still im Download-Ordner. Jetzt fragt
+  // der Speicherdialog des Systems, wohin — mit dem Dateinamen aus
+  // Antragsart, Name und Datum als Vorschlag.
+  on(word, "click", () => { void wordSichern(p); });
 
   on(el("btnPdf"), "click", () => pdfSichern());
 
@@ -955,6 +1123,33 @@ function bindeSchritt5(): void {
  * Ergebnis: pixelgleich zur Vorschau, kein zweites Layout, das
  * auseinanderlaufen kann. Preis: ein Systemdialog.
  */
+/**
+ * Fragt, wohin die Word-Datei soll, und schreibt sie dorthin.
+ *
+ * Schlägt der Dialog fehl — etwa weil die Datei-Berechtigung im
+ * Systempaket fehlt —, fällt Rana auf den alten Weg zurück, statt
+ * gar nichts zu tun. Ein Bericht, der im Download-Ordner landet, ist
+ * immer noch besser als einer, der verschwindet.
+ */
+async function wordSichern(p: api.Profile): Promise<void> {
+  const blob = buildDocx(S.state.report, S.state.fields, p);
+  const name = `${fileBase(S.state.fields)}.docx`;
+
+  try {
+    const ziel = await save({
+      defaultPath: name,
+      filters: [{ name: "Word-Dokument", extensions: ["docx"] }],
+    });
+    if (!ziel) return; // abgebrochen — das ist keine Störung
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    await api.saveBytes(ziel, bytes);
+    toast("Word-Datei gespeichert.", "ok");
+  } catch (e) {
+    download(blob, name);
+    toast(`Speicherdialog nicht verfügbar (${api.errorText(e)}) — Datei im Download-Ordner abgelegt.`, "info", 8000);
+  }
+}
+
 function pdfSichern(): void {
   const p = S.state.profile!;
   const html = renderDocHTML(S.state.report, S.state.fields, p, { footer: "none" });

@@ -19,24 +19,34 @@
  */
 
 import type { Felder, Profile } from "../core/ipc";
+import { artVon, gliederung } from "./gliederung";
+import type { Antragsart, Punkt } from "./gliederung";
 
 // ===============================================================
 // Gemeinsame Regeln
 // ===============================================================
 
-function umfang(p: Profile): string {
+function umfang(p: Profile, punkte: Punkt[]): string {
   const L = p.layout;
+  // Die Richtwerte aus der Gliederung auf den Korridor des Profils
+  // skalieren. Sonst stimmt die Summe nicht mehr, sobald jemand den
+  // Zielumfang in den Einstellungen ändert.
+  const summe = punkte.reduce((a, x) => a + x.anteil, 0) || 1;
+  const zeilen = punkte.map((x, i) => {
+    const z = Math.round((x.anteil / summe) * L.ziel_soll / 10) * 10;
+    return `  Abschnitt ${i + 1} (${x.titel}): rund ${z.toLocaleString("de-DE")} Zeichen, etwa ${Math.round(z / 7.8)} Wörter.`;
+  });
+
   return [
     "UMFANG – ZIELKORRIDOR, WICHTIGSTE VORGABE:",
-    "Der Leitfaden schreibt vor, dass der Bericht in der Regel zwei Seiten umfasst. Diese zwei Seiten sollen GUT GEFÜLLT sein.",
-    `Ziele bewusst an das OBERE Ende: rund ${L.ziel_soll.toLocaleString("de-DE")} Zeichen, mindestens ${L.ziel_min.toLocaleString("de-DE")} und höchstens ${L.ziel_max.toLocaleString("de-DE")}. In Wörtern sind das etwa ${Math.round(L.ziel_min / 7.8)} bis ${Math.round(L.ziel_max / 7.8)}.`,
-    "Eine halb leere zweite Seite ist der schlechtere Fehler als ein knapper Überhang. Ziele deshalb lieber etwas zu hoch als zu niedrig.",
-    "Verteilung, gemessen an Berichten, die zwei Seiten füllen:",
-    "  Abschnitt 1: rund 2.750 Zeichen (etwa 350 Wörter) in SIEBEN Absätzen: Ausgangslage, drei bis vier Verlaufsabsätze, die Zielbilanz, zuletzt der Bilanzabsatz.",
-    "  Abschnitt 2: rund 750 Zeichen (etwa 95 Wörter), verteilt auf die zwei bis drei Beschriftungen.",
-    "  Abschnitt 3: rund 1.450 Zeichen (etwa 185 Wörter): Begründung, drei bis vier Behandlungsziele, Methodik und Setting, Prognose mit geplantem Abschluss.",
+    "Der Leitfaden schreibt vor, dass der Bericht in der Regel zwei Seiten umfasst. Diese zwei Seiten sollen GUT GEFÜLLT sein, aber nicht überschritten werden.",
+    `Ziele auf rund ${L.ziel_soll.toLocaleString("de-DE")} Zeichen, mindestens ${L.ziel_min.toLocaleString("de-DE")} und HÖCHSTENS ${L.ziel_max.toLocaleString("de-DE")}. In Wörtern sind das etwa ${Math.round(L.ziel_min / 7.8)} bis ${Math.round(L.ziel_max / 7.8)}.`,
+    `Die Obergrenze von ${L.ziel_max.toLocaleString("de-DE")} Zeichen ist eine harte Grenze, keine Anregung. Ein Bericht auf zweieinhalb Seiten wird vom Gutachter nicht gründlicher gelesen, sondern flüchtiger.`,
+    "Verteilung auf die Abschnitte:",
+    ...zeilen,
     `Zähle beim Schreiben mit. Liegst du unter ${L.ziel_min.toLocaleString("de-DE")} Zeichen, führe die klinisch bedeutsamen Punkte KONKRETER aus: beobachtetes Verhalten im Setting, Beispiele aus dem Verlauf, fachliche Einordnung, Bezug zu den Therapiezielen.`,
     "ABER: Strecke den Text niemals ohne Grundlage. Reichen die gelieferten Angaben nicht aus, um den Zielumfang mit entscheidungsrelevantem Inhalt zu füllen, schreibe lieber kürzer. Keine Füllsätze, keine Wiederholungen zwischen den Abschnitten, keine allgemeinen Wendungen ohne Fallbezug.",
+    "SPARSAMKEIT IST TEIL DER AUFGABE. Der Leitfaden verlangt ausdrücklich, dass der Bericht auf die für das Verständnis der Störung und für die Behandlung relevanten Angaben BEGRENZT bleibt, und er erlaubt ausdrücklich stichwortartige Angaben. Erzähle deshalb nicht Sitzung für Sitzung nach, sondern schreibe ergebnisorientiert: was sich verändert hat und woran das erkennbar ist. Ein Beispiel je Aussage genügt.",
   ].join("\n");
 }
 
@@ -54,7 +64,8 @@ const STIL = [
   "– Konkrete Beobachtung vor der Deutung, verknüpft über „so als“ (z. B. „…, so als gebe ihr das Sicherheit“).",
   "– Therapeutische Vorhaben im Passiv mit „soll/sollen“ („soll herausgearbeitet werden“, „soll aufgearbeitet werden“).",
   "– Nüchterne Interpunktion: keine Ausrufezeichen, keine rhetorischen Fragen, keine Emojis, keine Gedankenstrich-Einschübe, kein Semikolon.",
-  "– Keine KI-typischen Wendungen wie „darüber hinaus“, „des Weiteren“, „insbesondere“, „es ist wichtig zu“, „es gilt“, „daher“, „folglich“, „dementsprechend“, „ganzheitlich“, „zielgerichtet“, „tiefgreifend“, „essenziell“. Das Label „Zusammenfassung: “ ist ausdrücklich erwünscht; das Wort „zusammenfassend“ soll dagegen nicht im Fließtext stehen.",
+  "– Keine KI-typischen Wendungen wie „darüber hinaus“, „des Weiteren“, „insbesondere“, „es ist wichtig zu“, „es gilt“, „daher“, „folglich“, „dementsprechend“, „ganzheitlich“, „zielgerichtet“, „tiefgreifend“, „essenziell“. Auch „zusammenfassend“ nicht.",
+  "– KEINE bewertenden Schlusssätze über die eigene Arbeit. Sätze wie „Die geplante Behandlung ist damit ausreichend begründet und erfolgversprechend“ nehmen dem Gutachter die Entscheidung vorweg, die ihm zusteht, und der Leitfaden verlangt sie nicht. Der Bericht endet mit der letzten inhaltlichen Aussage.",
   "– Keine Abkürzungen wie „bzw.“, „u. a.“, „ggf.“. Zahlen unter zwölf im Text ausschreiben.",
   "– Aufzählungen nur an den ausdrücklich genannten Stellen. Behandlungsziele werden nummeriert („1. “, „2. “ …), jedes auf eigener Zeile; sonst reiner Text.",
 ].join("\n");
@@ -67,17 +78,37 @@ const STIL = [
  * Mitte steht. Inhaltlich wiederholt die Liste nur, was oben schon
  * im Aufbau steht — die Wiederholung ist Absicht.
  */
-const PRUEFLISTE = [
+const PRUEFLISTE_FORT = [
   "PFLICHTBESTANDTEILE NACH LEITFADEN — PRÜFE VOR DEM ANTWORTEN, DASS ALLE VIER VORHANDEN SIND:",
   "1. Ausgangslage bei Therapiebeginn als erster Absatz von Abschnitt 1.",
-  "2. Bilanz zu den zuletzt vereinbarten Therapiezielen als vorletzter Absatz von Abschnitt 1.",
+  "2. Bilanz zu den zuletzt vereinbarten Therapiezielen als LETZTER Absatz von Abschnitt 1, mit der Symptomveränderung im selben Absatz.",
   "3. Aussage zu den Behandlungsmethoden und -techniken im Absatz „Methodik und Setting“.",
   "4. Satz zur Planung des Therapieabschlusses im Absatz „Prognose“.",
 ].join("\n");
 
-const FORMAT = [
-  "FORMAT: Verwende KEIN Markdown (kein #, kein *, keine ---). Jeder Absatz, jede Beschriftung und jedes nummerierte Ziel beginnt auf einer NEUEN ZEILE – niemals hintereinander in einer Zeile. Trenne die drei Abschnitte durch je eine Leerzeile. Gib KEINEN Kopf, KEINE Unterschrift und KEINE Hinweise oder Nachbemerkungen aus – ausschließlich die drei nummerierten Abschnitte.",
+/**
+ * Dasselbe für den Umwandlungsbericht.
+ *
+ * Der Leitfaden nennt für ihn eigene Pflichtangaben, die im
+ * Fortführungsbericht nicht vorkommen — allen voran den somatischen
+ * Befund samt Konsiliarbericht. Genau die fehlten in den Berichten,
+ * die Rana bis 2.6.1 für einen Umwandlungsantrag erzeugt hat.
+ */
+const PRUEFLISTE_UMW = [
+  "PFLICHTBESTANDTEILE NACH LEITFADEN — PRÜFE VOR DEM ANTWORTEN, DASS ALLE SECHS VORHANDEN SIND:",
+  "1. Familienstand und Zahl der Kinder in Abschnitt 1 (der Leitfaden nennt sie ausdrücklich).",
+  "2. Das Krankheitsverständnis der Patientin bzw. des Patienten in Abschnitt 2.",
+  "3. Abschnitt 3 überhaupt — somatischer Befund und Konsiliarbericht. Liegen keine Angaben vor, steht dort 【BITTE ERGÄNZEN: somatischer Befund / Konsiliarbericht】, niemals nichts.",
+  "4. Die Begründung von Setting, Sitzungszahl und Behandlungsfrequenz in Abschnitt 6.",
+  "5. Die Bilanz zu den Zielen der Kurzzeittherapie in Abschnitt 7, jedes Ziel als erreicht, teilweise erreicht oder offen eingeordnet.",
+  "6. Ein eigener Satz in Abschnitt 7, der begründet, warum die Kurzzeittherapie nicht ausreicht und was die Langzeittherapie leisten soll.",
 ].join("\n");
+
+function format(n: number): string {
+  const wort = n === 3 ? "drei" : "sieben";
+  return "FORMAT: Verwende KEIN Markdown (kein #, kein *, keine ---). Jeder Absatz, jede Beschriftung und jedes nummerierte Ziel beginnt auf einer NEUEN ZEILE – niemals hintereinander in einer Zeile. "
+    + `Trenne die ${wort} Abschnitte durch je eine Leerzeile. Gib KEINEN Kopf, KEINE Unterschrift und KEINE Hinweise oder Nachbemerkungen aus – ausschließlich die ${wort} nummerierten Abschnitte.`;
+}
 
 // ===============================================================
 // Verfahrensabhängiger Teil
@@ -95,14 +126,116 @@ const FORMAT = [
  * früher oder später eigene Zwischenüberschriften, und der Bericht
  * verliert die Form, die der Gutachter erwartet.
  */
-const BESCHRIFTUNGEN = [
-  "„Zusammenfassung: “",
+const BESCHRIFTUNGEN_FORT = [
   "„Diagnose(n): “",
   "„Psychischer Befund: “",
   "„Somatischer Befund: “",
   "„Methodik und Setting: “",
   "„Prognose: “",
 ] as const;
+
+/**
+ * Beim Umwandlungsbericht tragen die Gliederungspunkte selbst schon
+ * die Bezeichnung, die im Fortführungsbericht als Beschriftung nötig
+ * war — „Psychischer Befund“ ist dort Teil von Überschrift 2. Es
+ * bleiben die wenigen, die innerhalb eines Punktes trennen.
+ */
+const BESCHRIFTUNGEN_UMW = [
+  "„Psychischer Befund: “",
+  "„Krankheitsverständnis: “",
+  "„Somatischer Befund: “",
+  "„Diagnose(n): “",
+  "„Methodik und Setting: “",
+  "„Prognose: “",
+] as const;
+
+/** Die Deutungsebene je Verfahren — in beiden Berichtstypen gebraucht. */
+function deutungsebene(p: Profile): string {
+  return p.verfahren.art === "vt"
+    ? "verhaltensanalytische Einordnung (auslösende und aufrechterhaltende Bedingungen)"
+    : p.verfahren.art === "st"
+    ? "systemische Einordnung (Muster, Kontext, Funktion des Symptoms im System)"
+    : "psychodynamische Einordnung (Situation, Konflikt, Struktur, Abwehr)";
+}
+
+/** Wie der Punkt 4 des Leitfadens je Verfahren heisst. */
+function modellName(p: Profile): string {
+  return p.verfahren.art === "vt"
+    ? "funktionales Bedingungsmodell"
+    : p.verfahren.art === "st"
+    ? "systemisches Verständnis"
+    : "Psychodynamik";
+}
+
+/**
+ * Der Aufbau des Berichts zum UMWANDLUNGSANTRAG.
+ *
+ * Sieben Gliederungspunkte statt drei. Der Leitfaden behandelt den
+ * Umwandlungsantrag zusammen mit dem Erstantrag: der Gutachter kennt
+ * den Fall nicht, also muss der Bericht ihn vollständig darstellen —
+ * einschliesslich somatischem Befund und Konsiliarbericht, die im
+ * Fortführungsbericht gar nicht vorkommen.
+ *
+ * Punkt 7 trägt dann das, was den Umwandlungs- vom Erstantrag
+ * unterscheidet: der bisherige Verlauf der Kurzzeittherapie und die
+ * Begründung, warum sie nicht ausreicht.
+ */
+function aufbauUmwandlung(p: Profile): string {
+  return [
+    "AUFBAU DER SIEBEN ABSCHNITTE – GENAU DIESER VORLAGE FOLGEN:",
+    "",
+    "Grundregel: Jeder inhaltliche Gedanke bekommt einen EIGENEN ABSATZ, getrennt durch eine LEERZEILE. Ein Absatz umfasst etwa drei bis sechs Sätze. Die Abschnitte 1, 3 und 5 sind kurz und dürfen aus einem einzigen knappen Absatz bestehen.",
+    "",
+    "ERLAUBTE BESCHRIFTUNGEN, WÖRTLICH SO UND SONST KEINE:",
+    "  " + BESCHRIFTUNGEN_UMW.join(" · "),
+    "Erfinde KEINE weiteren Beschriftungen und wiederhole niemals die Überschrift des Abschnitts als Beschriftung. Es gibt insbesondere KEINE Beschriftung „Zusammenfassung“ — der Bericht hat keine.",
+    "",
+    "Abschnitt 1 – Relevante soziodemographische Daten:",
+    "  Ein einziger knapper Absatz ohne Beschriftung: aktuell ausgeübter Beruf, Familienstand, Zahl der Kinder, dazu die Lebenssituation, soweit sie für die Behandlung bedeutsam ist.",
+    "  Familienstand und Kinderzahl sind vom Leitfaden ausdrücklich verlangt. Fehlt eine der beiden Angaben, schreibe dafür 【BITTE ERGÄNZEN: Familienstand】 bzw. 【BITTE ERGÄNZEN: Zahl der Kinder】.",
+    "  Keine Namen, keine Orte, keine Arbeitgeber — nur die Art der Tätigkeit.",
+    "",
+    "Abschnitt 2 – Symptomatik und psychischer Befund, in dieser Reihenfolge:",
+    "  (a) Ein Absatz ohne Beschriftung: die geschilderte Symptomatik mit Angaben zu SCHWERE und VERLAUF, im Konjunktiv I. Dazu Auffälligkeiten bei der Kontaktaufnahme und im Erscheinungsbild.",
+    "  (b) „Psychischer Befund: “ – der aktuelle Befund.",
+    "  (c) „Krankheitsverständnis: “ – wie die Patientin bzw. der Patient sich die Beschwerden erklärt. Der Leitfaden verlangt das ausdrücklich; liegt nichts vor, schreibe 【BITTE ERGÄNZEN: Krankheitsverständnis】.",
+    "  Keine psychodiagnostischen Testverfahren erwähnen oder erfinden — es werden keine durchgeführt.",
+    "",
+    "Abschnitt 3 – Somatischer Befund und Konsiliarbericht:",
+    "  Ein knapper Absatz ohne Beschriftung: somatische Befunde einschliesslich des Konsiliarberichts, aktuelle Medikation, Suchtmittelkonsum soweit bedeutsam, sowie frühere psychotherapeutische, psychosomatische oder psychiatrische Behandlungen.",
+    "  Dieser Abschnitt darf NIEMALS leer bleiben. Liegen keine Angaben vor, schreibe 【BITTE ERGÄNZEN: somatischer Befund und Konsiliarbericht】. Der Gutachter braucht die somatische Abklärung, und ohne sie ist der Antrag unvollständig.",
+    "",
+    `Abschnitt 4 – Lebensgeschichte, Krankheitsanamnese und ${modellName(p)}:`,
+    "  (a) Ein Absatz zur behandlungsrelevanten Lebensgeschichte und zur Krankheitsanamnese. Nur was die Störung verständlich macht — keine vollständige Biografie.",
+    p.verfahren.art === "vt"
+      ? "  (b) Ein Absatz zum funktionalen Bedingungsmodell: Verhaltensanalyse, prädisponierende, auslösende und aufrechterhaltende Bedingungen, dazu knapp das übergeordnete Störungsmodell."
+      : p.verfahren.art === "st"
+      ? "  (b) Ein Absatz zum systemischen Verständnis: Muster im System, Kontext und Funktion des Symptoms, dysfunktionale Beziehungsmuster."
+      : "  (b) Ein Absatz zur Psychodynamik: auslösende Situation, intrapsychische Konfliktebene und aktualisierte Konflikte, Abwehrmechanismen, strukturelle Ebene, dysfunktionale Beziehungsmuster. Der Leitfaden nennt diese fünf einzeln; benenne die Abwehr also ausdrücklich und lasse die strukturelle Ebene nicht aus.",
+    "",
+    "Abschnitt 5 – Diagnose zum Zeitpunkt der Antragstellung:",
+    "  (a) „Diagnose(n): “ – ICD-10-Kode und Bezeichnung, mit Angabe der Diagnosesicherheit.",
+    ...(p.verfahren.art === "tp" || p.verfahren.art === "at"
+      ? ["  (b) Direkt danach im selben Absatz die psychodynamische bzw. neurosenpsychologische Diagnose. Der Leitfaden verlangt sie für die tiefenpsychologisch fundierte und die analytische Psychotherapie ausdrücklich; sie fehlt sonst regelmässig."]
+      : []),
+    "  (c) Differenzialdiagnostische Angaben nur, wenn sie für die Entscheidung erforderlich sind.",
+    "",
+    "Abschnitt 6 – Behandlungsplan und Prognose, in dieser Reihenfolge:",
+    "  (a) Ein Absatz ohne Beschriftung zum individuellen Behandlungsplan, der mit dem Satzteil „Behandlungsziele:“ endet.",
+    "  (b) Direkt danach die mit der Patientin reflektierten Ziele als NUMMERIERTE Aufzählung. JEDES Ziel auf EIGENER ZEILE, beginnend mit „1. “, „2. “, „3. “. Höchstens vier Ziele, je höchstens 20 Wörter.",
+    `  (c) „Methodik und Setting: “ – die geplanten Behandlungstechniken und -methoden. Der Absatz beginnt mit „Die Behandlung soll als ${p.verfahren.art === "tp" ? "tiefenpsychologisch fundierte Psychotherapie" : bezeichnung(p).toLowerCase()} im ${settingWort(p)} fortgeführt werden.“`,
+    "  Danach PFLICHT: die BEGRÜNDUNG von Setting, Sitzungszahl und Behandlungsfrequenz. Der Leitfaden verlangt für den Umwandlungsantrag ausdrücklich eine Begründung, nicht bloss eine Nennung — also warum gerade dieses Setting, warum gerade diese Zahl an Sitzungen, warum diese Frequenz.",
+    "  Ist eine Kooperation mit anderen Berufsgruppen angegeben, folgt dazu ein kurzer Satz.",
+    "  (d) „Prognose: “ – Motivation, Umstellungsfähigkeit, innere und äussere Veränderungshindernisse. Danach PFLICHT ein eigener Satz zur Planung des Therapieabschlusses.",
+    "",
+    "Abschnitt 7 – Zusätzlich erforderliche Angaben zum Umwandlungsantrag, in dieser Reihenfolge:",
+    "  (a) Ein bis zwei Absätze zum BISHERIGEN Behandlungsverlauf seit Therapiebeginn und zur Veränderung der Symptomatik. Schreibe ERGEBNISORIENTIERT: was sich verändert hat und woran das erkennbar ist. Erzähle NICHT Sitzung für Sitzung nach.",
+    `  Für die Deutung gilt: konkrete Beobachtung zuerst, dann die ${deutungsebene(p)}.`,
+    "  (b) Ein Absatz mit der Bilanz zu den Zielen der KURZZEITTHERAPIE. Jedes Ziel sinngemäß benennen und als erreicht, teilweise erreicht oder noch offen einordnen, mit kurzer Begründung. Als Fließtext, NICHT als Aufzählung. Beginne mit „Von den für die Kurzzeittherapie vereinbarten Zielen …“.",
+    "  (c) Ein Absatz, der die Notwendigkeit der Umwandlung begründet: warum der Umfang der Kurzzeittherapie nicht ausreicht und was die Langzeittherapie leisten soll. Dieser Absatz ist die Frage, über die der Gutachter entscheidet — ohne ihn ist der Bericht wertlos.",
+    "  Schreibe NIEMALS „seit dem letzten Bericht“. Es gab keinen: die Kurzzeittherapie verlangt keinen Bericht an den Gutachter.",
+  ].join("\n");
+}
 
 function aufbau(p: Profile): string {
   const art = p.verfahren.art;
@@ -128,18 +261,19 @@ function aufbau(p: Profile): string {
     "",
     "Grundregel: Jeder inhaltliche Gedanke bekommt einen EIGENEN ABSATZ, getrennt durch eine LEERZEILE. Niemals mehrere Themen zu einem langen Block zusammenziehen. Ein Absatz umfasst etwa drei bis sechs Sätze.",
     "",
-    "ES GIBT GENAU SECHS ERLAUBTE BESCHRIFTUNGEN, WÖRTLICH SO UND SONST KEINE:",
-    "  " + BESCHRIFTUNGEN.join(" · "),
+    "ES GIBT GENAU FÜNF ERLAUBTE BESCHRIFTUNGEN, WÖRTLICH SO UND SONST KEINE:",
+    "  " + BESCHRIFTUNGEN_FORT.join(" · "),
     "Erfinde KEINE weiteren Beschriftungen. Absätze in Abschnitt 1 (außer dem letzten) beginnen OHNE Beschriftung, als normaler Fließtext. Formulierungen wie „Ausgangslage: “, „Biografische Arbeit: “, „Berufliche Situation: “ oder „Therapieziele: “ sind untersagt.",
     "Eine Beschriftung steht am ABSATZANFANG, gefolgt von Doppelpunkt und Leerzeichen. Der Text danach ist normaler Fließtext im beschriebenen Stil.",
     "Ein Satz mitten im Text darf selbstverständlich einen Doppelpunkt enthalten – das ist keine Beschriftung und wird nicht hervorgehoben.",
     "",
     "Abschnitt 1 – mehrere Absätze in dieser Reihenfolge:",
     "  (a) Ausgangslage zu Behandlungsbeginn: Zeitpunkt des Therapiebeginns, auslösende Situation, Symptomatik und Funktionsniveau, zugrunde liegender Konflikt, ggf. Medikation. Dieser Absatz ist PFLICHT und muss den Fall so umreißen, dass er auch ohne den Erstbericht verständlich ist, weil dem Gutachter der Erstbericht häufig nicht vorliegt.",
-    `  (b) Danach je ein eigener Absatz pro bearbeitetem Themenbereich, möglichst in zeitlicher Reihenfolge ${themen}.`,
+    `  (b) HÖCHSTENS ZWEI Absätze zum Verlauf ${themen}. Nicht mehr. Schreibe ERGEBNISORIENTIERT — was sich verändert hat und woran das erkennbar ist —, NICHT als Nacherzählung der Sitzungen in zeitlicher Reihenfolge. Ein Beispiel je Aussage genügt; wo mehrere dasselbe belegen, nimm eines.`,
     `  Für die Deutung gilt: konkrete Beobachtung zuerst, dann die ${deutungsebene}.`,
-    "  (c) VORLETZTER Absatz, ohne Beschriftung und PFLICHT: die Bilanz zu den zuletzt vereinbarten Therapiezielen. Der Leitfaden verlangt das Behandlungsergebnis ausdrücklich „in Bezug auf die Erreichung bzw. Nichterreichung der Therapieziele“. Jedes zuletzt vereinbarte Ziel wird darin sinngemäß benannt und als erreicht, teilweise erreicht oder noch offen eingeordnet, mit kurzer Begründung. Als Fließtext, NICHT als Aufzählung. Beginne den Absatz mit „Von den zuletzt vereinbarten Zielen …“. Sind keine früheren Ziele geliefert, schreibe stattdessen 【BITTE ERGÄNZEN: Stand der zuletzt vereinbarten Therapieziele】.",
-    "  (d) Als LETZTER Absatz eine Bilanz mit dem Label „Zusammenfassung: “ – darin knapp, was sich bei Symptomatik und Funktionsniveau gebessert hat und was offen bleibt. WICHTIG: Nach dem Doppelpunkt beginnt ein vollständiger, eigenständiger Satz, der ohne das Label lesbar ist – also „Zusammenfassung: Es zeigt sich eine deutliche Besserung …“ und NICHT „Zusammenfassend zeigt sich …“. Das gilt für alle Beschriftungen.",
+    "  (c) LETZTER Absatz, ohne Beschriftung und PFLICHT: die Bilanz zu den zuletzt vereinbarten Therapiezielen. Der Leitfaden verlangt das Behandlungsergebnis ausdrücklich „in Bezug auf die Erreichung bzw. Nichterreichung der Therapieziele“. Jedes zuletzt vereinbarte Ziel wird darin sinngemäß benannt und als erreicht, teilweise erreicht oder noch offen eingeordnet, mit kurzer Begründung. Als Fließtext, NICHT als Aufzählung. Beginne den Absatz mit „Von den zuletzt vereinbarten Zielen …“. Sind keine früheren Ziele geliefert, schreibe stattdessen 【BITTE ERGÄNZEN: Stand der zuletzt vereinbarten Therapieziele】.",
+    "  Derselbe Absatz schliesst mit ein bis zwei Sätzen zur Veränderung der Symptomatik und des Funktionsniveaus — was sich gebessert hat und was fortbesteht. Der Leitfaden verlangt beides, die Zielbilanz UND die Symptomveränderung; sie gehören in einen Absatz.",
+    "  ES GIBT KEINEN Absatz „Zusammenfassung“. Der Leitfaden kennt ihn nicht, und er wiederholte bisher nur, was in der Zielbilanz unmittelbar davor schon steht. Schreibe ihn nicht.",
     "",
     "Abschnitt 2 – je ein eigener Absatz mit Label, in dieser Reihenfolge:",
     "  „Diagnose(n): “ – ICD-10-Code und Diagnosesicherheit.",
@@ -153,7 +287,7 @@ function aufbau(p: Profile): string {
     `  (c) Ein Absatz „Methodik und Setting: “ – Verfahren, Frequenz und Zahl der beantragten Sitzungen. Der Absatz beginnt mit der Formulierung „Die Behandlung soll als ${p.verfahren.art === "tp" ? "tiefenpsychologisch fundierte Psychotherapie" : bezeichnung(p).toLowerCase()} im ${settingWort(p)} fortgeführt werden.“ – also „soll fortgeführt werden“ und niemals „wird fortgeführt“.`,
     "  Der Leitfaden verlangt im selben Absatz, dass Methodik und Setting ERLÄUTERT werden — nicht bloss genannt. Also: mit welchen Techniken weitergearbeitet wird, und warum Verfahren, Setting und Frequenz für diesen Fall angemessen sind. Ist unter „Methodik und Setting – Erläuterung“ etwas angegeben, wird es dafür verwendet; ist nichts angegeben, wird die Begründung aus Verfahren, Setting und Frequenz gebildet und bleibt knapp.",
     "  Der Absatz endet mit „Die Behandlungsmethoden und -techniken bleiben unverändert.“, sofern nichts anderes angegeben ist.",
-    "  (d) Ein Absatz „Prognose: “ – günstige Faktoren, Veränderungshindernisse. Nach den Veränderungshindernissen folgt PFLICHT ein eigener Satz zur Planung des Therapieabschlusses, weil der Leitfaden diese ausdrücklich verlangt, etwa „Der Abschluss ist nach Bearbeitung der genannten Ziele vorgesehen.“ Sind weiterführende Maßnahmen nach Therapieende angegeben, folgt dazu ein weiterer kurzer Satz. Erst danach endet der Absatz mit dem festen Schlusssatz: „Die geplante Behandlung ist damit ausreichend begründet und erfolgversprechend.“",
+    "  (d) Ein Absatz „Prognose: “ – günstige Faktoren, Veränderungshindernisse. Nach den Veränderungshindernissen folgt PFLICHT ein eigener Satz zur Planung des Therapieabschlusses, weil der Leitfaden diese ausdrücklich verlangt, etwa „Der Abschluss ist nach Bearbeitung der genannten Ziele vorgesehen.“ Sind weiterführende Maßnahmen nach Therapieende angegeben, folgt dazu ein weiterer kurzer Satz. Damit endet der Bericht — OHNE bewertenden Schlusssatz.",
   ].join("\n");
 }
 
@@ -185,7 +319,7 @@ export function verfahrenZeile(p: Profile): string {
 // Der Systemteil — zwischenspeicherbar
 // ===============================================================
 
-export function systemPrompt(p: Profile): string {
+export function systemPrompt(p: Profile, art: Antragsart = "fortfuehrung"): string {
   const rolle =
     p.verfahren.qualifikation === "aerztlich"
       ? "eine ärztliche Psychotherapeutin"
@@ -194,27 +328,32 @@ export function systemPrompt(p: Profile): string {
       : "ein psychologischer Psychotherapeut bzw. eine psychologische Psychotherapeutin";
 
   const gruppe = p.verfahren.zielgruppe === "kj" ? "eines Kindes bzw. Jugendlichen" : "einer erwachsenen Person";
+  const punkte = gliederung(art, p);
+  const umw = art === "umwandlung";
 
   return [
-    `Du bist ${rolle} und schreibst den Text für den Bericht an den Gutachter zu einem FORTFÜHRUNGSANTRAG einer ${bezeichnung(p)} ${gruppe} (Formblatt PTV 3).`,
-    "Schreibe AUSSCHLIESSLICH die drei folgenden Gliederungspunkte in deutscher Fachsprache, sachlich und relevanzorientiert.",
+    umw
+      ? `Du bist ${rolle} und schreibst den Text für den Bericht an den Gutachter zu einem UMWANDLUNGSANTRAG — der Umwandlung einer Kurzzeit- in eine Langzeittherapie — bei einer ${bezeichnung(p)} ${gruppe} (Formblatt PTV 3).`
+      : `Du bist ${rolle} und schreibst den Text für den Bericht an den Gutachter zu einem FORTFÜHRUNGSANTRAG einer ${bezeichnung(p)} ${gruppe} (Formblatt PTV 3).`,
+    umw
+      ? "Der Leitfaden sieht für den Umwandlungsantrag dieselbe Gliederung vor wie für den Erstantrag, ergänzt um einen siebten Punkt. Der Gutachter kennt den Fall NICHT: es gab zur Kurzzeittherapie keinen Bericht. Der Bericht muss den Fall deshalb vollständig darstellen und darf nichts als bekannt voraussetzen."
+      : "Dem Gutachter liegt der bisherige Berichtsverlauf vor. Wiederhole ihn nicht, sondern schreibe ihn fort.",
+    `Schreibe AUSSCHLIESSLICH die ${umw ? "sieben" : "drei"} folgenden Gliederungspunkte in deutscher Fachsprache, sachlich und relevanzorientiert.`,
     "",
-    umfang(p),
+    umfang(p, punkte),
     "",
     STIL,
     "",
     "WICHTIG: Erfinde nichts. Nutze nur die gelieferten Angaben. Fehlt eine erforderliche Pflichtangabe, schreibe an der Stelle 【BITTE ERGÄNZEN: …】.",
     "Die Person wird im Bericht NIE mit Klarnamen bezeichnet, sondern durchgehend als „die Patientin“ bzw. „der Patient“ oder über die Chiffre. Erfinde keinen Namen und übernimm keinen, falls doch einer in den Angaben steht.",
-    "Gib GENAU diese drei Überschriften mit exaktem Wortlaut aus, jede auf EIGENER ZEILE, beginnend mit „1.“, „2.“ bzw. „3.“, gefolgt vom Text im nächsten Absatz:",
-    "1. Behandlungsverlauf seit dem letzten Bericht und Erreichung der Therapieziele",
-    "2. Aktuelle Diagnosen gemäß ICD-10 und aktueller psychischer Befund",
-    "3. Begründung der Fortführung, weitere Therapieplanung und Prognose",
+    `Gib GENAU diese ${umw ? "sieben" : "drei"} Überschriften mit exaktem Wortlaut aus, jede auf EIGENER ZEILE, beginnend mit der Nummer und einem Punkt, gefolgt vom Text im nächsten Absatz:`,
+    ...punkte.map((x, i) => `${i + 1}. ${x.titel}`),
     "",
-    aufbau(p),
+    umw ? aufbauUmwandlung(p) : aufbau(p),
     "",
-    FORMAT,
+    format(punkte.length),
     "",
-    PRUEFLISTE,
+    umw ? PRUEFLISTE_UMW : PRUEFLISTE_FORT,
   ].join("\n");
 }
 
@@ -231,42 +370,68 @@ function deDatum(v: string | undefined): string {
 }
 
 export function userPrompt(f: Felder, p: Profile): string {
-  const zeilen = [
+  const art = artVon(f);
+  const modell = p.verfahren.art === "vt"
+    ? "Bedingungsmodell / Verhaltensanalyse: "
+    : p.verfahren.art === "st"
+    ? "Systemisches Verständnis: "
+    : "Psychodynamik: ";
+
+  // Beim Umwandlungsantrag gibt es keinen Vorbericht, dafür verlangt
+  // der Leitfaden die Angaben, die sonst im Erstbericht stünden.
+  const zeilen = art === "umwandlung" ? [
+    "— Zu Punkt 1: Soziodemographische Daten —",
+    "Beruf, Familienstand, Kinder, Lebenssituation: " + leer(f.f_sozio),
+    "",
+    "— Zu Punkt 2: Symptomatik und Befund —",
+    "Geschilderte Symptomatik mit Schwere und Verlauf: " + leer(f.f_symptomatik),
+    "Aktueller psychischer Befund: " + leer(f.f_befund),
+    "Krankheitsverständnis der Patientin/des Patienten: " + leer(f.f_krankheitsverstaendnis),
+    "",
+    "— Zu Punkt 3: Somatischer Befund und Konsiliarbericht —",
+    "Somatische Befunde, Konsiliarbericht, Medikation, Suchtmittel: " + leer(f.f_somatisch),
+    "Frühere psychotherapeutische / psychiatrische Behandlungen: " + leer(f.f_vorbehandlung),
+    "",
+    "— Zu Punkt 4: Lebensgeschichte und " + (p.verfahren.art === "vt" ? "Bedingungsmodell" : "Psychodynamik") + " —",
+    "Behandlungsrelevante Lebensgeschichte und Krankheitsanamnese: " + leer(f.f_lebensgeschichte),
+    modell + leer(f.f_psychodyn),
+    "",
+    "— Zu Punkt 5: Diagnose —",
+    "ICD-10-Diagnose(n) mit Diagnosesicherheit: " + leer(f.f_diag_neu),
+    "Psychodynamische / neurosenpsychologische Diagnose: " + leer(f.f_diag_psychodyn),
+    "Differenzialdiagnostische Angaben: " + leer(f.f_differenzial),
+    "",
+    "— Zu Punkt 6: Behandlungsplan und Prognose —",
+    "Behandlungsplan und weitere Ziele: " + leer(f.f_begruendung),
+    "Kooperation mit anderen Berufsgruppen: " + leer(f.f_kooperation),
+    "Prognose / Veränderungshindernisse: " + leer(f.f_prognose),
+    "",
+    "— Zu Punkt 7: Zusatzangaben zum Umwandlungsantrag —",
+    "Therapiebeginn: " + deDatum(f.f_beginn),
+    "Bisheriger Behandlungsverlauf seit Therapiebeginn: " + leer(f.f_verlauf),
+    "Für die Kurzzeittherapie vereinbarte Ziele: " + leer(f.f_ziele_alt),
+    "Stand dieser Ziele (jedes einordnen): " + leer(f.f_zielstatus),
+    "Warum die Kurzzeittherapie nicht ausreicht: " + leer(f.f_umwandlungsgrund),
+    "",
+    "— ART DES ANTRAGS: UMWANDLUNG einer Kurzzeit- in eine Langzeittherapie —",
+    "Es gab KEINEN vorigen Bericht an den Gutachter; die Kurzzeittherapie braucht keinen. Schreibe deshalb niemals „seit dem letzten Bericht“.",
+    "Der Bericht folgt der SIEBENTEILIGEN Gliederung des Erst- und Umwandlungsberichts, nicht der dreiteiligen des Fortführungsberichts.",
+  ] : [
     "— Vorgeschichte (aus letztem Bericht) —",
     "Bisherige Diagnose(n): " + leer(f.f_diag_alt),
-    (p.verfahren.art === "vt"
-      ? "Bedingungsmodell / Verhaltensanalyse: "
-      : p.verfahren.art === "st"
-      ? "Systemisches Verständnis: "
-      : "Psychodynamik: ") + leer(f.f_psychodyn),
+    modell + leer(f.f_psychodyn),
     "Zuletzt formulierte Therapieziele: " + leer(f.f_ziele_alt),
     "",
     "— Verlauf & aktueller Stand —",
     "Therapiebeginn: " + deDatum(f.f_beginn),
     "Ausgangslage bei Therapiebeginn (zu Punkt 1, Absatz a): " + leer(f.f_ausgangslage),
-    (f.f_antragsart === "umwandlung"
-      ? "Bisheriger Behandlungsverlauf seit Therapiebeginn (zu Punkt 1): "
-      : "Behandlungsverlauf seit letztem Bericht (zu Punkt 1): ") + leer(f.f_verlauf),
-    (f.f_antragsart === "umwandlung"
-      ? "Stand der Ziele der Kurzzeittherapie (zu Punkt 1 – jedes Ziel einordnen): "
-      : "Stand der zuletzt vereinbarten Therapieziele (zu Punkt 1 – jedes Ziel einordnen): ") + leer(f.f_zielstatus),
+    "Behandlungsverlauf seit letztem Bericht (zu Punkt 1): " + leer(f.f_verlauf),
+    "Stand der zuletzt vereinbarten Therapieziele (zu Punkt 1 – jedes Ziel einordnen): " + leer(f.f_zielstatus),
     "Aktueller psychischer Befund (zu Punkt 2): " + leer(f.f_befund),
     "Aktuelle ICD-10-Diagnose(n) (zu Punkt 2): " + leer(f.f_diag_neu),
     "Begründung Fortführung / weitere Planung / geänderte Ziele und Methoden (zu Punkt 3): " + leer(f.f_begruendung),
     "Prognose / Veränderungshindernisse (zu Punkt 3): " + leer(f.f_prognose),
 
-    // Beim Umwandlungsantrag verlangt der Leitfaden zusätzlich die
-    // Begründung, warum aus der Kurzzeit- eine Langzeittherapie werden
-    // soll — und er verlangt sie ausdrücklich. Ohne sie fehlt dem
-    // Gutachter genau die Frage, über die er entscheidet.
-    ...(f.f_antragsart === "umwandlung" ? [
-      "",
-      "— ART DES ANTRAGS: UMWANDLUNG einer Kurzzeit- in eine Langzeittherapie —",
-      "Es gab KEINEN vorigen Bericht an den Gutachter; die Kurzzeittherapie braucht keinen. Schreibe deshalb niemals „seit dem letzten Bericht“, sondern beziehe dich auf den bisherigen Behandlungsverlauf seit Therapiebeginn.",
-      "Abschnitt 1 stellt entsprechend den BISHERIGEN Verlauf dar, die Veränderung der Symptomatik und das Ergebnis in Bezug auf die Ziele der Kurzzeittherapie.",
-      "Abschnitt 3 muss PFLICHT einen eigenen Satz enthalten, der die Notwendigkeit der Umwandlung in eine Langzeittherapie begründet: warum die Kurzzeittherapie nicht ausreicht und was die längere Behandlung leisten soll. Er steht im ersten Absatz von Abschnitt 3, vor den Behandlungszielen.",
-      "Im Absatz „Methodik und Setting“ werden ausserdem Setting, Sitzungszahl und Behandlungsfrequenz ausdrücklich BEGRÜNDET — beim Umwandlungsantrag genügt ihre Nennung nicht.",
-    ] : []),
     // Das Feld hiess bis 2.5.4 „Geänderte Behandlungsmethoden“ und
     // fragte nach einer Änderung. Das geht am Leitfaden vorbei: er
     // verlangt keine Änderungsmeldung, sondern eine Erläuterung von
@@ -305,7 +470,7 @@ export function userPrompt(f: Felder, p: Profile): string {
   const L = p.layout;
   zeilen.push(
     "",
-    `ZUM SCHLUSS NOCHMALS DER UMFANG: rund ${L.ziel_soll.toLocaleString("de-DE")} Zeichen, mindestens ${L.ziel_min.toLocaleString("de-DE")}, höchstens ${L.ziel_max.toLocaleString("de-DE")}. Abschnitt 1 hat sieben Absätze. Ziele an das obere Ende, damit die zweite Seite gefüllt ist, aber strecke nichts ohne Grundlage. Zähle nach, bevor du antwortest.`
+    `ZUM SCHLUSS NOCHMALS DER UMFANG: rund ${L.ziel_soll.toLocaleString("de-DE")} Zeichen, mindestens ${L.ziel_min.toLocaleString("de-DE")}, HÖCHSTENS ${L.ziel_max.toLocaleString("de-DE")}. Das entspricht zwei Seiten und ist die Vorgabe des Leitfadens. Zähle nach, bevor du antwortest, und kürze selbst, wenn du darüber liegst.`
   );
 
   return zeilen.join("\n");
@@ -348,7 +513,7 @@ export function expandPrompt(entwurf: string, p: Profile): string {
  * Deshalb stehen die vier hier noch einmal, als Bedingung und nicht
  * als Erinnerung.
  */
-export function kuerzePrompt(entwurf: string, p: Profile): string {
+export function kuerzePrompt(entwurf: string, p: Profile, art: Antragsart = "fortfuehrung"): string {
   const L = p.layout;
   const ist = entwurf.replace(/【\s*([^】]*?)\s*】/g, "$1").trim().length;
   const weg = ist - L.ziel_soll;
@@ -358,21 +523,32 @@ export function kuerzePrompt(entwurf: string, p: Profile): string {
     `Der Zielkorridor liegt bei ${L.ziel_min.toLocaleString("de-DE")} bis ${L.ziel_max.toLocaleString("de-DE")} Zeichen; angestrebt sind ${L.ziel_soll.toLocaleString("de-DE")}.`,
     `Es müssen also rund ${Math.max(0, weg).toLocaleString("de-DE")} Zeichen weichen.`,
     "",
-    "WAS NICHT WEICHEN DARF — diese vier verlangt der Leitfaden ausdrücklich:",
-    "1. Die Ausgangslage bei Therapiebeginn als erster Absatz von Abschnitt 1. Sie muss den Fall auch ohne den Erstbericht verständlich machen.",
-    "2. Die Bilanz zu den zuletzt vereinbarten Therapiezielen als vorletzter Absatz von Abschnitt 1, mit der Aussage, was erreicht und was nicht erreicht wurde.",
-    "3. Die Aussage zu den Behandlungsmethoden und -techniken im Absatz Methodik und Setting, einschliesslich Verfahren, Frequenz und Zahl der beantragten Sitzungen.",
-    "4. Der Satz zur Planung des Therapieabschlusses im Absatz Prognose.",
+    "WAS NICHT WEICHEN DARF — das verlangt der Leitfaden ausdrücklich:",
+    ...(art === "umwandlung" ? [
+      "1. Familienstand und Zahl der Kinder in Abschnitt 1.",
+      "2. Das Krankheitsverständnis in Abschnitt 2.",
+      "3. Abschnitt 3 — somatischer Befund und Konsiliarbericht. Er darf niemals ganz wegfallen.",
+      "4. Abwehr und strukturelle Ebene in Abschnitt 4, soweit sie dort stehen.",
+      "5. Die Begründung von Setting, Sitzungszahl und Frequenz in Abschnitt 6.",
+      "6. Der Satz zur Planung des Therapieabschlusses in Abschnitt 6.",
+      "7. Die Zielbilanz und die Begründung der Umwandlung in Abschnitt 7, beide vollständig.",
+    ] : [
+      "1. Die Ausgangslage bei Therapiebeginn als erster Absatz von Abschnitt 1. Sie muss den Fall auch ohne den Erstbericht verständlich machen.",
+      "2. Die Bilanz zu den zuletzt vereinbarten Therapiezielen als letzter Absatz von Abschnitt 1, mit der Aussage, was erreicht und was nicht erreicht wurde, und mit der Symptomveränderung.",
+      "3. Die Aussage zu den Behandlungsmethoden und -techniken im Absatz Methodik und Setting, einschliesslich Verfahren, Frequenz und Zahl der beantragten Sitzungen.",
+      "4. Der Satz zur Planung des Therapieabschlusses im Absatz Prognose.",
+    ]),
     "",
-    "Ebenfalls unverändert bleiben: Gliederung, alle Überschriften, alle Beschriftungen, die Diagnosen mit ICD-10-Kodierung, die nummerierten Behandlungsziele und der feste Schlusssatz.",
+    "Ebenfalls unverändert bleiben: Gliederung, alle Überschriften, alle Beschriftungen, die Diagnosen mit ICD-10-Kodierung und die nummerierten Behandlungsziele. Kein Gliederungspunkt darf verschwinden.",
     "",
     "WORAN GEKÜRZT WIRD, in dieser Reihenfolge:",
     "  (a) Wiederholungen zwischen den Abschnitten — dieselbe Aussage steht oft zweimal.",
-    "  (b) Ausschmückende Nebensätze und Wendungen ohne Fallbezug.",
-    "  (c) Beispiele, wo mehrere dasselbe belegen: eines genügt.",
-    "  (d) Erst zuletzt einzelne klinische Beobachtungen, und dann die am wenigsten entscheidungsrelevanten.",
+    "  (b) Sitzungsweise Nacherzählung: aus „Zunächst wurde besprochen … Im weiteren Verlauf schilderte …“ wird die Aussage, was sich dabei verändert hat.",
+    "  (c) Ausschmückende Nebensätze und Wendungen ohne Fallbezug.",
+    "  (d) Beispiele, wo mehrere dasselbe belegen: eines genügt.",
+    "  (e) Erst zuletzt einzelne klinische Beobachtungen, und dann die am wenigsten entscheidungsrelevanten.",
     "",
-    "Streiche niemals eine Angabe, die für die Beurteilung der Fortführung gebraucht wird, nur um die Zahl zu erreichen. Bleibt der Text danach über dem Korridor, ist das hinzunehmen — ein unvollständiger Bericht ist schlechter als ein langer.",
+    "Streiche niemals eine Angabe, die für die Beurteilung gebraucht wird, nur um die Zahl zu erreichen. Bleibt der Text danach über dem Korridor, ist das hinzunehmen — ein unvollständiger Bericht ist schlechter als ein langer.",
     "Gib den vollständigen gekürzten Text aus, nichts sonst. Keine Vorbemerkung, keine Erläuterung, was du gekürzt hast.",
     "",
     "— ENTWURF —",

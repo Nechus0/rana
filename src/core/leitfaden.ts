@@ -161,6 +161,98 @@ export const LEITFADEN: Record<string, Leitfadenhinweis> = {
     umwandlung: "Beim Umwandlungsantrag ist es die Nummer des Antrags, nicht die eines Fortführungsantrags.",
   },
 
+  // ---- Nur beim Umwandlungsantrag ---------------------------
+  // Der Leitfaden verlangt für ihn die sieben Punkte des
+  // Erstberichts. Diese Felder tragen die vier, die Rana bis 2.6.1
+  // gar nicht abgefragt hat.
+
+  f_symptomatik: {
+    verlangt: "Die geschilderte Symptomatik — mit Angaben zu Schwere und Verlauf.",
+    punkte: [
+      "Was die Patientin selbst berichtet, nicht Ihre Einordnung.",
+      "Schwere und Verlauf sind ausdrücklich verlangt: seit wann, wie stark, gleichbleibend oder schwankend.",
+      "Dazu Auffälligkeiten bei der Kontaktaufnahme und im Erscheinungsbild.",
+    ],
+    warum: "Der Gutachter muss das Krankheitsbild aus dem Bericht heraus verstehen. Beim Umwandlungsantrag hat er keinen Erstbericht, auf den er zurückgreifen könnte.",
+  },
+
+  f_krankheitsverstaendnis: {
+    verlangt: "Wie die Patientin sich ihre Beschwerden selbst erklärt.",
+    punkte: [
+      "Ihre eigene Deutung, auch wenn sie fachlich nicht trägt.",
+      "Ob sie einen Zusammenhang zwischen Belastung und Symptomen sieht.",
+      "Was sie sich von der Behandlung verspricht.",
+    ],
+    warum: "Der Leitfaden nennt es als eigenen Unterpunkt. Es sagt dem Gutachter etwas über die Behandelbarkeit, das aus dem Befund allein nicht hervorgeht.",
+  },
+
+  f_somatisch: {
+    verlangt: "Den somatischen Befund und den Konsiliarbericht.",
+    punkte: [
+      "Was der Konsiliarbericht ergeben hat — auch wenn er unauffällig war.",
+      "Aktuelle Medikation, psychopharmakologisch und sonstige.",
+      "Suchtmittelkonsum, soweit für die Behandlung bedeutsam.",
+    ],
+    warum: "Dieser Punkt ist der häufigste Grund für Rückfragen. Der Gutachter muss sehen, dass eine körperliche Ursache abgeklärt ist — bei somatoformen Beschwerden ist das die eigentliche Frage.",
+  },
+
+  f_vorbehandlung: {
+    verlangt: "Frühere psychotherapeutische, psychosomatische oder psychiatrische Behandlungen.",
+    punkte: [
+      "Art, Zeitraum und Ergebnis, in einem Satz je Behandlung.",
+      "Auch stationäre Aufenthalte.",
+      "Gab es keine, genügt „keine Vorbehandlungen“ — das ist ebenfalls eine Auskunft.",
+    ],
+  },
+
+  f_lebensgeschichte: {
+    verlangt: "Die behandlungsrelevanten Angaben zur Lebensgeschichte und zur Krankheitsanamnese.",
+    punkte: [
+      "Nur was die Störung verständlich macht — keine vollständige Biografie.",
+      "Herkunftsfamilie, prägende Beziehungserfahrungen, Brüche.",
+      "Wann die Beschwerden erstmals auftraten und wie sie sich entwickelt haben.",
+    ],
+    warum: "Der Leitfaden verlangt sie ausdrücklich „behandlungsrelevant“. Alles, was die Behandlung nicht erklärt, gehört nicht hinein und kostet nur Platz.",
+  },
+
+  f_diag_psychodyn: {
+    verlangt: "Die psychodynamische bzw. neurosenpsychologische Diagnose.",
+    punkte: [
+      "Der Leitfaden verlangt sie für TP und AP zusätzlich zur ICD-10-Diagnose.",
+      "Etwa: Konflikt, Strukturniveau, vorherrschender Abwehrmodus.",
+      "Bei Verhaltenstherapie und systemischer Therapie entfällt sie.",
+    ],
+    warum: "Sie fehlt in fast jedem Bericht — und sie ist der Punkt, an dem der Gutachter erkennt, ob das Verfahren zum Fall passt.",
+  },
+
+  f_differenzial: {
+    verlangt: "Differenzialdiagnostische Angaben, falls erforderlich.",
+    punkte: [
+      "Nur wenn eine Abgrenzung für die Entscheidung wirklich nötig ist.",
+      "Etwa Dysthymia gegen rezidivierende depressive Störung.",
+      "Sonst bleibt das Feld leer.",
+    ],
+  },
+
+  f_kooperation: {
+    verlangt: "Die Kooperation mit anderen Berufsgruppen.",
+    punkte: [
+      "Hausärztin, Fachärztin, Klinik, Sozialdienst.",
+      "Ein Satz genügt.",
+      "Gibt es keine, bleibt das Feld leer.",
+    ],
+  },
+
+  f_umwandlungsgrund: {
+    verlangt: "Warum die Kurzzeittherapie nicht ausreicht und was die Langzeittherapie leisten soll.",
+    punkte: [
+      "Was der Umfang der Kurzzeittherapie ermöglicht hat — und wo er endet.",
+      "Was nur über einen längeren Zeitraum bearbeitet werden kann.",
+      "Konkret am Fall, nicht allgemein über Kurzzeittherapien.",
+    ],
+    warum: "Dies ist die Frage, über die der Gutachter entscheidet. Der Leitfaden nennt sie als eigenen Unterpunkt des Umwandlungsantrags. Ohne sie ist der Bericht wertlos, gleich wie gut der Rest ist.",
+  },
+
   f_psychodyn: {
     verlangt: "Die tragende Dynamik des Falls.",
     punkte: [

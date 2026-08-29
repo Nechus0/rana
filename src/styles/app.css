@@ -341,12 +341,10 @@
    flacher als die Felder im Arbeitsbereich: hier wird nichts
    eingetragen, hier wird nur umgeschaltet.
    ------------------------------------------------------------ */
-.rail-filters {
-  margin: 0 var(--s3) var(--s3);
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--s2);
-}
+/* Die Regel für .rail-filters steht am Dateiende, bei den Änderungen
+   seit 2.7.0. Hier stand bis dahin ein Raster aus zwei Spalten für die
+   beiden Auswahlfelder; es ist entfallen, weil die Schalter die volle
+   Breite brauchen — sonst wird aus „Zu schreiben" ein „Zu s…". */
 
 .rail-select {
   width: 100%;
@@ -933,48 +931,107 @@
 }
 .work-head[hidden] { display: none; }
 
-/* Die Schrittleiste hat ihre eigene Zeile. Sie behält damit ihren
-   Platz, gleichgültig wie lang die Überschrift darunter ist. Die
-   Mindesthöhe hält die Zeile offen, wenn die Leiste ausgeblendet ist —
-   in der Patientenübersicht ist sie das. */
-.work-head-oben { position: relative; min-height: var(--h-md); }
-
-/* Die Titelzeile sitzt unter der Schrittleiste. */
-.work-head-titel {
+/* ---- Zeile 1: die Dokumentzeile ----------------------------- */
+/* Sie beantwortet, woran gearbeitet wird, in welchem Zustand, und wo
+   die Befehle liegen. Alle drei Dinge stehen auf einer Grundlinie und
+   in einer Reihe — anders als bis 2.6.1, wo das Menü als einzelner
+   Knopf am Rand einer Zeile hing, in der sonst eine zwanzig Punkt
+   hohe Serifenüberschrift stand. */
+.doczeile {
   display: flex;
-  align-items: flex-end;
-  gap: var(--s3);
+  align-items: center;
+  gap: var(--s2);
+  min-height: var(--h-md);
 }
-/* Speicherstand und Menü stehen rechts, auf der Grundlinie der
-   Überschrift. */
-.work-head-titel .btn-icon { flex: none; align-self: flex-end; }
-.work-title { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1 1 auto; }
-.work-eyebrow {
+.doczeile-zurueck { flex: none; gap: 6px; }
+.doczeile-zurueck svg { width: 15px; height: 15px; }
+.doczeile-trenner {
+  flex: none;
+  width: 1px;
+  height: 16px;
+  background: var(--line);
+  margin: 0 var(--s1);
+}
+.doczeile-wer {
   font-family: var(--face-record);
   font-size: var(--t-xs);
   letter-spacing: var(--record-track);
   text-transform: uppercase;
   color: var(--reed);
-  /* Die Zeile trägt seit 2.3 auch den Namen und die Antragsnummer.
-     Bei langen Namen bricht sie nicht um, sondern kürzt — die
-     Überschrift darunter soll ihre Zeile behalten. */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
-/* Der Speicherstand steht am rechten Ende derselben Zeile, auf der
-   Grundlinie der Überschrift. */
-.work-head-titel .save-indicator { flex: none; align-self: flex-end; padding-bottom: 4px; }
-.work-head h2 { font-size: var(--t-xl); }
+.doczeile .save-indicator { flex: none; }
+.doczeile .btn-icon { flex: none; }
+
+/* Ohne offenen Antrag trägt die Zeile nichts als das Menü. Dann
+   verschwindet auch die Schrittleiste, statt fünf tote Kreise zu
+   zeigen. */
+.work-head.leer .stepbar,
+.work-head.leer .doczeile-zurueck,
+.work-head.leer .doczeile-trenner,
+.work-head.leer .save-indicator { display: none; }
+
+/* ---- Die Überschrift steht jetzt im Inhalt ------------------ */
+/* Sie war bis 2.6.1 Teil der festen Kopfzeile und hielt dort Platz
+   fest, den der Text besser gebrauchen kann. Jetzt scrollt sie mit. */
+.work-title {
+  font-family: var(--face-doc);
+  font-size: var(--t-xl);
+  font-weight: 600;
+  margin: 0 0 var(--s5);
+  line-height: 1.2;
+}
 
 .work-body {
   flex: 1 1 auto;
   overflow-y: auto;
   padding: var(--s6);
   scroll-behavior: smooth;
+  display: flex;
+  flex-direction: column;
 }
-.work-inner { max-width: var(--work-max); margin: 0 auto; }
+.work-inner { max-width: var(--work-max); margin: 0 auto; width: 100%; }
 .work-inner.wide { max-width: 1000px; }
+
+/* ---- Vor und zurück, am Fuss des Inhalts -------------------- */
+.schrittnav {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  max-width: var(--work-max);
+  width: 100%;
+  margin: var(--s7) auto 0;
+  padding-top: var(--s5);
+  border-top: 1px solid var(--line);
+}
+.work-inner.wide + .schrittnav { max-width: 1000px; }
+.schrittnav[hidden] { display: none; }
+.schrittnav .btn { gap: 6px; }
+.schrittnav .btn[hidden] { display: none; }
+.schrittnav svg { width: 15px; height: 15px; }
+.schrittnav-wort { font-weight: 550; }
+/* Der Name des Ziels steht kleiner daneben: „Weiter · Verlauf". Er
+   sagt, wohin es geht, ohne dem Wort „Weiter" die Führung zu nehmen. */
+.schrittnav-ziel {
+  font-family: var(--face-record);
+  font-size: var(--t-2xs);
+  letter-spacing: var(--record-track);
+  text-transform: uppercase;
+  opacity: .72;
+}
+.schrittnav-ziel:not(:empty)::before { content: "· "; }
+
+/* ---- Leerstelle ohne offenen Antrag ------------------------- */
+.leerstelle {
+  text-align: center;
+  padding: 140px 20px;
+  color: var(--peat);
+}
+.leerstelle h3 { margin-bottom: var(--s3); }
+.leerstelle p { color: var(--reed); margin-bottom: var(--s5); }
 
 .empty-state {
   display: flex;
@@ -1433,3 +1490,249 @@ details.fold > summary:hover { background: var(--sphagnum); }
   font-variant-numeric: tabular-nums;
 }
 :root[data-transmitting="true"] .progress-ring-fill { stroke: var(--bloom); }
+
+
+/* ===============================================================
+   Seit 2.7.0
+   =============================================================== */
+
+/* ---- Schritt 4: der Laufbalken ------------------------------ */
+/* Bis 2.6.1 stand hier ein Rad von 120 Pixeln in der Blattmitte, mit
+   dem Wort „Formuliere …" quer hineingesetzt. Ein Kreis kann keinen
+   Text tragen: die Beschriftung stiess an beiden Seiten an den Rand
+   und war beim Prozentwert wieder zu klein. Ein Balken kann beides —
+   Beschriftung daneben, Zahl am Ende, Fortschritt darunter. */
+.lauf {
+  margin-bottom: var(--s5);
+  padding: var(--s3) 0;
+}
+.lauf.hidden { display: none; }
+.lauf-zeile {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s3);
+  margin-bottom: 6px;
+}
+.lauf-text {
+  font-family: var(--face-record);
+  font-size: var(--t-xs);
+  letter-spacing: var(--record-track);
+  text-transform: uppercase;
+  color: var(--peat);
+}
+.lauf-zahl {
+  margin-left: auto;
+  font-family: var(--face-record);
+  font-size: var(--t-xs);
+  color: var(--reed);
+  font-variant-numeric: tabular-nums;
+}
+.lauf-bahn {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--line);
+  overflow: hidden;
+}
+.lauf-fuell {
+  height: 100%;
+  width: 0;
+  border-radius: 2px;
+  background: var(--arvalis);
+  transition: width .18s ease-out;
+}
+
+/* ---- Schritt 4: die Kopfzeile des Entwurfs ------------------ */
+/* Sie trug alles in einer Zeile und lief damit bis an den Rand:
+   „ENTWURF direkt bearbeitbar 6.104 Zeichen · 791 Wörter · über dem
+   Korridor, läuft womöglich auf eine dritte Seite · 1 offen". Jetzt
+   zwei Zeilen: oben Beschriftung und Zahlen, darunter das Urteil, das
+   umbrechen darf. */
+.entwurf-kopf { margin-bottom: 6px; }
+.entwurf-kopf-zeile {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+}
+.entwurf-titel {
+  font-family: var(--face-record);
+  font-size: var(--t-xs);
+  letter-spacing: var(--record-track);
+  text-transform: uppercase;
+  color: var(--peat);
+  font-weight: 550;
+}
+.entwurf-urteil {
+  font-family: var(--face-record);
+  font-size: var(--t-2xs);
+  line-height: 1.5;
+  margin-top: 2px;
+  min-height: 1em;
+}
+
+/* ---- Fortschritt in der Schiene ----------------------------- */
+/* Die grosse Zahl stand bis 2.6.1 als „43 %" in einer eigenen Zeile
+   über dem Balken, gefolgt von einem zweiten Block „Dieser Fall" mit
+   Chiffre und Datum. Der Block ist weg, und die Zahl steht jetzt in
+   derselben Zeile wie ihre Beschriftung — dort beantwortet sie eine
+   Frage, statt eine Überschrift zu sein. */
+.fort-kopf {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s3);
+  margin-bottom: 6px;
+}
+.fort-pct {
+  font-family: var(--face-record);
+  font-size: var(--t-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--peat);
+  font-weight: 550;
+}
+.fort-pct.is-full { color: var(--moss); }
+.fort-lead {
+  font-size: var(--t-xs);
+  color: var(--reed);
+  margin: var(--s3) 0 var(--s2);
+  line-height: 1.5;
+}
+.fort-lead.is-voll { color: var(--moss); }
+
+/* Die Lückenliste: eine Gruppe je Schritt, mit Luft dazwischen. */
+.gap-gruppe + .gap-gruppe { margin-top: var(--s4); }
+.gap-kopf {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+  margin-bottom: 4px;
+}
+.gap-num {
+  flex: none;
+  font-family: var(--face-record);
+  font-size: var(--t-2xs);
+  color: var(--reed);
+  min-width: 12px;
+}
+.gap-schritt {
+  font-family: var(--face-record);
+  font-size: var(--t-2xs);
+  letter-spacing: var(--record-track);
+  text-transform: uppercase;
+  color: var(--reed);
+  line-height: 1.4;
+}
+.gap-list { list-style: none; margin: 0; padding: 0 0 0 20px; }
+.gap-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 4px 6px;
+  margin-left: -6px;
+  border-radius: var(--r-sm);
+  font: inherit;
+  font-size: var(--t-xs);
+  line-height: 1.45;
+  color: var(--peat);
+  cursor: pointer;
+}
+.gap-item:hover { background: var(--sphagnum-deep); color: var(--peat); }
+
+/* ---- Die Filterzeile der Schiene ---------------------------- */
+/* Zwei Auswahlfelder nebeneinander unter dem Suchfeld waren gedrängt,
+   und das eine davon bot vier Ordnungen an, von denen zwei dieselbe
+   Frage beantworteten. Geblieben sind drei Schalter für den Filter
+   und ein schmales Feld für die Ordnung. */
+.rail-filters {
+  display: block;
+  margin: 0 var(--s3) var(--s2);
+}
+.rail-chips {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  background: var(--paper);
+}
+.rail-chip {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 6px;
+  height: var(--h-sm);
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--t-2xs);
+  color: var(--peat);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rail-chip + .rail-chip { border-left: 1px solid var(--line); }
+.rail-chip:hover { background: var(--sphagnum-deep); }
+.rail-chip[aria-pressed="true"] {
+  background: var(--arvalis);
+  color: #fff;
+  font-weight: 550;
+}
+/* Die Ordnung sitzt am rechten Ende der Zählerzeile, unauffällig:
+   sie wird selten geändert und soll die Zahl nicht überstimmen. */
+/* Der Zähler darf nicht schrumpfen — der Abstandhalter daneben würde
+   ihm sonst den Platz nehmen und „11 Patienten · 15 Anträge" über
+   drei Zeilen brechen. */
+.rail-zaehler { display: flex; align-items: center; gap: var(--s2); }
+.rail-zaehler > span:first-child { flex: 0 0 auto; white-space: nowrap; }
+.rail-sort {
+  flex: none;
+  height: 22px;
+  padding: 0 18px 0 6px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  font-family: var(--face-record);
+  font-size: var(--t-2xs);
+  color: var(--reed);
+  cursor: pointer;
+}
+.rail-sort:hover { border-color: var(--line); background: var(--paper); color: var(--peat); }
+.rail-sort:focus-visible { border-color: var(--arvalis); background: var(--paper); }
+
+/* „Neuer Patient" gehört zur Patientenliste. In der Fortschrittsicht
+   beantwortet er keine Frage, die man dort stellt. */
+.rail[data-ansicht="fortschritt"] #btnNeuerFall { display: none; }
+.rail[data-ansicht="fortschritt"] .rail-foot { justify-content: flex-end; }
+
+
+/* ---- Schritt 5: das Beiblatt PTV 2b ------------------------- */
+/* Zwei Spalten mit fester Breite links, damit die Werte rechts eine
+   gemeinsame Kante haben und umbrechen dürfen. Die Zeilenhöhe folgt
+   dem Vierer-Raster statt sechs Pixeln aus einer Inline-Angabe. */
+.ptv-liste {
+  display: grid;
+  grid-template-columns: minmax(120px, 200px) 1fr;
+  gap: var(--s3) var(--s5);
+  margin: 0;
+  padding: var(--s5);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+}
+.ptv-liste dt {
+  font-family: var(--face-record);
+  font-size: var(--t-2xs);
+  letter-spacing: var(--record-track);
+  text-transform: uppercase;
+  color: var(--reed);
+  line-height: 1.6;
+  margin: 0;
+}
+.ptv-liste dd {
+  margin: 0;
+  font-size: var(--t-sm);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}

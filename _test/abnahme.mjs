@@ -55,20 +55,35 @@ const sys = M.systemPrompt(profil);
 const up = M.userPrompt(gefuellt, profil);
 pruef("Prüfliste im Systemteil", sys.includes("PFLICHTBESTANDTEILE NACH LEITFADEN"));
 pruef("(1) Ausgangslage als Pflichtabsatz", sys.includes("Dieser Absatz ist PFLICHT"));
-pruef("(2) Zielbilanz als vorletzter Absatz", sys.includes("VORLETZTER Absatz") && sys.includes("Von den zuletzt vereinbarten Zielen"));
+// Seit 2.7.0 steht die Zielbilanz als LETZTER Absatz und traegt die
+// Symptomveraenderung mit. Der Absatz "Zusammenfassung", der bis 2.6.1
+// dahinter stand, wiederholte sie nur und ist entfallen.
+pruef("(2) Zielbilanz als letzter Absatz mit Symptomveraenderung",
+  sys.includes("LETZTER Absatz") && sys.includes("Von den zuletzt vereinbarten Zielen")
+  && /Symptomatik und des Funktionsniveaus/.test(sys));
+pruef("(2b) keine erfundene Zusammenfassung mehr",
+  /KEINEN Absatz .Zusammenfassung/.test(sys) && !sys.includes('Label „Zusammenfassung: “'));
+pruef("(2c) kein bewertender Schlusssatz mehr",
+  /KEINE bewertenden Schlusss/.test(sys)
+  && !sys.includes("ausreichend begründet und erfolgversprechend.“"));
 pruef("(3) Methoden im Absatz Methodik und Setting", sys.includes("Behandlungsmethoden und -techniken bleiben unverändert"));
 pruef("(4) Abschlussplanung im Absatz Prognose", sys.includes("Planung des Therapieabschlusses"));
 pruef("Überschrift 1 am Leitfaden-Wortlaut", sys.includes("1. Behandlungsverlauf seit dem letzten Bericht und Erreichung der Therapieziele"));
 pruef("Überschrift 2 am Leitfaden-Wortlaut", sys.includes("2. Aktuelle Diagnosen gemäß ICD-10 und aktueller psychischer Befund"));
 pruef("Überschrift 3 am Leitfaden-Wortlaut", sys.includes("3. Begründung der Fortführung, weitere Therapieplanung und Prognose"));
 pruef("Umfangsverteilung 2.750 / 750 / 1.450", sys.includes("2.750") && sys.includes("750 Zeichen") && sys.includes("1.450"));
-pruef("sieben Absätze in Abschnitt 1", sys.includes("SIEBEN Absätzen"));
+// Statt sieben Absaetzen jetzt hoechstens zwei Verlaufsabsaetze — das
+// sitzungsweise Protokoll war der groesste Einzelposten der Ueberlaenge.
+pruef("hoechstens zwei Verlaufsabsaetze", sys.includes("HÖCHSTENS ZWEI Absätze zum Verlauf"));
+pruef("Verlauf ergebnisorientiert statt Sitzungsprotokoll",
+  /ERGEBNISORIENTIERT/.test(sys) && /NICHT als Nacherzählung/.test(sys));
+pruef("harte Obergrenze benannt", /harte Grenze, keine Anregung/.test(sys));
 pruef("Therapiebeginn übergeben", up.includes("Therapiebeginn: 02.05.2024"));
 pruef("Ausgangslage übergeben", up.includes("Autonomie-Abhängigkeits-Konflikt"));
 pruef("Zielstatus übergeben", up.includes("Ziel 2 teilweise"));
 pruef("Methoden übergeben", up.includes("imaginative Stabilisierungsübungen"));
 pruef("Abschluss übergeben", up.includes("ambulante Nachsorge"));
-pruef("Schlusszeile nennt sieben Absätze", up.includes("Abschnitt 1 hat sieben Absätze"));
+pruef("Schlusszeile nennt die Obergrenze", /HÖCHSTENS 5\.100/.test(up) && /kürze selbst/.test(up));
 
 console.log("\n=== Kriterium 2 — leere neue Felder erzeugen Standardsätze statt Stillschweigen ===");
 const up2 = M.userPrompt(leerFelder, profil);
@@ -111,12 +126,51 @@ pruef("Fortfuehrung nennt den letzten Bericht",
   pFort.includes("seit letztem Bericht") && !pFort.includes("UMWANDLUNG"));
 pruef("Umwandlung nennt KEINEN letzten Bericht",
   pUmw.includes("seit Therapiebeginn") && !pUmw.includes("seit letztem Bericht"));
-pruef("Umwandlung fordert die Begruendung der Umwandlung",
-  pUmw.includes("UMWANDLUNG") && /Notwendigkeit der Umwandlung/.test(pUmw));
-pruef("Umwandlung fordert Begruendung von Setting und Frequenz",
-  /Setting, Sitzungszahl und Behandlungsfrequenz/.test(pUmw));
-pruef("Umwandlung ordnet die Ziele der Kurzzeittherapie zu",
-  pUmw.includes("Ziele der Kurzzeittherapie"));
+pruef("Umwandlung nennt die siebenteilige Gliederung",
+  /SIEBENTEILIGEN Gliederung/.test(pUmw));
+pruef("Umwandlung fragt die Kurzzeitziele ab",
+  /Kurzzeittherapie vereinbarte Ziele/.test(pUmw));
+pruef("Umwandlung fragt die Umwandlungsbegruendung ab",
+  /Warum die Kurzzeittherapie nicht ausreicht/.test(pUmw));
+pruef("Umwandlung fragt den Konsiliarbericht ab",
+  /Konsiliarbericht/.test(pUmw));
+pruef("Umwandlung fragt das Krankheitsverstaendnis ab",
+  /Krankheitsverständnis/.test(pUmw));
+
+console.log("\n=== Kriterium 5b - der Systemteil des Umwandlungsberichts ===");
+const sUmw = M.systemPrompt(profil, "umwandlung");
+const sFort = M.systemPrompt(profil, "fortfuehrung");
+pruef("sieben Ueberschriften, wortlautgetreu", [
+  "1. Relevante soziodemographische Daten",
+  "2. Symptomatik und psychischer Befund",
+  "3. Somatischer Befund und Konsiliarbericht",
+  "5. Diagnose zum Zeitpunkt der Antragstellung",
+  "6. Behandlungsplan und Prognose",
+  "7. Zusätzlich erforderliche Angaben zum Umwandlungsantrag",
+].every((t) => sUmw.includes(t)));
+pruef("Punkt 4 nennt das Verfahrensmodell",
+  /4\. Behandlungsrelevante Angaben zur Lebensgeschichte, zur Krankheitsanamnese und zur Psychodynamik/.test(sUmw));
+pruef("Abschnitt 3 darf nie leer bleiben",
+  /darf NIEMALS leer bleiben/.test(sUmw));
+pruef("psychodynamische Diagnose fuer TP verlangt",
+  /psychodynamische bzw. neurosenpsychologische Diagnose/.test(sUmw));
+pruef("Setting und Frequenz begruenden, nicht nennen",
+  /BEGRÜNDUNG von Setting, Sitzungszahl und Behandlungsfrequenz/.test(sUmw));
+pruef("kein Fortfuehrungs-Aufbau im Umwandlungsbericht",
+  !sUmw.includes("seit dem letzten Bericht und Erreichung"));
+pruef("Fortfuehrungsbericht bleibt dreiteilig",
+  sFort.includes("1. Behandlungsverlauf seit dem letzten Bericht") && !sFort.includes("7."));
+
+console.log("\n=== Kriterium 5c - die Gliederung selbst ===");
+pruef("Fortfuehrung hat drei Punkte", M.gliederung("fortfuehrung", profil).length === 3);
+pruef("Umwandlung hat sieben Punkte", M.gliederung("umwandlung", profil).length === 7);
+const secsUmw = M.parseSections(
+  M.gliederung("umwandlung", profil).map((x, i) => `${i + 1}. ${x.titel}\nInhalt ${i + 1}.`).join("\n\n"),
+  M.gliederung("umwandlung", profil),
+);
+pruef("sieben Abschnitte werden zerlegt", secsUmw.length === 7);
+pruef("jede Ueberschrift wird abgestreift",
+  secsUmw.every((s, i) => s.trim() === `Inhalt ${i + 1}.`));
 pruef("f_antragsart ist ein Feld", M.FELDER.includes("f_antragsart"));
 pruef("Vorgabewert ist Fortfuehrung", M.leererFall(profil).f_antragsart === "fortfuehrung");
 
@@ -125,8 +179,18 @@ const kp = M.kuerzePrompt("Ein Entwurf.", profil);
 pruef("Kuerzen nennt die vier Pflichtbestandteile",
   /Ausgangslage/.test(kp) && /Therapiezielen/.test(kp)
   && /Methodik und Setting/.test(kp) && /Therapieabschlusses/.test(kp));
-pruef("Kuerzen schuetzt Diagnosen und Schlusssatz",
-  /ICD-10/.test(kp) && /Schlusssatz/.test(kp));
+pruef("Kuerzen schuetzt Diagnosen und Gliederung",
+  /ICD-10/.test(kp) && /Kein Gliederungspunkt darf verschwinden/.test(kp));
+pruef("Kuerzen nimmt sich zuerst das Sitzungsprotokoll vor",
+  /Sitzungsweise Nacherzählung/.test(kp));
+
+// Beim Umwandlungsbericht schuetzt das Kuerzen andere Angaben — allen
+// voran den Abschnitt, den es im Fortfuehrungsbericht gar nicht gibt.
+const kpUmw = M.kuerzePrompt("Ein Entwurf.", profil, "umwandlung");
+pruef("Kuerzen schuetzt den Konsiliarbericht",
+  /Er darf niemals ganz wegfallen/.test(kpUmw) && /somatischer Befund und Konsiliarbericht/.test(kpUmw));
+pruef("Kuerzen schuetzt die Umwandlungsbegruendung",
+  /Begründung der Umwandlung in Abschnitt 7/.test(kpUmw));
 pruef("Kuerzen erlaubt Ueberlaenge statt Verlust",
   /hinzunehmen/.test(kp));
 
@@ -142,6 +206,63 @@ pruef("Umwandlungs-Zusatz an den Feldern, die sich unterscheiden",
     .every((k) => M.LEITFADEN[k] && M.LEITFADEN[k].umwandlung));
 pruef("jeder Hinweis hat verlangt + punkte",
   Object.values(M.LEITFADEN).every((h) => h.verlangt && Array.isArray(h.punkte) && h.punkte.length > 0));
+
+console.log("\n=== Kriterium 8 - Umwandlungsbericht von Ende zu Ende ===");
+// Ein vollstaendiger Durchlauf: Gliederung → Rohtext → Anzeige → Word.
+// Die Einzelteile sind oben geprueft; hier geht es darum, dass sie
+// zusammen einen Bericht ergeben, in dem nirgends mehr die falsche
+// Antragsart steht.
+const umwFall = {
+  ...M.leererFall(profil),
+  f_antragsart: "umwandlung",
+  f_chiffre: "V36-025825", f_gebdatum: "1962-10-09", f_nr: "1",
+  f_bewilligt: "24", f_verbraucht: "24", f_beantragt: "36", f_frequenz: "woechentlich",
+};
+const punkte = M.gliederung("umwandlung", profil);
+const rohtext = punkte.map((x, i) => `${i + 1}. ${x.titel}\n\nInhalt zu Punkt ${i + 1}.`).join("\n\n");
+const html = M.renderDocHTML(rohtext, umwFall, profil);
+const f = umwFall;
+const p = profil;
+const text = rohtext;
+
+pruef("sieben Abschnittsueberschriften", (html.match(/class="t">/g) || []).length === 7);
+pruef("Kopfzeile sagt Umwandlungsantrag", /Umwandlungsantrag<\/td>/.test(html));
+// Das Profil traegt einen eigenen Untertitel mit dem Wort
+// „Fortführungsantrag". Er soll erhalten bleiben — nur das eine Wort
+// wird getauscht, sonst stuende die falsche Antragsart im Bericht.
+pruef("Untertitel nennt den Umwandlungsantrag", /doc-subtitle">[^<]*Umwandlungsantrag/.test(html));
+
+// Wer einen eigenen Untertitel hinterlegt hat — manche Beihilfestellen
+// verlangen einen bestimmten Wortlaut —, behaelt ihn. Getauscht wird
+// nur das eine Wort, das die Antragsart nennt.
+const pBeihilfe = { ...p, layout: { ...p.layout, untertitel: "zum Fortführungsantrag auf Anerkennung der Beihilfefähigkeit" } };
+pruef("eigener Untertitel bleibt erhalten",
+  M.untertitel("umwandlung", pBeihilfe) === "zum Umwandlungsantrag auf Anerkennung der Beihilfefähigkeit");
+pruef("eigener Untertitel beim Fortfuehrungsantrag unangetastet",
+  M.untertitel("fortfuehrung", pBeihilfe) === "zum Fortführungsantrag auf Anerkennung der Beihilfefähigkeit");
+pruef("Fusszeile sagt Umwandlungsbericht", /Umwandlungsbericht/.test(html));
+pruef("nirgends mehr Fortfuehrungsantrag", !/Fortführungsantrag/.test(html));
+pruef("nirgends mehr 'seit dem letzten Bericht'", !/seit dem letzten Bericht/.test(html));
+pruef("Dateiname traegt Umwandlungsbericht", M.fileBase(f).startsWith("Umwandlungsbericht"));
+pruef("jeder Abschnitt hat seinen Inhalt",
+  punkte.every((_, i) => html.includes(`Inhalt zu Punkt ${i + 1}.`)));
+
+const blob = M.buildDocx(text, f, p);
+const buf = Buffer.from(await blob.arrayBuffer());
+pruef("Word-Datei ist ein ZIP", buf.subarray(0, 2).toString() === "PK");
+pruef("Word-Datei nicht leer", buf.length > 10000);
+
+// Zum Vergleich der Fortfuehrungsbericht — er darf sich nicht geaendert haben.
+console.log("\n=== Fortfuehrungsbericht unveraendert ===");
+const fF = { ...M.leererFall(p), f_chiffre: "A.B.-1970", f_nr: "2" };
+const tF = M.gliederung("fortfuehrung", p)
+  .map((x, i) => `${i + 1}. ${x.titel}\n\nInhalt zu Punkt ${i + 1}.`).join("\n\n");
+const hF = M.renderDocHTML(tF, fF, p);
+pruef("drei Abschnittsueberschriften", (hF.match(/class="t">/g) || []).length === 3);
+pruef("Kopfzeile sagt 2. Fortfuehrungsantrag", /2\. Fortführungsantrag<\/td>/.test(hF));
+pruef("Fusszeile sagt Fortfuehrungsbericht", /Fortführungsbericht/.test(hF));
+pruef("Dateiname traegt Fortfuehrungsbericht", M.fileBase(fF).startsWith("Fortfuehrungsbericht"));
+
 
 export { profil, gefuellt, leerFelder, fehler };
 console.log(`\n=== Zwischenstand: ${fehler} Fehler ===`);

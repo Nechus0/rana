@@ -256,3 +256,13 @@ export const restoreAutoBackup = (path: string) =>
 export const importLegacy = (json: string) => call<number>("import_legacy", { json });
 
 export const extractReportText = (path: string) => call<string>("extract_report_text", { path });
+
+/**
+ * Schreibt Bytes an einen Pfad, den der Speicherdialog geliefert hat.
+ *
+ * Tauri serialisiert Uint8Array als Zahlenfeld; Rust nimmt es als
+ * Vec<u8> entgegen. Bei einer Word-Datei von etwa 30 KB ist das
+ * unbedenklich.
+ */
+export const saveBytes = (path: string, bytes: Uint8Array) =>
+  call<void>("save_bytes", { path, bytes: Array.from(bytes) });
