@@ -966,13 +966,15 @@
 .doczeile .save-indicator { flex: none; }
 .doczeile .btn-icon { flex: none; }
 
-/* Ohne offenen Antrag trägt die Zeile nichts als das Menü. Dann
-   verschwindet auch die Schrittleiste, statt fünf tote Kreise zu
-   zeigen. */
-.work-head.leer .stepbar,
-.work-head.leer .doczeile-zurueck,
-.work-head.leer .doczeile-trenner,
-.work-head.leer .save-indicator { display: none; }
+/* Was die Kopfzeile trägt, hängt daran, was der Arbeitsbereich zeigt.
+   Über ein Merkmal, nicht über Formatangaben am Element selbst: die
+   alte Fassung setzte `style.display` in der Patientenübersicht und
+   nahm es nie zurück — die Schrittleiste war danach dauerhaft weg. */
+.work-head[data-zeigt="patient"] .stepbar,
+.work-head[data-zeigt="leer"] .stepbar { display: none; }
+
+.work-head[data-zeigt="leer"] .doczeile-trenner,
+.work-head[data-zeigt="leer"] .save-indicator { display: none; }
 
 /* ---- Die Überschrift steht jetzt im Inhalt ------------------ */
 /* Sie war bis 2.6.1 Teil der festen Kopfzeile und hielt dort Platz
@@ -1735,4 +1737,67 @@ details.fold > summary:hover { background: var(--sphagnum); }
   font-size: var(--t-sm);
   line-height: 1.6;
   overflow-wrap: anywhere;
+}
+
+
+/* ===============================================================
+   Seit 2.7.2
+   =============================================================== */
+
+/* ---- Die Suche braucht Luft nach oben ----------------------- */
+/* Sie klebte an der Linie unter den Reitern. Ein Feld, das eine
+   Trennlinie berührt, sieht aus, als sei es aus ihr herausgewachsen. */
+.rail-body { padding-top: var(--s4); }
+.case-search { margin-bottom: var(--s4); }
+
+/* ---- Die blaue Senkrechte am rechten Rand der Schiene -------- */
+/* Der Reiter der eingeklappten Schiene stand auch dann noch da, wenn
+   die Schiene ausgeklappt war — als ein Pixel breiter blauer Strich
+   an ihrer rechten Kante. Sichtbar wird er nur, wenn die Schiene
+   wirklich eingeklappt ist. */
+.rail:not(.collapsed) .rail-collapsed { display: none; }
+
+/* ---- Schritt 5: die Abstände ---------------------------------
+   Zum vierten Mal angesprochen, und beim dritten Mal habe ich am
+   falschen Ort gesucht: die Abstände stehen nicht in `.group`,
+   sondern als Inline-Angabe an den einzelnen Elementen von Schritt 5.
+   Hier stehen sie jetzt an einer Stelle und gelten für alle.
+   ------------------------------------------------------------ */
+
+/* Die Ablage mit dem Blatt: Luft davor und danach. */
+.ausgabe .paper-tray { margin-bottom: var(--s7); }
+
+/* „Einzureichen: Bericht, PTV 2b …" — ein eigener Hinweis, kein
+   Anhängsel des Blattes darüber und keine Überschrift des Beiblatts
+   darunter. Er braucht auf beiden Seiten Abstand. */
+.ausgabe .notice-einreichen {
+  margin: var(--s7) 0 var(--s7);
+}
+
+/* Die Gruppe „Beiblatt PTV 2b" beginnt danach neu. */
+.ausgabe .group { margin-top: 0; }
+.ausgabe .group-head { margin-bottom: var(--s4); }
+.ausgabe .group .hint { margin-bottom: var(--s4); }
+
+/* Die Knopfreihe oben in Schritt 5. */
+.ausgabe-knoepfe { margin-bottom: var(--s7); }
+
+/* ---- Der Laufbalken, ehrlicher --------------------------------
+   Bis 2.7.1 blieb er lange bei null und sprang dann. Das lag nicht am
+   Balken, sondern an der Wartezeit: zwischen Absenden und dem ersten
+   Zeichen vergehen mehrere Sekunden, in denen es nichts zu melden
+   gibt. Jetzt sagt die Beschriftung, worauf gewartet wird, und der
+   Balken läuft in dieser Zeit als unbestimmter Streifen.
+   ------------------------------------------------------------ */
+.lauf-bahn.ist-unbestimmt { position: relative; overflow: hidden; }
+.lauf-bahn.ist-unbestimmt .lauf-fuell {
+  width: 35%;
+  animation: lauf-wandern 1.4s ease-in-out infinite;
+}
+@keyframes lauf-wandern {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(320%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lauf-bahn.ist-unbestimmt .lauf-fuell { animation: none; width: 100%; opacity: .35; }
 }

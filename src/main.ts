@@ -174,9 +174,16 @@ function zeichneGeruest(): void {
              beim Blättern mitwandert statt Platz festzuhalten. -->
         <header class="work-head">
           <div class="doczeile">
+            <!-- Der Knopf klappt die Schiene ein und aus. Er hiess bis
+                 2.7.1 „Patienten" und tat in der Patientenübersicht
+                 nichts — beides falsch: die Schiene trägt Patienten
+                 UND Fortschritt, und der Fortschritt ist durchgängig
+                 von Belang. Jetzt heisst er nach dem, was er schaltet,
+                 und schaltet immer. -->
             <button class="btn btn-quiet btn-sm doczeile-zurueck" id="btnZurListe"
-                    title="Zur Patientenliste (Strg+L)">
-              ${icon.panelL} <span>Patienten</span>
+                    title="Seitenschiene ein- und ausklappen (Strg+L)"
+                    aria-expanded="true">
+              ${icon.panelL} <span id="railKnopfText">Übersicht</span>
             </button>
             <span class="doczeile-trenner" aria-hidden="true"></span>
             <span class="doczeile-wer" id="workEyebrow"></span>
@@ -366,12 +373,7 @@ function bindeTopbar(): void {
 
   // Der Weg zurück zur Liste. Ist sie eingeklappt, holt er sie
   // hervor; ist sie da, führt er zur Übersicht der Patientin.
-  on(el("btnZurListe"), "click", () => {
-    const rail = el("rail");
-    if (rail.classList.contains("collapsed")) { toggleRail(); return; }
-    const pid = S.state.cases.find((c) => c.id === S.state.activeId)?.patient_id;
-    if (pid) void zeigePatient(pid);
-  });
+  on(el("btnZurListe"), "click", toggleRail);
 
   on(el("btnSchrittZurueck"), "click", () => geheZu(S.state.step - 1));
   on(el("btnSchrittWeiter"), "click", () => geheZu(S.state.step + 1));
@@ -717,10 +719,7 @@ async function zeigePatient(patientId: string): Promise<void> {
       <div class="empty-state">
         <p class="hint">Bitte wählen Sie links eine Patientin oder einen Antrag aus.</p>
       </div>`;
-    const stepbar = document.querySelector(".stepbar") as HTMLElement | null;
-    if (stepbar) stepbar.style.display = "none";
-    const whr = document.querySelector(".work-head-row") as HTMLElement | null;
-    if (whr) whr.style.display = "none";
+    ansichtsart("leer");
     return;
   }
 
@@ -736,10 +735,12 @@ async function zeichnePatientAnsicht(): Promise<void> {
   const pid = S.state.patientAnsicht;
   if (!pid) return;
 
-  const stepbar = document.querySelector(".stepbar") as HTMLElement | null;
-  if (stepbar) stepbar.style.display = "none";
-  const whr = document.querySelector(".work-head-row") as HTMLElement | null;
-  if (whr) whr.style.display = "flex";
+  // Bis 2.7.1 stand hier `stepbar.style.display = "none"` — und nichts
+  // nahm es je zurück. Wer einmal eine Patientin ansah, hatte die
+  // Schrittleiste für den Rest der Sitzung verloren, auch in jedem
+  // Bericht danach. Eine Klasse an der Kopfzeile lässt sich abnehmen;
+  // eine Formatangabe am Element selbst überlebt jedes Neuzeichnen.
+  ansichtsart("patient");
 
   try {
     const daten = await ladePatient(pid);
@@ -794,14 +795,32 @@ function geheZu(n: number): void {
 
 const neuZeichnen = () => { zeichneSchritt(); zeichneFallListe(); };
 
+/**
+ * Was der Arbeitsbereich gerade zeigt — und was dazu gehört.
+ *
+ * Drei Zustände mit je eigener Ausstattung:
+ *   bericht  Schrittleiste oben, Vor und Zurück unten.
+ *   patient  Weder noch: eine Übersicht hat keine Schritte, und die
+ *            Knöpfe „Zurück · Vorbericht" wären dort sinnlos.
+ *   leer     Nur die Marke und das Menü.
+ *
+ * Eine Klasse an der Kopfzeile statt Formatangaben an den Elementen.
+ * Die alte Fassung setzte `style.display` direkt und nahm es nie
+ * zurück — die Schrittleiste verschwand dadurch dauerhaft, sobald man
+ * einmal eine Patientin angesehen hatte.
+ */
+function ansichtsart(was: "bericht" | "patient" | "leer"): void {
+  const kopf = document.querySelector(".work-head") as HTMLElement | null;
+  if (kopf) kopf.dataset.zeigt = was;
+  const nav = document.querySelector(".schrittnav") as HTMLElement | null;
+  if (nav) nav.hidden = was !== "bericht";
+}
+
 function zeichneSchritt(): void {
   // Steht die Übersicht einer Patientin im Arbeitsbereich, hat sie
   // Vorrang. Sonst überschriebe jede Zustandsänderung sie mit dem
   // gerade offenen Schritt.
   if (S.state.patientAnsicht) { void zeichnePatientAnsicht(); return; }
-
-  const kopf = document.querySelector(".work-head") as HTMLElement | null;
-  const nav = document.querySelector(".schrittnav") as HTMLElement | null;
 
   if (!S.state.activeId) {
     el("workEyebrow").textContent = "";
@@ -812,16 +831,14 @@ function zeichneSchritt(): void {
         <p>Wählen Sie links eine Patientin aus oder legen Sie eine neue an.</p>
         <button class="btn btn-primary" id="btnEmptyNeuerFall">${icon.plus} Neuer Patient</button>
       </div>`;
-    if (kopf) kopf.classList.add("leer");
-    if (nav) nav.hidden = true;
+    ansichtsart("leer");
 
     const btn = document.getElementById("btnEmptyNeuerFall");
     if (btn) btn.addEventListener("click", () => { void neuerFall(); });
     return;
   }
 
-  if (kopf) kopf.classList.remove("leer");
-  if (nav) nav.hidden = false;
+  ansichtsart("bericht");
 
   const n = S.state.step;
   const SS = schritte();

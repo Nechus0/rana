@@ -15,7 +15,7 @@
 
 import type { Felder, Profile } from "../core/ipc";
 import {
-  dateLong, esc, fmtDate, parseSections, sozioText,
+  dateLong, esc, fmtDate, parseSections, patientZeile,
   splitLabel, splitParas, toList,
 } from "./render";
 import { verfahrenZeile } from "./prompt";
@@ -336,7 +336,7 @@ function wInfoBox(f: Felder, p: Profile): string {
         chiffre ? wrun(chiffre, { sz: 20 }) : wrun("[Chiffre]", { sz: 20, shd: WC.hlBg, c: WC.hlTx }),
         true, false)
     // Dieselbe Funktion wie in der Vorschau, damit beide nie auseinanderlaufen.
-    + wBoxRow("Patient:in", wrun(sozioText(f), { sz: 20 }), false, false)
+    + wBoxRow("Patient:in", wrun(patientZeile(f), { sz: 20 }), false, false)
     + wBoxRow("Verfahren", wrun(wVerfahrenText(f, p), { sz: 20 }), false, false)
     + wBoxRow("Stundenkontingent", wStundenRuns(f), false, true)
     + "</w:tbl>";

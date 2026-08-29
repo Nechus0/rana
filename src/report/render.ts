@@ -17,9 +17,10 @@
 import type { Felder, Profile } from "../core/ipc";
 import { verfahrenZeile } from "./prompt";
 import {
-  ANTRAGSWORT, BERICHTSWORT, DATEIWORT, FORTFUEHRUNG, artVon, gliederung, untertitel,
+  ANTRAGSWORT, BERICHTSWORT, DATEIWORT, FORTFUEHRUNG,
+  artVon, gliederung, korridor, seitenSchaetzung, untertitel,
 } from "./gliederung";
-import type { Punkt } from "./gliederung";
+import type { Antragsart, Punkt } from "./gliederung";
 
 /** Die drei Überschriften des Fortführungsberichts, ohne Profil. */
 const FORTFUEHRUNG_TITEL = FORTFUEHRUNG.map((x) => x.titel);
@@ -455,6 +456,28 @@ function sozioLine(f: Felder): string {
   );
 }
 
+/**
+ * Nur das Geburtsdatum, ohne die soziodemographischen Angaben.
+ *
+ * Beim Umwandlungsbericht stehen Beruf, Familienstand und Kinderzahl
+ * als Gliederungspunkt 1 im Text — der Leitfaden verlangt ihn. Die
+ * Metabox wiederholte sie dann wortgleich, zwei Zeilen darüber. Das
+ * kostete rund 150 Zeichen und sah nach einem Fehler aus.
+ */
+export function patientZeile(f: Felder): string {
+  const art = artVon(f);
+  if (art !== "umwandlung") return sozioText(f);
+  const gb = g(f, "f_gebdatum");
+  return gb ? `geb. ${fmtDate(gb)}${ageSuffix(gb)}` : "geb. [Geburtsdatum fehlt]";
+}
+
+function gebLine(f: Felder): string {
+  return esc(patientZeile(f)).replace(
+    /\[Geburtsdatum fehlt\]/g,
+    '<span class="doc-ph">[Geburtsdatum fehlt]</span>'
+  );
+}
+
 function verfahrenLine(f: Felder, p: Profile): string {
   let base = verfahrenZeile(p);
   if (g(f, "f_kasse")) base += ` · ${esc(g(f, "f_kasse"))}`;
@@ -527,7 +550,11 @@ export function renderDocHTML(
      + `<tr><td class="k">Anonymisierungscode</td><td class="v">`
      + (g(f, "f_chiffre") ? esc(g(f, "f_chiffre")) : '<span class="doc-ph">[Chiffre]</span>')
      + "</td></tr>"
-     + `<tr><td class="k">Patient:in</td><td class="v">${sozioLine(f)}</td></tr>`
+     // Beim Umwandlungsbericht traegt Gliederungspunkt 1 die
+     // soziodemographischen Angaben — der Leitfaden verlangt ihn. Die
+     // Metabox wiederholte sie dann wortgleich zwei Zeilen darueber.
+     // Dort steht jetzt nur noch, was sie allein beantwortet.
+     + `<tr><td class="k">Patient:in</td><td class="v">${art === "umwandlung" ? gebLine(f) : sozioLine(f)}</td></tr>`
      + `<tr><td class="k">Verfahren</td><td class="v">${verfahrenLine(f, p)}</td></tr>`
      + `<tr><td class="k">Stundenkontingent</td><td class="v">${metaValStunden(f)}</td></tr>`
      + "</table></div>";
@@ -573,28 +600,42 @@ export interface Metrik {
   /** "kurz" · "gut" · "lang" */
   urteil: "kurz" | "gut" | "lang";
   hinweis: string;
+  /** Geschätzte Seitenzahl — aus Zeilen gerechnet, nicht aus Zeichen. */
+  seiten: number;
+  korridor: { min: number; soll: number; max: number };
 }
 
 /**
- * Gemessen, nicht geschätzt: aus Testberichten des Vorgängers wurden
- * die Seiten gezählt. Bis 5.362 Zeichen sind es zwei Seiten, ab 5.659
- * drei.
+ * Umfang und Urteil.
+ *
+ * Bis 2.7.1 stand hier ein fester Korridor aus dem Profil, gemessen an
+ * Berichten des Vorgängers — alle dreiteilig. Beim siebenteiligen
+ * Umwandlungsbericht ging das schief: Rana meldete zwei Seiten, Word
+ * zeigte zweieinhalb. Der Korridor kommt jetzt aus dem Satzspiegel
+ * (gliederung.ts) und kennt den Unterschied.
  */
-export function metrik(report: string, p: Profile): Metrik {
+export function metrik(report: string, p: Profile, art: Antragsart = "fortfuehrung"): Metrik {
   const ohne = report.replace(/【\s*([^】]*?)\s*】/g, "$1");
   const zeichen = ohne.trim().length;
   const woerter = ohne.trim() ? ohne.trim().split(/\s+/).length : 0;
   const luecken = (report.match(/【/g) || []).length;
-  const L = p.layout;
+
+  // Der Korridor haengt an der Gliederung, nicht mehr an einer festen
+  // Zahl im Profil: sieben Ueberschriften kosten eine Viertelseite,
+  // die kein Zeichen fuellt. Siehe gliederung.ts.
+  const K = korridor(art, p);
+  const anzahl = gliederung(art, p).length;
+  const seiten = seitenSchaetzung(report, anzahl);
 
   let urteil: Metrik["urteil"] = "gut";
-  let hinweis = "füllt die zwei Seiten";
-  if (zeichen < L.ziel_min) {
+  let hinweis = "passt auf zwei Seiten";
+  if (zeichen && zeichen < K.min) {
     urteil = "kurz";
-    hinweis = `noch ${(L.ziel_min - zeichen).toLocaleString("de-DE")} Zeichen bis zum Korridor`;
-  } else if (zeichen > L.ziel_max) {
+    hinweis = `noch ${(K.min - zeichen).toLocaleString("de-DE")} Zeichen bis zum Korridor`;
+  } else if (zeichen > K.max) {
     urteil = "lang";
-    hinweis = "über dem Korridor, läuft womöglich auf eine dritte Seite";
+    const weg = zeichen - K.soll;
+    hinweis = `${weg.toLocaleString("de-DE")} Zeichen über dem Ziel von ${K.soll.toLocaleString("de-DE")}`;
   }
-  return { zeichen, woerter, luecken, urteil, hinweis };
+  return { zeichen, woerter, luecken, urteil, hinweis, seiten, korridor: K };
 }

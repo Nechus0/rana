@@ -16,6 +16,7 @@ import { LEITFADEN } from "../core/leitfaden";
 import { buildDocx } from "../report/docx";
 import { expandPrompt, klarnamen, kuerzePrompt, systemPrompt, userPrompt } from "../report/prompt";
 import { fileBase, metrik, renderDocHTML } from "../report/render";
+import { korridor } from "../report/gliederung";
 import * as S from "../core/state";
 import { confirmDialog, dialog, download, el, esc, icon, on, qs, qsa, toast } from "../ui/kit";
 import { open, save } from "@tauri-apps/plugin-dialog";
@@ -290,14 +291,16 @@ function schritt2Umwandlung(): string {
         ph: "Ihre eigene Deutung, auch wenn sie fachlich nicht trägt …",
       })}`)}
 
+    <!-- Zwei Felder waren hier eines zu viel. Der Leitfaden führt
+         somatischen Befund, Medikation und Vorbehandlungen als
+         Unterpunkte DESSELBEN Gliederungspunkts, und der bekommt im
+         Bericht 250 Zeichen. Für zwei Eingabefelder ist das zu wenig
+         Ziel, um sie auseinanderzuhalten. -->
     ${gruppe("3", "Somatischer Befund und Konsiliarbericht", `
-      ${textarea("f_somatisch", "Somatischer Befund, Konsiliarbericht, Medikation", {
-        note: "Pflicht — auch wenn unauffällig",
-        ph: "Ergebnis des Konsiliarberichts, aktuelle Medikation, Suchtmittel soweit bedeutsam …",
-      })}
-      ${textarea("f_vorbehandlung", "Frühere Behandlungen", {
-        note: "psychotherapeutisch, psychosomatisch, psychiatrisch",
-        ph: "Art, Zeitraum, Ergebnis — oder „keine Vorbehandlungen“ …",
+      ${textarea("f_somatisch", "Somatischer Befund, Medikation, Vorbehandlungen", {
+        note: "Pflicht — auch wenn alles unauffällig ist",
+        hoch: 150,
+        ph: "Ergebnis des Konsiliarberichts · aktuelle Medikation · Suchtmittel soweit bedeutsam · frühere Behandlungen oder „keine“ …",
       })}`)}
 
     ${gruppe("4", `Lebensgeschichte und ${psychodynLabel()}`, `
@@ -415,14 +418,14 @@ function schritt3Umwandlung(): string {
         hoch: 150,
         ph: "Individueller Behandlungsplan, dann die weiteren Ziele …",
       })}
-      ${textarea("f_methoden", "Methodik und Setting", {
+      <!-- Die Kooperation war ein eigenes Feld mit 200 Zeichen Ziel,
+           das in neun von zehn Fällen leer bleibt. Sie steht im
+           Leitfaden als Unterpunkt desselben Gliederungspunkts und
+           gehört als Satz in denselben Absatz. -->
+      ${textarea("f_methoden", "Methodik, Setting und Kooperation", {
         note: "Setting, Sitzungszahl und Frequenz BEGRÜNDEN — nicht nur nennen",
-        hoch: 150,
-        ph: "Warum dieses Setting, warum diese Zahl an Sitzungen, warum diese Frequenz für diesen Fall …",
-      })}
-      ${textarea("f_kooperation", "Kooperation mit anderen Berufsgruppen", {
-        note: "falls vorhanden",
-        ph: "Hausärztin, Fachärztin, Klinik …",
+        hoch: 190,
+        ph: "Warum dieses Setting, warum diese Zahl an Sitzungen, warum diese Frequenz für diesen Fall. Zuletzt: Kooperation mit Hausärztin, Fachärztin oder Klinik, falls vorhanden …",
       })}
       ${textarea("f_prognose", "Prognose", {
         note: "Motivation, Umstellungsfähigkeit, Veränderungshindernisse",
@@ -457,7 +460,7 @@ function schritt3Umwandlung(): string {
 
 function schritt4(): string {
   const b = S.state.budget;
-  const m = S.state.profile ? metrik(S.state.report, S.state.profile) : null;
+  const m = S.state.profile ? metrik(S.state.report, S.state.profile, S.antragsart()) : null;
   const offen = S.luecken();
 
   const anzahl = umwandlung() ? "sieben" : "drei";
@@ -558,9 +561,17 @@ function zeigeZaehler(m: ReturnType<typeof metrik>): void {
   if (u) u.innerHTML = zaehlerUrteil(m);
 }
 
-/** Zeile 2: das Urteil in Worten, mit Platz zum Umbrechen. */
+/**
+ * Zeile 2: das Urteil in Worten, mit Platz zum Umbrechen.
+ *
+ * Die Seitenzahl kommt seit 2.7.2 aus `metrik` und wird dort in
+ * Zeilen gerechnet — mit den Überschriften und der festen Ausstattung
+ * des Blattes. Die frühere Rechnung „Zeichen durch 2.840" kannte den
+ * Unterschied zwischen drei und sieben Abschnitten nicht und meldete
+ * beim Umwandlungsbericht zwei Seiten, wo Word zweieinhalb zeigte.
+ */
 function zaehlerUrteil(m: ReturnType<typeof metrik>): string {
-  const seiten = m.zeichen ? `rund ${(m.zeichen / 2840).toFixed(1).replace(".", ",")} Seiten · ` : "";
+  const seiten = m.seiten ? `rund ${m.seiten.toFixed(1).replace(".", ",")} Seiten · ` : "";
   return `<span style="color:${zaehlerFarbe(m)}">${seiten}${esc(m.hinweis)}</span>`
     + (m.luecken ? ` <span style="color:var(--amber)">· ${m.luecken} offene ${m.luecken === 1 ? "Stelle" : "Stellen"}</span>` : "");
 }
@@ -575,7 +586,8 @@ function schritt5(): string {
   const konsiliar = p.verfahren.qualifikation !== "aerztlich";
 
   return `
-    <div class="row row-wrap" style="margin-bottom: var(--s5)">
+   <div class="ausgabe">
+    <div class="row row-wrap ausgabe-knoepfe">
       <button class="btn btn-primary" id="btnWord" ${leer ? "disabled" : ""}>${icon.word} Word (.docx)</button>
       <button class="btn" id="btnPdf" ${leer ? "disabled" : ""}>${icon.pdf} Als PDF sichern</button>
       <button class="btn" id="btnKopieren" ${leer ? "disabled" : ""}>${icon.copy} Text kopieren</button>
@@ -593,7 +605,7 @@ function schritt5(): string {
         <div class="paper-sheet paper-doc">${renderDocHTML(S.state.report, S.state.fields, p)}</div>
       </div>
 
-      <div class="notice notice-info" style="margin-top: var(--s5)">
+      <div class="notice notice-info notice-einreichen">
         <b>Einzureichen:</b> Bericht, PTV 2b${konsiliar ? ", Konsiliarbericht (Muster 22b)" : ""}, ggf. Befundkopien (pseudonymisiert).
       </div>
 
@@ -612,7 +624,8 @@ function schritt5(): string {
         <div class="row" style="margin-top: var(--s4)">
           <button class="btn btn-sm" id="btnPtv2b">${icon.copy} Angaben kopieren</button>
         </div>`)}
-    `}`;
+    `}
+   </div>`;
 }
 
 function ptv2bZeilen(): [string, string][] {
@@ -704,7 +717,7 @@ function grossOeffnen(feldId: string): void {
 
       const zeigeStand = (): void => {
         const stand = S.fuellstand(feldId, gross.value.length);
-        const ziel = S.ZIELUMFANG[feldId];
+        const ziel = S.zielspanne(feldId);
         if (balken && stand) balken.dataset.stand = stand;
         if (zaehler) {
           zaehler.textContent = ziel
@@ -822,7 +835,7 @@ function aktualisiereZaehler(node: HTMLElement): void {
   if (!z) return;
 
   const len = (node as HTMLTextAreaElement).value.length;
-  const ziel = S.ZIELUMFANG[id];
+  const ziel = S.zielspanne(id);
 
   if (!ziel) {
     z.textContent = len ? `${len.toLocaleString("de-DE")} Zeichen` : "";
@@ -907,7 +920,7 @@ function bindeSchritt4(neuZeichnen: () => void): void {
   on(entwurf, "input", () => {
     S.setzeBericht(entwurf.innerText);
     const p = S.state.profile;
-    if (p) zeigeZaehler(metrik(S.state.report, p));
+    if (p) zeigeZaehler(metrik(S.state.report, p, S.antragsart()));
   });
 
   // Einfügen nur als reiner Text — sonst gerät fremdes Markup in den
@@ -976,23 +989,35 @@ async function formuliere(
   if (progress) progress.classList.remove("hidden");
 
   const pZahl = document.getElementById("progressPct");
-  if (pText) {
-    pText.textContent = kind === "kuerzen" ? "Kürze auf zwei Seiten …" : "Formuliere …";
-  }
+  const bahn = progress?.querySelector(".lauf-bahn");
 
+  // Zwischen Absenden und dem ersten Zeichen vergehen mehrere
+  // Sekunden, in denen es nichts zu melden gibt. Bis 2.7.1 stand der
+  // Balken in dieser Zeit auf null und sprang dann — es sah aus, als
+  // hinge das Programm. Jetzt läuft er als unbestimmter Streifen und
+  // die Beschriftung sagt, worauf gewartet wird.
+  bahn?.classList.add("ist-unbestimmt");
+  if (pText) pText.textContent = "Anfrage geht hinaus, Antwort steht aus …";
+  if (pZahl) pZahl.textContent = "";
+
+  const korr = korridor(art, p);
   let gesammelt = "";
   const stopStream = await api.onStream((chunk) => {
     if (abbruch) return;
+    if (!gesammelt) {
+      // Das erste Zeichen ist da: vom Warten auf das Zählen umstellen.
+      bahn?.classList.remove("ist-unbestimmt");
+      if (pText) pText.textContent = kind === "kuerzen" ? "Kürze auf zwei Seiten …" : "Formuliere …";
+    }
     gesammelt += chunk;
     entwurf.textContent = gesammelt;
-    // Am Zielumfang gemessen, nicht an einer festen Zahl: beim
-    // Umwandlungsbericht sind sieben Abschnitte zu schreiben.
-    const fortschritt = Math.min(97, Math.round((gesammelt.length / p.layout.ziel_soll) * 100));
+    // Am Zielumfang der jeweiligen Gliederung gemessen.
+    const fortschritt = Math.min(97, Math.round((gesammelt.length / korr.soll) * 100));
     if (circle) circle.style.width = `${fortschritt}%`;
     if (pZahl) pZahl.textContent = `${fortschritt} %`;
     // Mitlaufen lassen: der Blick bleibt am entstehenden Text.
     entwurf.scrollIntoView({ block: "end", behavior: "smooth" });
-    zeigeZaehler(metrik(gesammelt, p));
+    zeigeZaehler(metrik(gesammelt, p, art));
   });
 
   try {
@@ -1009,7 +1034,7 @@ async function formuliere(
     await S.speichereJetzt();
     await S.refreshBudget();
 
-    const m = metrik(res.text, p);
+    const m = metrik(res.text, p, art);
     const kosten = res.cost_eur.toLocaleString("de-DE", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
     const gespart = res.cached_tokens > 0 ? " · Regelteil aus dem Zwischenspeicher" : "";
 
@@ -1045,7 +1070,16 @@ async function formuliere(
     }
 
   } catch (e) {
-    toast(api.errorText(e), "danger");
+    // Der Entwurf bleibt erhalten: `setzeBericht` läuft erst nach
+    // einer erfolgreichen Antwort. Beim Kürzen ist das entscheidend —
+    // wer hier den fertigen, nur zu langen Bericht verlöre, hätte
+    // durch das Kürzen alles verloren statt etwas gewonnen.
+    if (kind === "kuerzen") {
+      entwurf.textContent = S.state.report;
+      toast(`Das Kürzen ist gescheitert. ${api.errorText(e)}`, "danger", 14000);
+    } else {
+      toast(api.errorText(e), "danger");
+    }
   } finally {
     if (progress) progress.classList.add("hidden");
     stopStream();

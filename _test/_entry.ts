@@ -3,4 +3,8 @@ export { renderDocHTML, parseSections, metrik, fileBase, ABSCHNITTE } from "../s
 export { systemPrompt, userPrompt, kuerzePrompt } from "../src/report/prompt";
 export { FELDER, PFLICHT, leererFall, luecken, pflicht } from "../src/core/state";
 export { LEITFADEN } from "../src/core/leitfaden";
-export { gliederung, artVon, ANTRAGSWORT, BERICHTSWORT, untertitel } from "../src/report/gliederung";
+export {
+  gliederung, artVon, korridor, seitenSchaetzung, zeichenFuer,
+  ANTRAGSWORT, BERICHTSWORT, untertitel,
+} from "../src/report/gliederung";
+export { zielspanne, ZIELUMFANG } from "../src/core/state";

@@ -110,7 +110,7 @@ const PFLICHT_UMW: Pflichtangabe[] = [
   { feld: "f_sozio",        label: "Beruf, Familienstand, Kinder", schritt: 0 },
   { feld: "f_symptomatik",  label: "Symptomatik mit Schwere und Verlauf", schritt: 1 },
   { feld: "f_krankheitsverstaendnis", label: "Krankheitsverständnis", schritt: 1 },
-  { feld: "f_somatisch",    label: "Somatischer Befund und Konsiliarbericht", schritt: 1 },
+  { feld: "f_somatisch",    label: "Somatischer Befund, Medikation, Vorbehandlungen", schritt: 1 },
   { feld: "f_lebensgeschichte", label: "Lebensgeschichte und Krankheitsanamnese", schritt: 1 },
   { feld: "f_psychodyn",    label: "Psychodynamik / Bedingungsmodell", schritt: 1 },
   { feld: "f_ziele_alt",    label: "Ziele der Kurzzeittherapie", schritt: 1 },
@@ -120,7 +120,7 @@ const PFLICHT_UMW: Pflichtangabe[] = [
   { feld: "f_zielstatus",   label: "Stand der Ziele der Kurzzeittherapie", schritt: 2 },
   { feld: "f_umwandlungsgrund", label: "Warum die Kurzzeittherapie nicht ausreicht", schritt: 2 },
   { feld: "f_begruendung",  label: "Behandlungsplan und weitere Ziele", schritt: 2 },
-  { feld: "f_methoden",     label: "Begründung von Setting, Sitzungszahl und Frequenz", schritt: 2 },
+  { feld: "f_methoden",     label: "Methodik, Setting und Kooperation", schritt: 2 },
   { feld: "f_prognose",     label: "Prognose",                schritt: 2 },
   { feld: "f_abschluss",    label: "Planung des Therapieabschlusses", schritt: 2 },
 ];
@@ -811,7 +811,78 @@ export function speichernBeimBeenden(): void {
  * Die Zahlen sind Anhaltspunkte, keine Grenzen. Rana hindert niemanden
  * am Weiterschreiben.
  */
-export const ZIELUMFANG: Record<string, { von: number; bis: number; hinweis?: string }> = {
+export interface Zielspanne { von: number; bis: number; hinweis?: string }
+
+/**
+ * Der Umwandlungsbericht hat ein anderes Budget.
+ *
+ * Er muss auf dieselben zwei Seiten, hat aber sieben Überschriften
+ * statt drei — und die kosten rund eine Viertelseite, die kein Zeichen
+ * füllt. Bleiben etwa 3.900 Zeichen Fliesstext statt 4.950, verteilt
+ * auf sieben Gliederungspunkte statt drei.
+ *
+ * Daraus je Punkt:
+ *   1 Soziodemografie        160
+ *   2 Symptomatik und Befund 680
+ *   3 Somatischer Befund     250
+ *   4 Lebensgeschichte       720
+ *   5 Diagnose               220
+ *   6 Behandlungsplan       1000
+ *   7 Zusatzangaben          880
+ *
+ * Die Eingabefelder liegen wie beim Fortführungsbericht etwa ein
+ * Drittel darüber: kürzen kann das Modell, erfinden nicht.
+ */
+const ZIELUMFANG_UMW: Record<string, Zielspanne> = {
+  // --- Punkt 1, 160 Zeichen ------------------------------------
+  f_sozio: { von: 80, bis: 300 },
+
+  // --- Punkt 2, 680 Zeichen ------------------------------------
+  f_symptomatik:            { von: 200, bis: 500 },
+  f_befund:                 { von: 150, bis: 450 },
+  f_krankheitsverstaendnis: { von: 60,  bis: 250 },
+
+  // --- Punkt 3, 250 Zeichen ------------------------------------
+  f_somatisch:     { von: 80, bis: 350 },
+  f_vorbehandlung: { von: 0,  bis: 250, hinweis: "„keine“ ist auch eine Auskunft" },
+
+  // --- Punkt 4, 720 Zeichen ------------------------------------
+  f_lebensgeschichte: { von: 250, bis: 600 },
+  f_psychodyn:        { von: 200, bis: 550 },
+
+  // --- Punkt 5, 220 Zeichen ------------------------------------
+  f_diag_neu:       { von: 40, bis: 250 },
+  f_diag_psychodyn: { von: 50, bis: 250 },
+  f_differenzial:   { von: 0,  bis: 200, hinweis: "nur wenn nötig" },
+
+  // --- Punkt 6, 1.000 Zeichen ----------------------------------
+  f_begruendung: { von: 200, bis: 550 },
+  f_methoden:    { von: 150, bis: 450 },
+  f_kooperation: { von: 0,   bis: 200, hinweis: "falls vorhanden" },
+  f_prognose:    { von: 120, bis: 400 },
+  f_abschluss:   { von: 80,  bis: 300 },
+
+  // --- Punkt 7, 880 Zeichen ------------------------------------
+  // Deutlich enger als beim Fortführungsbericht: dort trägt der
+  // Verlauf allein 2.750 Zeichen, hier teilt er sich 880 mit der
+  // Zielbilanz und der Umwandlungsbegründung.
+  f_verlauf:          { von: 250, bis: 650 },
+  f_zielstatus:       { von: 200, bis: 500 },
+  f_umwandlungsgrund: { von: 150, bis: 450 },
+
+  // --- Gehen nur als Hintergrund in den Prompt ------------------
+  f_ziele_alt: { von: 0, bis: 350, hinweis: "Hintergrund" },
+  f_diag_alt:  { von: 0, bis: 300, hinweis: "Hintergrund" },
+};
+
+/** Die Spanne eines Feldes im gerade offenen Fall. */
+export function zielspanne(feld: string, art: Antragsart = antragsart()): Zielspanne | undefined {
+  return art === "umwandlung"
+    ? ZIELUMFANG_UMW[feld] ?? ZIELUMFANG[feld]
+    : ZIELUMFANG[feld];
+}
+
+export const ZIELUMFANG: Record<string, Zielspanne> = {
   // --- Gliederungspunkt 1 --------------------------------------
   // Die Ausgangslage wird zu einem Absatz von rund 450 Zeichen.
   f_ausgangslage: { von: 250, bis: 600 },
@@ -843,7 +914,7 @@ export const ZIELUMFANG: Record<string, { von: number; bis: number; hinweis?: st
 export type Fuellstand = "leer" | "kurz" | "gut" | "reichlich" | null;
 
 export function fuellstand(feld: string, laenge: number): Fuellstand {
-  const z = ZIELUMFANG[feld];
+  const z = zielspanne(feld);
   if (!z) return null;
   if (laenge === 0) return "leer";
   if (laenge < z.von) return "kurz";

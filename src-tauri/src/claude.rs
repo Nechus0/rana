@@ -319,6 +319,9 @@ async fn stream_once(
     // ganze Block wurde stillschweigend übersprungen. Bei deutschem Text
     // mit Umlauten passiert das laufend.
     let mut roh: Vec<u8> = Vec::new();
+    // Wie viele SSE-Ereignisse überhaupt ankamen. Nur für die
+    // Fehlermeldung, wenn am Ende kein Text da ist.
+    let mut ereignisse: u32 = 0;
 
     while let Some(chunk) = bytes.next().await {
         let chunk = chunk?;
@@ -343,6 +346,7 @@ async fn stream_once(
                 let Ok(v) = serde_json::from_str::<serde_json::Value>(payload) else {
                     continue;
                 };
+                ereignisse += 1;
 
                 match v.get("type").and_then(|t| t.as_str()) {
                     Some("content_block_delta") => {
@@ -412,9 +416,27 @@ async fn stream_once(
     }
 
     if out.text.trim().is_empty() {
-        return Err(RanaError::Message(
-            "Die Schnittstelle hat keinen Text zurückgegeben. Bitte erneut versuchen.".into(),
-        ));
+        // Bis 2.7.1 stand hier nur „Die Schnittstelle hat keinen Text
+        // zurückgegeben". Das ist wahr und hilft niemandem: es sagt
+        // weder, ob überhaupt etwas ankam, noch warum die Antwort leer
+        // blieb. Bei einem Fehler, der sich nicht nachstellen lässt,
+        // ist die Meldung die einzige Spur — also muss sie tragen.
+        let woran = if ereignisse == 0 {
+            "Es kam kein einziges Ereignis an; vermutlich brach die Verbindung ab, bevor die Antwort begann."
+        } else if out.stop_reason == "max_tokens" {
+            "Die Antwort erreichte sofort die Längengrenze, ohne Text zu liefern."
+        } else if !out.stop_reason.is_empty() {
+            "Die Antwort wurde abgeschlossen, enthielt aber keinen Text."
+        } else {
+            "Es kamen Ereignisse an, aber kein Textblock."
+        };
+        return Err(RanaError::Message(format!(
+            "Die Schnittstelle hat keinen Text zurückgegeben. {woran} \
+             (Ereignisse: {ereignisse}, Abbruchgrund: {}, Ausgabe-Marken: {}) \
+             Der Entwurf ist unverändert erhalten. Bitte erneut versuchen.",
+            if out.stop_reason.is_empty() { "keiner" } else { &out.stop_reason },
+            out.output_tokens,
+        )));
     }
 
     // Ein an der Marken-Obergrenze abgeschnittener Bericht sah aus wie

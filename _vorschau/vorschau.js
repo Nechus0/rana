@@ -123,7 +123,7 @@ document.getElementById("app").innerHTML = `
   </nav>
 
   <main class="work">
-    <header class="work-head">
+    <header class="work-head" data-zeigt="bericht">
       <div class="doczeile">
         <button class="btn btn-quiet btn-sm doczeile-zurueck">${icon.panelL} <span>Patienten</span></button>
         <span class="doczeile-trenner"></span>
@@ -164,13 +164,23 @@ document.getElementById("app").innerHTML = `
           <div class="entwurf-urteil"><span style="color:var(--brick)">rund 2,1 Seiten · über dem Korridor, läuft womöglich auf eine dritte Seite</span> <span style="color:var(--amber)">· 1 offene Stelle</span></div>
         </div>
 
-        <!-- Schritt 5, das Beiblatt. -->
-        <dl class="ptv-liste" style="margin-bottom:var(--s6)">
-          <dt>Chiffre</dt><dd>V36-025825A09.10.1962</dd>
-          <dt>Kostenträger</dt><dd>Beihilfe</dd>
-          <dt>Verfahren</dt><dd>Tiefenpsychologisch fundierte Psychotherapie, Einzeltherapie</dd>
-          <dt>Diagnose(n)</dt><dd>Dysthymia F34.1 · Undifferenzierte Somatisierungsstörung bei emotionaler Belastung (F45.1)</dd>
-        </dl>
+        <!-- Schritt 5: die Abstände zwischen Blatt, Hinweis und Beiblatt. -->
+        <div class="ausgabe">
+          <div class="paper-tray"><div class="paper-sheet" style="min-height:80px"></div></div>
+          <div class="notice notice-info notice-einreichen">
+            <b>Einzureichen:</b> Bericht, PTV 2b, ggf. Befundkopien (pseudonymisiert).
+          </div>
+          <section class="group">
+            <div class="group-head"><span class="group-title">Beiblatt PTV 2b</span></div>
+            <p class="hint">Angaben für das PTV 2b — zum Kopieren.</p>
+            <dl class="ptv-liste">
+              <dt>Chiffre</dt><dd>V36-025825A09.10.1962</dd>
+              <dt>Kostenträger</dt><dd>Beihilfe</dd>
+              <dt>Verfahren</dt><dd>Tiefenpsychologisch fundierte Psychotherapie, Einzeltherapie</dd>
+              <dt>Diagnose(n)</dt><dd>Dysthymia F34.1 · Undifferenzierte Somatisierungsstörung bei emotionaler Belastung (F45.1)</dd>
+            </dl>
+          </section>
+        </div>
 
         <section class="group">
           <div class="group-head"><span class="group-title">Vißer, Claudia</span></div>

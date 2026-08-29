@@ -71,7 +71,32 @@ pruef("(4) Abschlussplanung im Absatz Prognose", sys.includes("Planung des Thera
 pruef("Überschrift 1 am Leitfaden-Wortlaut", sys.includes("1. Behandlungsverlauf seit dem letzten Bericht und Erreichung der Therapieziele"));
 pruef("Überschrift 2 am Leitfaden-Wortlaut", sys.includes("2. Aktuelle Diagnosen gemäß ICD-10 und aktueller psychischer Befund"));
 pruef("Überschrift 3 am Leitfaden-Wortlaut", sys.includes("3. Begründung der Fortführung, weitere Therapieplanung und Prognose"));
-pruef("Umfangsverteilung 2.750 / 750 / 1.450", sys.includes("2.750") && sys.includes("750 Zeichen") && sys.includes("1.450"));
+// Der Korridor kommt seit 2.7.2 aus dem Satzspiegel, nicht aus einer
+// festen Zahl: sieben Ueberschriften kosten eine Viertelseite, die
+// kein Zeichen fuellt. Deshalb hat der Umwandlungsbericht ein
+// deutlich kleineres Budget als der Fortfuehrungsbericht.
+pruef("Budget je Abschnitt genannt", /BUDGET JE ABSCHNITT/.test(sys));
+const sysU = M.systemPrompt(profil, "umwandlung");
+const kF = M.korridor("fortfuehrung", profil);
+const kU = M.korridor("umwandlung", profil);
+pruef(`Umwandlung hat ein kleineres Budget (${kF.soll} gegen ${kU.soll})`, kU.soll < kF.soll - 800);
+pruef("beide Korridore stehen im Prompt",
+  sys.includes(kF.soll.toLocaleString("de-DE")) && sysU.includes(kU.soll.toLocaleString("de-DE")));
+pruef("die Verteilung nennt jeden Abschnitt einzeln",
+  (sysU.match(/HÖCHSTENS [\d.]+ Zeichen \(etwa/g) || []).length === 7);
+
+// Die Schaetzung muss die gemessenen Berichte treffen. Zwei echte
+// Punkte: der Fortfuehrungsbericht mit 7.095 Zeichen lief auf knapp
+// zweieinhalb Seiten, der Umwandlungsbericht mit 5.394 auf 2,4.
+const absatz = (n) => Array.from({ length: n }, (_, i) => "x".repeat(400)).join("\n\n");
+const sA = M.seitenSchaetzung("x".repeat(7095).replace(/(.{400})/g, "$1\n\n"), 3);
+const sB = M.seitenSchaetzung("x".repeat(5394).replace(/(.{400})/g, "$1\n\n"), 7);
+pruef(`7.095 Zeichen bei 3 Abschnitten: ${sA.toFixed(2)} Seiten (gemessen ~2,5)`,
+  sA > 2.2 && sA < 2.8);
+pruef(`5.394 Zeichen bei 7 Abschnitten: ${sB.toFixed(2)} Seiten (gemessen 2,4)`,
+  sB > 2.2 && sB < 2.6);
+pruef("dieselbe Zeichenzahl braucht bei sieben Abschnitten mehr Platz",
+  M.seitenSchaetzung(absatz(12), 7) > M.seitenSchaetzung(absatz(12), 3));
 // Statt sieben Absaetzen jetzt hoechstens zwei Verlaufsabsaetze — das
 // sitzungsweise Protokoll war der groesste Einzelposten der Ueberlaenge.
 pruef("hoechstens zwei Verlaufsabsaetze", sys.includes("HÖCHSTENS ZWEI Absätze zum Verlauf"));
