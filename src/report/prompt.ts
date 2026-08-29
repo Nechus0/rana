@@ -244,12 +244,29 @@ export function userPrompt(f: Felder, p: Profile): string {
     "— Verlauf & aktueller Stand —",
     "Therapiebeginn: " + deDatum(f.f_beginn),
     "Ausgangslage bei Therapiebeginn (zu Punkt 1, Absatz a): " + leer(f.f_ausgangslage),
-    "Behandlungsverlauf seit letztem Bericht (zu Punkt 1): " + leer(f.f_verlauf),
-    "Stand der zuletzt vereinbarten Therapieziele (zu Punkt 1 – jedes Ziel einordnen): " + leer(f.f_zielstatus),
+    (f.f_antragsart === "umwandlung"
+      ? "Bisheriger Behandlungsverlauf seit Therapiebeginn (zu Punkt 1): "
+      : "Behandlungsverlauf seit letztem Bericht (zu Punkt 1): ") + leer(f.f_verlauf),
+    (f.f_antragsart === "umwandlung"
+      ? "Stand der Ziele der Kurzzeittherapie (zu Punkt 1 – jedes Ziel einordnen): "
+      : "Stand der zuletzt vereinbarten Therapieziele (zu Punkt 1 – jedes Ziel einordnen): ") + leer(f.f_zielstatus),
     "Aktueller psychischer Befund (zu Punkt 2): " + leer(f.f_befund),
     "Aktuelle ICD-10-Diagnose(n) (zu Punkt 2): " + leer(f.f_diag_neu),
     "Begründung Fortführung / weitere Planung / geänderte Ziele und Methoden (zu Punkt 3): " + leer(f.f_begruendung),
     "Prognose / Veränderungshindernisse (zu Punkt 3): " + leer(f.f_prognose),
+
+    // Beim Umwandlungsantrag verlangt der Leitfaden zusätzlich die
+    // Begründung, warum aus der Kurzzeit- eine Langzeittherapie werden
+    // soll — und er verlangt sie ausdrücklich. Ohne sie fehlt dem
+    // Gutachter genau die Frage, über die er entscheidet.
+    ...(f.f_antragsart === "umwandlung" ? [
+      "",
+      "— ART DES ANTRAGS: UMWANDLUNG einer Kurzzeit- in eine Langzeittherapie —",
+      "Es gab KEINEN vorigen Bericht an den Gutachter; die Kurzzeittherapie braucht keinen. Schreibe deshalb niemals „seit dem letzten Bericht“, sondern beziehe dich auf den bisherigen Behandlungsverlauf seit Therapiebeginn.",
+      "Abschnitt 1 stellt entsprechend den BISHERIGEN Verlauf dar, die Veränderung der Symptomatik und das Ergebnis in Bezug auf die Ziele der Kurzzeittherapie.",
+      "Abschnitt 3 muss PFLICHT einen eigenen Satz enthalten, der die Notwendigkeit der Umwandlung in eine Langzeittherapie begründet: warum die Kurzzeittherapie nicht ausreicht und was die längere Behandlung leisten soll. Er steht im ersten Absatz von Abschnitt 3, vor den Behandlungszielen.",
+      "Im Absatz „Methodik und Setting“ werden ausserdem Setting, Sitzungszahl und Behandlungsfrequenz ausdrücklich BEGRÜNDET — beim Umwandlungsantrag genügt ihre Nennung nicht.",
+    ] : []),
     // Das Feld hiess bis 2.5.4 „Geänderte Behandlungsmethoden“ und
     // fragte nach einer Änderung. Das geht am Leitfaden vorbei: er
     // verlangt keine Änderungsmeldung, sondern eine Erläuterung von

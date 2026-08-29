@@ -30,7 +30,32 @@ export const FELDER = [
   // Bewusst HINTEN angehaengt: aeltere Faelle kennen diese Schluessel
   // nicht und werden von leererFall() einfach leer vorbelegt.
   "f_beginn", "f_ausgangslage", "f_zielstatus", "f_methoden", "f_abschluss",
+  // Seit 2.6.0. Steht am Fall, nicht am Profil: dieselbe Praxis stellt
+  // beides, und welcher Antrag es ist, entscheidet sich je Behandlung.
+  "f_antragsart",
 ] as const;
+
+/**
+ * Welche Art Antrag der Bericht begründet.
+ *
+ * Der Leitfaden kennt zwei Berichte mit verschiedener Gliederung. Der
+ * zum Fortführungsantrag setzt einen vorigen Bericht voraus und knüpft
+ * an ihn an. Der zum Umwandlungsantrag — Kurzzeit- in Langzeittherapie —
+ * hat keinen: die Kurzzeittherapie brauchte keinen Bericht. Wer die
+ * Felder trotzdem mit „seit dem letzten Bericht" beschriftet, fragt
+ * nach etwas, das es nicht gibt.
+ */
+export type Antragsart = "fortfuehrung" | "umwandlung";
+
+export const ANTRAGSART_NAMEN: Record<Antragsart, string> = {
+  fortfuehrung: "Fortführungsantrag (Langzeittherapie)",
+  umwandlung:   "Umwandlungsantrag (Kurzzeit- in Langzeittherapie)",
+};
+
+/** Die Art des gerade offenen Falls. Vorgabe ist die Fortführung. */
+export function antragsart(): Antragsart {
+  return state.fields.f_antragsart === "umwandlung" ? "umwandlung" : "fortfuehrung";
+}
 
 export type FeldName = (typeof FELDER)[number];
 
@@ -60,6 +85,7 @@ export const PFLICHT: { feld: FeldName; label: string; schritt: number }[] = [
  * die Pflichtangaben ab, hier stehen auch die übrigen.
  */
 export const FELD_NAMEN: Record<string, string> = {
+  f_antragsart: "Art des Antrags",
   f_name: "Patient:in",
   f_chiffre: "Chiffre",
   f_nr: "Lfd. Nummer",
@@ -481,6 +507,10 @@ export function leererFall(profile: Profile | null): Felder {
   for (const k of FELDER) f[k] = "";
   // Vorbelegungen aus dem Profil, die für jeden neuen Fall gleich sind.
   if (profile) f.f_nr = "1";
+  // Seit 2.6.0. Der häufigere Fall ist der Fortführungsantrag, und ein
+  // leerer Wert würde die Beschriftungen in einen undefinierten Zustand
+  // bringen. Altfälle ohne das Feld fängt antragsart() zusätzlich ab.
+  f.f_antragsart = "fortfuehrung";
   return f;
 }
 

@@ -54,6 +54,16 @@ export const LEITFADEN: Record<string, Leitfadenhinweis> = {
 
   // ---- Schritt 1 · Stammdaten --------------------------------
 
+  f_antragsart: {
+    verlangt: "Welche Art Antrag dieser Bericht begründet.",
+    punkte: [
+      "Fortführungsantrag: die Langzeittherapie läuft, es gab schon einen Bericht.",
+      "Umwandlungsantrag: aus einer Kurzzeittherapie soll eine Langzeittherapie werden. Dafür gab es noch keinen Bericht.",
+      "Die Wahl ändert die Beschriftungen der Felder und das, was Rana an Claude weitergibt.",
+    ],
+    warum: "Der Leitfaden kennt für beide verschiedene Anforderungen. Beim Umwandlungsantrag verlangt er zusätzlich eine Begründung, warum die Kurzzeittherapie nicht ausreicht — und die Begründung von Setting, Sitzungszahl und Frequenz.",
+  },
+
   f_chiffre: {
     verlangt: "Eine Kennung, unter der die Patientin im Bericht durchgängig erscheint.",
     punkte: [
@@ -111,6 +121,46 @@ export const LEITFADEN: Record<string, Leitfadenhinweis> = {
 
   // ---- Schritt 2 · Vorbericht --------------------------------
 
+  f_vorbericht: {
+    verlangt: "Ob es zu dieser Behandlung schon einmal einen Bericht an den Gutachter gab.",
+    punkte: [
+      "Beim Fortführungsantrag gibt es ihn — und Rana knüpft daran an, statt Bekanntes zu wiederholen.",
+      "Beim Umwandlungsantrag gibt es ihn nicht: die Kurzzeittherapie verlangte keinen.",
+      "Ohne Vorbericht muss der Bericht den Fall aus sich heraus verständlich machen.",
+    ],
+    umwandlung: "Bei der Umwandlung Kurzzeit → Langzeit bleibt das Feld leer. Das ist kein Versäumnis, sondern der Normalfall.",
+  },
+
+  f_lastreport: {
+    verlangt: "Den Wortlaut des letzten Berichts, damit der neue daran anschliesst.",
+    punkte: [
+      "Rana liest daraus, was dem Gutachter bereits bekannt ist.",
+      "Der neue Bericht wiederholt es dann nicht, sondern schreibt den Verlauf fort.",
+      "Der Text bleibt auf dem Gerät verschlüsselt; an Anthropic geht er nur pseudonymisiert.",
+    ],
+    warum: "Der Leitfaden will keinen zweiten Erstbericht, sondern die Entwicklung seit dem letzten Mal.",
+    umwandlung: "Entfällt beim Umwandlungsantrag — es gibt keinen vorigen Bericht.",
+  },
+
+  f_diag_alt: {
+    verlangt: "Die Diagnose(n), unter denen die Behandlung bisher lief, mit ICD-10-Kode.",
+    punkte: [
+      "Mit Kode und Bezeichnung, nicht nur der Kode.",
+      "Sie dient dem Vergleich: Rana kann so benennen, was sich seither geändert hat.",
+      "Bleibt die Diagnose gleich, ist auch das eine Aussage.",
+    ],
+    umwandlung: "Hier stehen die Diagnosen der Kurzzeittherapie.",
+  },
+
+  f_nr: {
+    verlangt: "Die laufende Nummer dieses Antrags in dieser Behandlung.",
+    punkte: [
+      "Der erste Fortführungsantrag ist die 1, der nächste die 2.",
+      "Sie erscheint im Kopf des Berichts und ordnet ihn dem Verlauf zu.",
+    ],
+    umwandlung: "Beim Umwandlungsantrag ist es die Nummer des Antrags, nicht die eines Fortführungsantrags.",
+  },
+
   f_psychodyn: {
     verlangt: "Die tragende Dynamik des Falls.",
     punkte: [
@@ -127,6 +177,7 @@ export const LEITFADEN: Record<string, Leitfadenhinweis> = {
       "Rana zieht sie beim Folgeantrag aus dem vorigen Bericht heraus.",
     ],
     warum: "Ohne die alten Ziele fehlt der Massstab, an dem sich das Behandlungsergebnis messen lässt. Genau das verlangt der Leitfaden.",
+    umwandlung: "Beim Umwandlungsantrag stehen hier die Ziele, die für die Kurzzeittherapie vereinbart wurden — sie sind der Massstab, an dem sich zeigt, warum die Kurzzeittherapie nicht ausreicht.",
   },
 
   // ---- Schritt 3 · Verlauf -----------------------------------

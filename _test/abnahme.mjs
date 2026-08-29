@@ -101,6 +101,48 @@ const alteSecs = M.parseSections(alterBericht);
 pruef("alte Überschrift wird abgestreift", !alteSecs[0].includes("Bisheriger Behandlungsverlauf") && alteSecs[0].startsWith("Zu Behandlungsbeginn"));
 pruef("alle drei Abschnitte erkannt", alteSecs.every((x) => x.trim().length > 5));
 
+console.log("\n=== Kriterium 5 - Antragsart steuert den Prompt ===");
+const fortF = { ...M.leererFall(profil), ...gefuellt, f_antragsart: "fortfuehrung" };
+const umwF  = { ...M.leererFall(profil), ...gefuellt, f_antragsart: "umwandlung" };
+const pFort = M.userPrompt(fortF, profil);
+const pUmw  = M.userPrompt(umwF, profil);
+
+pruef("Fortfuehrung nennt den letzten Bericht",
+  pFort.includes("seit letztem Bericht") && !pFort.includes("UMWANDLUNG"));
+pruef("Umwandlung nennt KEINEN letzten Bericht",
+  pUmw.includes("seit Therapiebeginn") && !pUmw.includes("seit letztem Bericht"));
+pruef("Umwandlung fordert die Begruendung der Umwandlung",
+  pUmw.includes("UMWANDLUNG") && /Notwendigkeit der Umwandlung/.test(pUmw));
+pruef("Umwandlung fordert Begruendung von Setting und Frequenz",
+  /Setting, Sitzungszahl und Behandlungsfrequenz/.test(pUmw));
+pruef("Umwandlung ordnet die Ziele der Kurzzeittherapie zu",
+  pUmw.includes("Ziele der Kurzzeittherapie"));
+pruef("f_antragsart ist ein Feld", M.FELDER.includes("f_antragsart"));
+pruef("Vorgabewert ist Fortfuehrung", M.leererFall(profil).f_antragsart === "fortfuehrung");
+
+console.log("\n=== Kriterium 6 - Kuerzen verliert keine Pflichtinhalte ===");
+const kp = M.kuerzePrompt("Ein Entwurf.", profil);
+pruef("Kuerzen nennt die vier Pflichtbestandteile",
+  /Ausgangslage/.test(kp) && /Therapiezielen/.test(kp)
+  && /Methodik und Setting/.test(kp) && /Therapieabschlusses/.test(kp));
+pruef("Kuerzen schuetzt Diagnosen und Schlusssatz",
+  /ICD-10/.test(kp) && /Schlusssatz/.test(kp));
+pruef("Kuerzen erlaubt Ueberlaenge statt Verlust",
+  /hinzunehmen/.test(kp));
+
+console.log("\n=== Kriterium 7 - Leitfadenhinweise vorhanden ===");
+// Selbsterklaerende Stammdaten brauchen keinen Hinweis; jedes andere
+// Feld muss einen haben, sonst zeigt Rana ein Info-Zeichen ins Leere.
+const ohneNoetig = ["f_name", "f_gebdatum", "f_geschlecht", "f_kasse", "f_beginn"];
+const ohneHinweis = M.FELDER.filter((k) => !ohneNoetig.includes(k) && !M.LEITFADEN[k]);
+pruef(`jedes erklaerungsbeduerftige Feld hat einen Hinweis (${ohneHinweis.join(", ") || "-"})`,
+  ohneHinweis.length === 0);
+pruef("Umwandlungs-Zusatz an den Feldern, die sich unterscheiden",
+  ["f_nr", "f_vorbericht", "f_lastreport", "f_ziele_alt", "f_verlauf", "f_zielstatus", "f_methoden"]
+    .every((k) => M.LEITFADEN[k] && M.LEITFADEN[k].umwandlung));
+pruef("jeder Hinweis hat verlangt + punkte",
+  Object.values(M.LEITFADEN).every((h) => h.verlangt && Array.isArray(h.punkte) && h.punkte.length > 0));
+
 export { profil, gefuellt, leerFelder, fehler };
 console.log(`\n=== Zwischenstand: ${fehler} Fehler ===`);
 process.exitCode = fehler ? 1 : 0;

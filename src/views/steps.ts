@@ -34,6 +34,9 @@ export const SCHRITTE = [
 
 const f = (k: string) => S.state.fields[k] ?? "";
 
+/** Kurz zur Hand: ist dieser Fall ein Umwandlungsantrag? */
+const umwandlung = () => S.antragsart() === "umwandlung";
+
 function input(id: string, label: string, opts: {
   typ?: string; ph?: string; note?: string; liste?: string[]; span?: number;
 } = {}): string {
@@ -149,8 +152,26 @@ function schritt1(): string {
       mit der Person verknüpft. Du kannst sie in der Patienten-Übersicht bearbeiten.
       Hier trägst du nur ein, was spezifisch für diesen Antrag ist.
     </p>
+    <!-- Die Antragsart steht ganz oben, weil sie alles darunter
+         beeinflusst: bei einer Umwandlung gibt es keinen letzten
+         Bericht, und Beschriftungen wie „seit dem letzten Bericht"
+         fragen dann nach etwas, das es nicht gibt. -->
+    <div class="field" style="margin-bottom: var(--s5)">
+      <label for="f_antragsart" style="align-items: center;">
+        Art des Antrags
+        <span class="field-note">bestimmt die Beschriftungen und den Auftrag an Claude</span>
+        ${leitfadenZeichen("f_antragsart")}
+      </label>
+      ${leitfadenBlase("f_antragsart")}
+      <select id="f_antragsart" data-feld="f_antragsart">
+        ${(Object.keys(S.ANTRAGSART_NAMEN) as S.Antragsart[]).map((k) => `
+          <option value="${k}" ${S.antragsart() === k ? "selected" : ""}>${esc(S.ANTRAGSART_NAMEN[k])}</option>`).join("")}
+      </select>
+    </div>
+
     <div class="grid-3">
-      ${input("f_nr", "Lfd. Nr. des Fortführungsantrags", { span: 3, typ: "number", ph: "1", note: "je Antrag hochzählen" })}
+      ${input("f_nr", umwandlung() ? "Lfd. Nr. des Antrags" : "Lfd. Nr. des Fortführungsantrags",
+              { span: 3, typ: "number", ph: "1", note: "je Antrag hochzählen" })}
       ${input("f_bewilligt", "Bisher bewilligt", { typ: "number", note: "Std." })}
       ${input("f_verbraucht", "Davon verbraucht", { typ: "number", note: "Std." })}
       ${input("f_beantragt", "Jetzt beantragt", { typ: "number", note: "weitere Std." })}
@@ -189,11 +210,25 @@ function schritt2(): string {
       im Bericht.
     </p>
 
-    <label class="switch" style="margin-bottom: var(--s5)">
-      <input type="checkbox" id="cbVorbericht" ${hat ? "checked" : ""}>
-      <span class="switch-track"></span>
-      <span>Ein Vorbericht liegt vor</span>
-    </label>
+    ${umwandlung() ? `
+      <div class="notice notice-info" style="margin-bottom: var(--s5)">
+        <b>Umwandlungsantrag.</b> Zur Kurzzeittherapie gab es keinen Bericht an
+        den Gutachter — sie braucht keinen. Dieser Schritt darf deshalb leer
+        bleiben. Was aus der bisherigen Behandlung in den Bericht gehört,
+        tragen Sie in Schritt 3 ein.
+      </div>` : ""}
+
+    <div class="field" style="margin-bottom: var(--s5)">
+      <div class="row" style="gap: var(--s2); align-items: center">
+        <label class="switch" style="margin: 0">
+          <input type="checkbox" id="cbVorbericht" ${hat ? "checked" : ""}>
+          <span class="switch-track"></span>
+          <span>Ein Vorbericht liegt vor</span>
+        </label>
+        ${leitfadenZeichen("f_vorbericht")}
+      </div>
+      ${leitfadenBlase("f_vorbericht")}
+    </div>
 
     <div id="vorberichtBlock" class="${hat ? "" : "hidden"}">
       ${gruppe(null, "Text des letzten Berichts", `
@@ -203,10 +238,12 @@ function schritt2(): string {
           </button>
         </div>
         <div class="field">
-          <label for="f_lastreport">
+          <label for="f_lastreport" style="align-items: center;">
             Hier einfügen
             <span class="field-note">bleibt auf dem Gerät, geht nur als Hintergrund in die Formulierung</span>
+            ${leitfadenZeichen("f_lastreport")}
           </label>
+          ${leitfadenBlase("f_lastreport")}
           <textarea id="f_lastreport" data-feld="f_lastreport" style="min-height:190px"
                     placeholder="Kompletten Text des letzten Berichts hier einfügen …">${esc(f("f_lastreport"))}</textarea>
         </div>`)}
@@ -248,17 +285,24 @@ function schritt3(): string {
       des fertigen Berichts der Text einfliesst.
     </p>
 
-    ${gruppe("1", "Behandlungsverlauf seit dem letzten Bericht", `
+    ${gruppe("1", umwandlung()
+        ? "Bisheriger Behandlungsverlauf"
+        : "Behandlungsverlauf seit dem letzten Bericht", `
       ${textarea("f_ausgangslage", "Ausgangslage bei Therapiebeginn", {
         note: "auslösende Situation, Symptomatik, Psychodynamik",
         hoch: 150,
         ph: "Wodurch wurde die Behandlung ausgelöst? Symptomatik und Funktionsniveau zu Beginn, zugrunde liegender Konflikt …",
       })}
-      ${textarea("f_verlauf", "Verlauf seit dem letzten Bericht", {
+      ${textarea("f_verlauf",
+        umwandlung() ? "Bisheriger Verlauf seit Therapiebeginn" : "Verlauf seit dem letzten Bericht", {
+        note: umwandlung() ? "Veränderung der Symptomatik in der Kurzzeittherapie" : undefined,
         hoch: 190,
-        ph: "Was wurde bearbeitet? Symptomveränderung im Behandlungszeitraum …",
+        ph: umwandlung()
+          ? "Was wurde in der Kurzzeittherapie bearbeitet? Wie hat sich die Symptomatik seither verändert …"
+          : "Was wurde bearbeitet? Symptomveränderung im Behandlungszeitraum …",
       })}
-      ${textarea("f_zielstatus", "Stand der zuletzt vereinbarten Therapieziele", {
+      ${textarea("f_zielstatus",
+        umwandlung() ? "Stand der Ziele der Kurzzeittherapie" : "Stand der zuletzt vereinbarten Therapieziele", {
         note: "je Ziel: erreicht / teilweise erreicht / noch offen",
         hoch: 150,
         ph: "Ziel 1 … erreicht. Ziel 2 … teilweise, weil … Ziel 3 … noch offen, weil …",
@@ -269,7 +313,13 @@ function schritt3(): string {
       ${textarea("f_diag_neu", "Aktuelle ICD-10-Diagnose(n)", { ph: "Mit Code und Diagnosesicherheit …", icd10: true })}`)}
 
     ${gruppe("3", "Begründung, Planung und Prognose", `
-      ${textarea("f_begruendung", "Begründung und weitere Planung", { note: "Ziele, Methoden", ph: "Warum ist die Fortführung nötig? Weitere Planung, angepasste Ziele …" })}
+      ${textarea("f_begruendung",
+        umwandlung() ? "Begründung der Umwandlung und weitere Planung" : "Begründung und weitere Planung", {
+        note: umwandlung() ? "warum Langzeittherapie · weitere Ziele" : "Ziele, Methoden",
+        ph: umwandlung()
+          ? "Warum reicht die Kurzzeittherapie nicht aus? Was soll die Langzeittherapie leisten? Weitere Ziele …"
+          : "Warum ist die Fortführung nötig? Weitere Planung, angepasste Ziele …",
+      })}
       ${textarea("f_methoden", "Methodik und Setting", {
         note: "beim Fortführungsantrag nur bei Änderung · beim Umwandlungsantrag zu begründen",
         ph: "Beim Umwandlungsantrag: warum Setting, Sitzungszahl und Frequenz für diesen Fall die richtigen sind …",
@@ -538,6 +588,12 @@ export function bindeSchritt(n: number, neuZeichnen: () => void): void {
     on(node, "change", () => S.setzeFeld(name, node.value));
     aktualisiereZaehler(node);
   }
+
+  // Die Antragsart ist das einzige Feld, das die Beschriftungen um sich
+  // herum ändert. Ohne Neuzeichnen bliebe „Lfd. Nr. des Fortführungs-
+  // antrags" stehen, obwohl gerade auf Umwandlung umgestellt wurde.
+  const art = document.getElementById("f_antragsart");
+  if (art) on(art, "change", () => neuZeichnen());
 
   for (const btn of qsa<HTMLButtonElement>("[data-bausteine]")) {
     on(btn, "click", () => { void bausteinDialog(btn.dataset.bausteine!, neuZeichnen); });
