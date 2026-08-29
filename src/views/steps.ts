@@ -13,7 +13,7 @@
 import * as api from "../core/ipc";
 import { F_DIAGNOSEN } from "../core/icd10";
 import { buildDocx } from "../report/docx";
-import { expandPrompt, klarnamen, systemPrompt, userPrompt } from "../report/prompt";
+import { expandPrompt, klarnamen, kuerzePrompt, systemPrompt, userPrompt } from "../report/prompt";
 import { fileBase, metrik, renderDocHTML } from "../report/render";
 import * as S from "../core/state";
 import { confirmDialog, dialog, download, el, esc, icon, on, qs, qsa, toast } from "../ui/kit";
@@ -267,6 +267,16 @@ function schritt4(): string {
         ${icon.wand} Bericht formulieren
       </button>
       <button class="btn hidden" id="btnAbbrechen">${icon.stop} Abbrechen</button>
+
+      <!-- Erscheint nur, wenn der Entwurf wirklich zu lang ist. Ein
+           Knopf, der die meiste Zeit nichts zu tun hat, verstellt nur
+           den Blick auf den einen, der zählt. -->
+      ${m && m.urteil === "lang" ? `
+        <button class="btn" id="btnKuerzen" ${b && !b.may_send ? "disabled" : ""}
+                title="Auf zwei Seiten kürzen, ohne die Pflichtangaben zu verlieren">
+          Auf zwei Seiten kürzen
+        </button>` : ""}
+
       <span class="spacer"></span>
       <button class="btn btn-quiet btn-sm" id="btnPromptZeigen">Anfrage ansehen</button>
     </div>
@@ -650,9 +660,15 @@ function bindeSchritt4(neuZeichnen: () => void): void {
   on(el("btnFormulieren"), "click", () => { void formuliere("report", neuZeichnen); });
   on(el("btnAbbrechen"), "click", () => { abbruch = true; toast("Wird abgebrochen …"); });
   on(el("btnPromptZeigen"), "click", () => { void zeigePrompt(); });
+
+  const btnKuerzen = document.getElementById("btnKuerzen");
+  if (btnKuerzen) on(btnKuerzen, "click", () => { void formuliere("kuerzen", neuZeichnen); });
 }
 
-async function formuliere(kind: "report" | "expand", neuZeichnen: () => void): Promise<void> {
+async function formuliere(
+  kind: "report" | "expand" | "kuerzen",
+  neuZeichnen: () => void,
+): Promise<void> {
   const p = S.state.profile;
   if (!p) return;
 
@@ -664,7 +680,10 @@ async function formuliere(kind: "report" | "expand", neuZeichnen: () => void): P
   // einmal, aber hier lässt sich früher und freundlicher warnen.
   const namen = klarnamen(S.state.fields);
   const system = systemPrompt(p);
-  const user = kind === "expand" ? expandPrompt(S.state.report, p) : userPrompt(S.state.fields, p);
+  const user =
+      kind === "expand"  ? expandPrompt(S.state.report, p)
+    : kind === "kuerzen" ? kuerzePrompt(S.state.report, p)
+    : userPrompt(S.state.fields, p);
 
   const treffer = await api.checkClearNames(`${system}\n${user}`, namen);
   if (treffer) {
@@ -723,10 +742,22 @@ async function formuliere(kind: "report" | "expand", neuZeichnen: () => void): P
     const m = metrik(res.text, p);
     const kosten = res.cost_eur.toLocaleString("de-DE", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
     const gespart = res.cached_tokens > 0 ? " · Regelteil aus dem Zwischenspeicher" : "";
-    toast(
-      `Fertig. ${m.zeichen.toLocaleString("de-DE")} Zeichen, ${m.hinweis}. Kosten: ${kosten} €${gespart}`,
-      m.urteil === "gut" ? "ok" : "info"
-    );
+
+    // Ein abgeschnittener Bericht sah aus wie ein fertiger. Wer den
+    // Abbruch übersah, reichte einen halben Bericht ein — deshalb ist
+    // das hier eine Warnung und keine Randbemerkung.
+    if (res.stop_reason === "max_tokens") {
+      toast(
+        "Der Bericht ist unvollständig: Anthropic hat an der Längengrenze abgebrochen. "
+        + "Bitte den Entwurf prüfen und noch einmal formulieren lassen.",
+        "danger", 12000,
+      );
+    } else {
+      toast(
+        `Fertig. ${m.zeichen.toLocaleString("de-DE")} Zeichen, ${m.hinweis}. Kosten: ${kosten} €${gespart}`,
+        m.urteil === "gut" ? "ok" : "info"
+      );
+    }
 
   } catch (e) {
     toast(api.errorText(e), "danger");

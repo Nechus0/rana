@@ -136,8 +136,12 @@ gesendet und kosten ab dem zweiten Bericht nur noch ein Zehntel.
 1. **In Rana.** Jeder Aufruf wird mit tatsächlichem Verbrauch protokolliert.
    Ab 70 % ein Hinweis, ab 90 % eine Warnung, bei 100 % wird nicht mehr
    gesendet. Dazu ein Tageslimit gegen Programmfehler.
-2. **Je Aufruf.** `max_tokens` steht fest auf 4.000. Ein einzelner Aufruf
-   kann strukturell nie mehr als etwa 0,11 € kosten.
+2. **Je Aufruf.** `max_tokens` steht fest auf 12.000. Ein einzelner Aufruf
+   kann strukturell nie mehr als etwa 0,31 € kosten. Die Grenze lag bis
+   2.5.4 bei 4.000 — zu knapp: der Bericht brach dann mitten im Satz ab,
+   und er tat es stillschweigend. Bezahlt werden erzeugte Marken, nicht
+   erlaubte; ein gewöhnlicher Bericht bleibt bei rund 2.000. Wird die
+   Grenze doch erreicht, sagt es Rana jetzt deutlich.
 3. **Bei Anthropic.** Die Ersteinrichtung führt ausdrücklich zur
    Ausgabengrenze in der Console. Das ist die einzige Grenze, die auch dann
    greift, wenn der Schlüssel abhandenkommt.

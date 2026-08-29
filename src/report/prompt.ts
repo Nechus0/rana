@@ -305,6 +305,57 @@ export function expandPrompt(entwurf: string, p: Profile): string {
 }
 
 // ===============================================================
+// Kürzen, wenn der Entwurf über zwei Seiten hinausgeht
+// ===============================================================
+
+/**
+ * Bringt einen zu langen Entwurf auf den Korridor zurück.
+ *
+ * Das Gegenstück zu `expandPrompt`, und das wichtigere von beiden:
+ * gemessen an den Verbrauchsdaten schreibt das Modell regelmässig
+ * das Doppelte des Zielumfangs. Ein Bericht über zwei Seiten wird vom
+ * Gutachter nicht besser gelesen, sondern schlechter.
+ *
+ * Der Kern dieser Anweisung ist nicht das Kürzen, sondern was dabei
+ * **nicht** verlorengehen darf. Der Leitfaden verlangt vier Angaben
+ * ausdrücklich; ein Bericht, dem beim Kürzen die Zielbilanz oder die
+ * Abschlussplanung abhandenkommt, ist kürzer und zugleich unbrauchbar.
+ * Deshalb stehen die vier hier noch einmal, als Bedingung und nicht
+ * als Erinnerung.
+ */
+export function kuerzePrompt(entwurf: string, p: Profile): string {
+  const L = p.layout;
+  const ist = entwurf.replace(/【\s*([^】]*?)\s*】/g, "$1").trim().length;
+  const weg = ist - L.ziel_soll;
+
+  return [
+    `Der folgende Entwurf ist mit ${ist.toLocaleString("de-DE")} Zeichen zu lang.`,
+    `Der Zielkorridor liegt bei ${L.ziel_min.toLocaleString("de-DE")} bis ${L.ziel_max.toLocaleString("de-DE")} Zeichen; angestrebt sind ${L.ziel_soll.toLocaleString("de-DE")}.`,
+    `Es müssen also rund ${Math.max(0, weg).toLocaleString("de-DE")} Zeichen weichen.`,
+    "",
+    "WAS NICHT WEICHEN DARF — diese vier verlangt der Leitfaden ausdrücklich:",
+    "1. Die Ausgangslage bei Therapiebeginn als erster Absatz von Abschnitt 1. Sie muss den Fall auch ohne den Erstbericht verständlich machen.",
+    "2. Die Bilanz zu den zuletzt vereinbarten Therapiezielen als vorletzter Absatz von Abschnitt 1, mit der Aussage, was erreicht und was nicht erreicht wurde.",
+    "3. Die Aussage zu den Behandlungsmethoden und -techniken im Absatz Methodik und Setting, einschliesslich Verfahren, Frequenz und Zahl der beantragten Sitzungen.",
+    "4. Der Satz zur Planung des Therapieabschlusses im Absatz Prognose.",
+    "",
+    "Ebenfalls unverändert bleiben: Gliederung, alle Überschriften, alle Beschriftungen, die Diagnosen mit ICD-10-Kodierung, die nummerierten Behandlungsziele und der feste Schlusssatz.",
+    "",
+    "WORAN GEKÜRZT WIRD, in dieser Reihenfolge:",
+    "  (a) Wiederholungen zwischen den Abschnitten — dieselbe Aussage steht oft zweimal.",
+    "  (b) Ausschmückende Nebensätze und Wendungen ohne Fallbezug.",
+    "  (c) Beispiele, wo mehrere dasselbe belegen: eines genügt.",
+    "  (d) Erst zuletzt einzelne klinische Beobachtungen, und dann die am wenigsten entscheidungsrelevanten.",
+    "",
+    "Streiche niemals eine Angabe, die für die Beurteilung der Fortführung gebraucht wird, nur um die Zahl zu erreichen. Bleibt der Text danach über dem Korridor, ist das hinzunehmen — ein unvollständiger Bericht ist schlechter als ein langer.",
+    "Gib den vollständigen gekürzten Text aus, nichts sonst. Keine Vorbemerkung, keine Erläuterung, was du gekürzt hast.",
+    "",
+    "— ENTWURF —",
+    entwurf,
+  ].join("\n");
+}
+
+// ===============================================================
 // Klarnamen, die nicht hinausgehen dürfen
 // ===============================================================
 

@@ -24,10 +24,24 @@ use tauri::{AppHandle, Emitter};
 const ENDPOINT: &str = "https://api.anthropic.com/v1/messages";
 const API_VERSION: &str = "2023-06-01";
 
-/// Feste Obergrenze je Aufruf. Der Bericht soll rund 1.800 Marken lang
-/// werden; 4.000 lassen reichlich Luft und begrenzen zugleich den
-/// teuersten denkbaren Einzelaufruf auf etwa elf Cent.
-const MAX_TOKENS: u32 = 4_000;
+/// Feste Obergrenze je Aufruf.
+///
+/// Sie stand auf 4.000 — gerechnet für einen Bericht von rund 1.800
+/// Marken. Die Rechnung war zu knapp: Deutsch mit Umlauten zerfällt in
+/// mehr Marken als Englisch, und ein Modell, das den Zeichenkorridor
+/// überschreitet, läuft in die Grenze. Der Bericht brach dann mitten im
+/// Satz ab — bei „Methodik und Setting", also mitten in Abschnitt 2.
+///
+/// Jetzt 12.000. Das ist reichlich und kostet nichts, solange es nicht
+/// gebraucht wird: bezahlt werden erzeugte Marken, nicht erlaubte. Ein
+/// gewöhnlicher Bericht bleibt bei rund 2.000. Der teuerste denkbare
+/// Einzelaufruf steigt damit auf etwa dreissig Cent — bei einem Bericht
+/// am Tag sind das gut neun Euro im Monat im schlechtesten Fall, und die
+/// Monatsgrenze greift ohnehin davor.
+///
+/// Wichtiger als die Zahl ist, was jetzt passiert, wenn sie doch
+/// erreicht wird: der Abbruch wird gemeldet statt verschwiegen.
+const MAX_TOKENS: u32 = 12_000;
 
 const RETRIES: u32 = 2;
 
@@ -298,9 +312,26 @@ async fn stream_once(
     let mut buf = String::new();
     let mut bytes = res.bytes_stream();
 
+    // Rohe Bytes, nicht Text: ein Datenpaket endet an beliebiger Stelle,
+    // auch mitten in einem Zeichen. `from_utf8_lossy` machte aus den
+    // angefangenen Bytes ein Ersatzzeichen — und wenn das mitten in
+    // einer JSON-Zeile geschah, liess sie sich nicht mehr lesen und der
+    // ganze Block wurde stillschweigend übersprungen. Bei deutschem Text
+    // mit Umlauten passiert das laufend.
+    let mut roh: Vec<u8> = Vec::new();
+
     while let Some(chunk) = bytes.next().await {
         let chunk = chunk?;
-        buf.push_str(&String::from_utf8_lossy(&chunk));
+        roh.extend_from_slice(&chunk);
+
+        // So viel entnehmen, wie sich vollständig lesen lässt; der Rest
+        // bleibt liegen und wird mit dem nächsten Paket vervollständigt.
+        let gueltig = match std::str::from_utf8(&roh) {
+            Ok(s) => s.len(),
+            Err(e) => e.valid_up_to(),
+        };
+        buf.push_str(&String::from_utf8_lossy(&roh[..gueltig]));
+        roh.drain(..gueltig);
 
         // Server-Sent-Events: Blöcke sind durch eine Leerzeile getrennt.
         while let Some(idx) = buf.find("\n\n") {
@@ -385,6 +416,19 @@ async fn stream_once(
             "Die Schnittstelle hat keinen Text zurückgegeben. Bitte erneut versuchen.".into(),
         ));
     }
+
+    // Ein an der Marken-Obergrenze abgeschnittener Bericht sah aus wie
+    // ein fertiger. Er brach mitten im Satz ab, und wer das übersah,
+    // reichte einen halben Bericht ein. Der Text wird trotzdem
+    // zurückgegeben — er ist ja brauchbar, nur unvollständig —, aber
+    // `stop_reason` sagt es, und die Oberfläche zeigt es an.
+    if out.stop_reason == "max_tokens" {
+        log::warn!(
+            "Der Bericht wurde an der Marken-Obergrenze abgeschnitten ({} Marken).",
+            out.output_tokens
+        );
+    }
+
     Ok(out)
 }
 
@@ -487,10 +531,16 @@ mod tests {
 
     #[test]
     fn teuerster_denkbarer_aufruf_ist_begrenzt() {
-        // MAX_TOKENS steht fest auf 4.000. Selbst bei voll ausgereizter
-        // Eingabe bleibt ein einzelner Aufruf zweistellig in Cent.
+        // MAX_TOKENS steht seit 2.5.5 auf 12.000, damit ein Bericht nicht
+        // mehr mitten im Satz abbricht. Der teuerste denkbare Einzelaufruf
+        // steigt damit auf gut dreissig Cent. Das ist die Grenze, die hier
+        // gehalten werden muss: ein einzelner Klick darf niemals einen Euro
+        // kosten können. Die Monatsgrenze in budget.rs greift ohnehin davor.
         let schlimmstenfalls = budget::cost_eur("claude-opus-5", 8_000, 0, MAX_TOKENS as u64);
-        assert!(schlimmstenfalls < 0.15, "Obergrenze verletzt: {schlimmstenfalls:.4} €");
+        assert!(
+            schlimmstenfalls < 0.40,
+            "Obergrenze verletzt: {schlimmstenfalls:.4} €"
+        );
     }
 
     #[test]

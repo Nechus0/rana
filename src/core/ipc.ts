@@ -214,7 +214,8 @@ export interface GenerateRequest {
   system: string;
   user: string;
   forbidden_names: string[];
-  kind: "report" | "expand";
+  /** Wofür der Aufruf zählt. Rust nimmt es unverändert ins Verbrauchsprotokoll. */
+  kind: "report" | "expand" | "kuerzen";
 }
 
 export const generateReport = (request: GenerateRequest) =>
