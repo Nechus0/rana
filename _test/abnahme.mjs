@@ -1,5 +1,5 @@
 // Abnahmekriterien aus Rana-Aenderungen-PTV3-Leitfaden-Prompt.md
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 globalThis.window = { matchMedia: () => ({ matches: false }) };
 const M = await import("./bundle.mjs");
 
@@ -263,6 +263,35 @@ pruef("Kopfzeile sagt 2. Fortfuehrungsantrag", /2\. Fortführungsantrag<\/td>/.t
 pruef("Fusszeile sagt Fortfuehrungsbericht", /Fortführungsbericht/.test(hF));
 pruef("Dateiname traegt Fortfuehrungsbericht", M.fileBase(fF).startsWith("Fortfuehrungsbericht"));
 
+
+console.log("\n=== Kriterium 9 - jede Pflichtangabe hat auch ein Feld ===");
+// Eine Pflichtangabe ohne Eingabefeld ist schlimmer als keine: die
+// Fortschrittsanzeige meldet eine Luecke, der Klick darauf springt in
+// den Schritt — und dort ist nichts zu sehen. Genau das passierte in
+// 2.7.0 mit dem psychischen Befund im Umwandlungspfad.
+const stepsQuelle = readFileSync(new URL("../src/views/steps.ts", import.meta.url), "utf8");
+const teilVon = (von, bis) => stepsQuelle.slice(stepsQuelle.indexOf(von), stepsQuelle.indexOf(bis));
+const feldeIn = (b) => new Set((b.match(/"f_[a-z_]+"/g) || []).map((x) => x.slice(1, -1)));
+// Chiffre, Geburtsdatum und Soziodemografie stehen an der Patientin,
+// nicht am Antrag — sie werden in der Patientenuebersicht gepflegt.
+const amPatienten = ["f_chiffre", "f_gebdatum", "f_sozio"];
+const schrittBloecke = {
+  eins: teilVon("function schritt1", "function schritt2("),
+  zweiFort: teilVon("function schritt2Fortfuehrung", "function schritt2Umwandlung"),
+  zweiUmw: teilVon("function schritt2Umwandlung", "/** Die Beschriftung folgt"),
+  dreiFort: teilVon("function schritt3Fortfuehrung", "function schritt3Umwandlung"),
+  dreiUmw: teilVon("function schritt3Umwandlung", "// Schritt 4"),
+};
+for (const art of ["fortfuehrung", "umwandlung"]) {
+  const teile = art === "umwandlung"
+    ? [schrittBloecke.eins, schrittBloecke.zweiUmw, schrittBloecke.dreiUmw]
+    : [schrittBloecke.eins, schrittBloecke.zweiFort, schrittBloecke.dreiFort];
+  const vorhanden = new Set(teile.flatMap((b) => [...feldeIn(b)]));
+  const ohne = M.pflicht(art).map((x) => x.feld)
+    .filter((x) => !vorhanden.has(x) && !amPatienten.includes(x));
+  pruef(`${art}: alle ${M.pflicht(art).length} Pflichtangaben haben ein Feld (${ohne.join(", ") || "-"})`,
+    ohne.length === 0);
+}
 
 export { profil, gefuellt, leerFelder, fehler };
 console.log(`\n=== Zwischenstand: ${fehler} Fehler ===`);

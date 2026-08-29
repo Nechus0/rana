@@ -275,11 +275,15 @@ function schritt2Umwandlung(): string {
       steht, wird zu den Gliederungspunkten 1 bis 5 des Berichts.
     </p>
 
-    ${gruppe("2", "Symptomatik und Befund", `
+    ${gruppe("2", "Symptomatik und psychischer Befund", `
       ${textarea("f_symptomatik", "Geschilderte Symptomatik", {
         note: "mit Schwere und Verlauf",
         hoch: 150,
         ph: "Was berichtet die Patientin? Seit wann, wie stark, gleichbleibend oder schwankend …",
+      })}
+      ${textarea("f_befund", "Aktueller psychischer Befund", {
+        hoch: 150,
+        ph: "Antrieb, Affekt, Denken, Suizidalität soweit relevant …",
       })}
       ${textarea("f_krankheitsverstaendnis", "Krankheitsverständnis", {
         note: "wie sie sich die Beschwerden selbst erklärt",
