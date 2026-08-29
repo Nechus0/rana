@@ -397,6 +397,64 @@ textarea.input-record {
 }
 
 
+/* ---- Was der Leitfaden hier verlangt ------------------------
+   Ein Zeichen am Feld, das eine Blase aufklappt. Sie steht im Fluss
+   und nicht darüber: eine schwebende Blase verdeckt beim Tippen
+   genau das Feld, zu dem sie gehört. Der Text schiebt das Feld
+   stattdessen ein Stück nach unten und bleibt stehen, solange man
+   ihn braucht.
+   ------------------------------------------------------------ */
+.lf-zeichen svg { opacity: .55; }
+.lf-zeichen:hover svg { opacity: 1; }
+.lf-zeichen.ist-auf { background: var(--arvalis-wash); }
+.lf-zeichen.ist-auf svg { opacity: 1; color: var(--arvalis); }
+
+.lf-blase {
+  border: 1px solid var(--arvalis-line);
+  border-left: 3px solid var(--arvalis);
+  background: var(--arvalis-wash);
+  border-radius: var(--r);
+  padding: var(--s3) var(--s4);
+  margin-bottom: var(--s2);
+  font-size: var(--t-sm);
+  line-height: var(--lh-read);
+  color: var(--peat);
+}
+
+.lf-verlangt { margin: 0 0 var(--s2); font-weight: 600; }
+
+.lf-punkte { margin: 0; padding-left: var(--s4); }
+.lf-punkte li { margin-bottom: 3px; color: var(--peat-soft); }
+
+/* Warum der Gutachter es braucht — der Teil, der beim Schreiben am
+   meisten hilft, deshalb abgesetzt statt eingereiht. */
+.lf-warum {
+  margin: var(--s3) 0 0;
+  padding-top: var(--s2);
+  border-top: 1px solid var(--arvalis-line);
+  color: var(--peat-soft);
+  font-style: italic;
+}
+
+/* Was beim Umwandlungsantrag anders gilt. Abgesetzt in Bernstein,
+   weil es eine Ausnahme ist und keine Ergänzung — wer sie überliest,
+   schreibt den falschen Bericht. */
+.lf-umwandlung {
+  margin: var(--s3) 0 0;
+  padding: var(--s2) var(--s3);
+  border-left: 2px solid var(--amber);
+  background: var(--amber-wash);
+  border-radius: var(--r-sm);
+  color: var(--peat);
+}
+
+.lf-quelle {
+  margin: var(--s2) 0 0;
+  font-family: var(--face-record);
+  font-size: var(--t-2xs);
+  color: var(--reed);
+}
+
 /* ---- ICD-10-Suche ------------------------------------------
    Steht als eigene Zeile zwischen Etikett und Textfeld. Alles, was
    sie vorher vom umgebenden Etikett geerbt hat — Versalien,

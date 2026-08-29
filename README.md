@@ -1,6 +1,6 @@
 # Rana
 
-**Version Arvalis · 2.5.4**
+**Version Arvalis · 2.5.5**
 
 Assistent für Berichte an den Gutachter zu Anträgen auf Psychotherapie
 (Formblatt PTV 3). Windows-Anwendung. Alle Falldaten bleiben verschlüsselt

@@ -12,6 +12,7 @@
 
 import * as api from "../core/ipc";
 import { F_DIAGNOSEN } from "../core/icd10";
+import { LEITFADEN } from "../core/leitfaden";
 import { buildDocx } from "../report/docx";
 import { expandPrompt, klarnamen, kuerzePrompt, systemPrompt, userPrompt } from "../report/prompt";
 import { fileBase, metrik, renderDocHTML } from "../report/render";
@@ -40,11 +41,51 @@ function input(id: string, label: string, opts: {
   const listId = opts.liste ? `${id}_list` : "";
   return `
     <div class="field ${fehlt ? "is-missing" : ""}" ${opts.span ? `style="grid-column: span ${opts.span}"` : ""}>
-      <label for="${id}">${esc(label)}${opts.note ? ` <span class="field-note">${esc(opts.note)}</span>` : ""}</label>
+      <label for="${id}">
+        ${esc(label)}${opts.note ? ` <span class="field-note">${esc(opts.note)}</span>` : ""}
+        ${LEITFADEN[id] ? `<span class="spacer"></span>${leitfadenZeichen(id)}` : ""}
+      </label>
+      ${leitfadenBlase(id)}
       <input id="${id}" data-feld="${id}" type="${opts.typ ?? "text"}"
              value="${esc(f(id))}" placeholder="${esc(opts.ph ?? "")}"
              ${listId ? `list="${listId}"` : ""}>
       ${opts.liste ? `<datalist id="${listId}">${opts.liste.map((o) => `<option value="${esc(o)}"></option>`).join("")}</datalist>` : ""}
+    </div>`;
+}
+
+/**
+ * Das Info-Zeichen am Feld.
+ *
+ * Es steht nur dort, wo der Leitfaden wirklich etwas verlangt — ein
+ * Zeichen an jedem Feld wäre Tapete und würde genau dort übersehen, wo
+ * es zählt. Der Inhalt kommt aus `core/leitfaden.ts`; hier steht nur,
+ * wie er aussieht.
+ */
+function leitfadenZeichen(id: string): string {
+  const h = LEITFADEN[id];
+  if (!h) return "";
+  return `<button class="btn btn-sm btn-quiet btn-icon lf-zeichen" data-leitfaden="${id}"
+                  type="button" title="Was der Leitfaden hier verlangt"
+                  aria-label="Was der Leitfaden hier verlangt">${icon.info}</button>`;
+}
+
+/** Der Inhalt der Blase — dieselbe Form für Textfelder und Eingaben. */
+function leitfadenBlase(id: string): string {
+  const h = LEITFADEN[id];
+  if (!h) return "";
+  return `
+    <div class="lf-blase" id="lf_${esc(id)}" role="note" hidden>
+      <p class="lf-verlangt">${esc(h.verlangt)}</p>
+      <ul class="lf-punkte">
+        ${h.punkte.map((p) => `<li>${esc(p)}</li>`).join("")}
+      </ul>
+      ${h.warum ? `<p class="lf-warum">${esc(h.warum)}</p>` : ""}
+      ${h.umwandlung ? `
+        <p class="lf-umwandlung">
+          <b>Bei einem Umwandlungsantrag (Kurzzeit- in Langzeittherapie):</b>
+          ${esc(h.umwandlung)}
+        </p>` : ""}
+      <p class="lf-quelle">PTV-3-Leitfaden der KBV, Muster 4.2017</p>
     </div>`;
 }
 
@@ -57,6 +98,7 @@ function textarea(id: string, label: string, opts: {
       <label for="${id}" style="align-items: center;">
         ${esc(label)}${opts.note ? ` <span class="field-note">${esc(opts.note)}</span>` : ""}
         <span class="spacer"></span>
+        ${leitfadenZeichen(id)}
         <button class="btn btn-sm btn-quiet btn-icon" data-gross="${id}" type="button"
                 title="Feld gross öffnen (Strg+Umschalt+E)"
                 aria-label="Feld gross öffnen">${icon.gross}</button>
@@ -65,6 +107,7 @@ function textarea(id: string, label: string, opts: {
                      title="Eigene Textbausteine für dieses Feld">Bausteine</button>`
           : ""}
       </label>
+      ${leitfadenBlase(id)}
       ${opts.icd10
         // Das Suchfeld stand vorher im Etikett und erbte von dort
         // Versalien, Sperrung und Schriftgrad — es sah aus wie ein
@@ -227,9 +270,9 @@ function schritt3(): string {
 
     ${gruppe("3", "Begründung, Planung und Prognose", `
       ${textarea("f_begruendung", "Begründung und weitere Planung", { note: "Ziele, Methoden", ph: "Warum ist die Fortführung nötig? Weitere Planung, angepasste Ziele …" })}
-      ${textarea("f_methoden", "Geänderte Behandlungsmethoden und -techniken", {
-        note: "darf leer bleiben, dann gilt „unverändert“",
-        ph: "Nur ausfüllen, wenn sich an Methoden oder Techniken etwas geändert hat …",
+      ${textarea("f_methoden", "Methodik und Setting", {
+        note: "beim Fortführungsantrag nur bei Änderung · beim Umwandlungsantrag zu begründen",
+        ph: "Beim Umwandlungsantrag: warum Setting, Sitzungszahl und Frequenz für diesen Fall die richtigen sind …",
       })}
       ${textarea("f_prognose", "Prognose und geplanter Abschluss", { ph: "Günstige Faktoren, Veränderungshindernisse …" })}
       ${textarea("f_abschluss", "Planung des Therapieabschlusses", {
@@ -502,6 +545,21 @@ export function bindeSchritt(n: number, neuZeichnen: () => void): void {
 
   for (const btn of qsa<HTMLButtonElement>("[data-gross]")) {
     on(btn, "click", () => grossOeffnen(btn.dataset.gross!));
+  }
+
+  // Die Leitfaden-Blase: eine ist offen, nie zwei. Sie bleibt offen,
+  // bis man sie wieder schliesst — beim Tippen soll man nachlesen
+  // können, ohne die Hand von der Tastatur zu nehmen.
+  for (const btn of qsa<HTMLButtonElement>("[data-leitfaden]")) {
+    on(btn, "click", () => {
+      const blase = document.getElementById(`lf_${btn.dataset.leitfaden}`);
+      if (!blase) return;
+      const auf = blase.hidden;
+      for (const b of qsa<HTMLElement>(".lf-blase")) b.hidden = true;
+      for (const z of qsa<HTMLElement>("[data-leitfaden]")) z.classList.remove("ist-auf");
+      blase.hidden = !auf;
+      btn.classList.toggle("ist-auf", auf);
+    });
   }
 
   // Strg+Umschalt+E öffnet das Feld gross, in dem die Schreibmarke steht.

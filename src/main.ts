@@ -119,26 +119,22 @@ function zeichneGeruest(): void {
     <div class="shell" id="shell">
       ${railHtml()}
       <main class="work">
+        <!-- Zwei Zeilen, nicht eine.
+             Titel und Schrittleiste standen nebeneinander auf einer
+             Grundlinie: die grosse Serifenschrift links, die fünf Kreise
+             rechts daneben. Zwei Dinge gingen dabei schief. Die Leiste
+             begann dort, wo der Titel endete — also bei „Ausgabe" an
+             anderer Stelle als bei „Verlauf und aktueller Stand", und
+             sie sprang bei jedem Schrittwechsel. Und ein zwanzig Punkt
+             hoher Titel neben zwölf Punkt hohen Beschriftungen ergibt
+             keine gemeinsame Zeile, sondern zwei, die sich stören.
+
+             Jetzt: die Schrittleiste als eigene Zeile, mittig und
+             ortsfest. Darunter der Titel mit dem Zusammenhang darüber,
+             rechts der Speicherstand und das Menü. -->
         <header class="work-head">
-          <div class="work-actions-top" style="position: absolute; top: 16px; right: 24px; z-index: 50; display: flex; align-items: center; gap: 16px;">
-            <span class="save-indicator" id="saveIndicator">
-              <span class="save-dot"></span>
-              <span class="save-text">Gespeichert</span>
-            </span>
-            <button class="btn btn-quiet btn-icon" id="btnSettings"
-                    title="Einstellungen" aria-label="Einstellungen">
-              ${icon.dots}
-            </button>
-          </div>
-          <!-- Der Zusammenhang steht über der Arbeit, nicht über dem
-               Fenster: wessen Antrag hier offen ist, welcher Schritt es
-               ist, und ob alles gesichert ist. -->
-          <div class="work-head-row" style="display: flex; align-items: flex-end;">
-            <div class="work-title" style="flex: 0 0 auto; margin-right: 48px; padding-bottom: 6px;">
-              <span class="work-eyebrow" id="workEyebrow"></span>
-              <h2 id="workTitel" style="margin: 0; line-height: 1;"></h2>
-            </div>
-            <nav class="stepbar" role="tablist" aria-label="Arbeitsschritte" style="flex: 1; justify-content: flex-start; transform: none; margin: 0;">
+          <div class="work-head-oben">
+            <nav class="stepbar" role="tablist" aria-label="Arbeitsschritte">
               ${SCHRITTE.map((s, i) => `
                 <button class="stepbar-step" role="tab" data-schritt="${i}" aria-selected="false"
                         title="${esc(s.titel)}">
@@ -147,6 +143,20 @@ function zeichneGeruest(): void {
                   <span class="stepbar-flag" aria-hidden="true"></span>
                 </button>`).join("")}
             </nav>
+          </div>
+
+          <div class="work-head-titel">
+            <div class="work-title">
+              <span class="work-eyebrow" id="workEyebrow"></span>
+              <h2 id="workTitel"></h2>
+            </div>
+            <span class="spacer"></span>
+            <span class="save-indicator" id="saveIndicator">
+              <span class="save-dot"></span>
+              <span class="save-text">Gespeichert</span>
+            </span>
+            <button class="btn btn-quiet btn-icon" id="btnSettings"
+                    title="Einstellungen" aria-label="Einstellungen">${icon.dots}</button>
           </div>
         </header>
         <div class="work-body" id="work-body" tabindex="-1">

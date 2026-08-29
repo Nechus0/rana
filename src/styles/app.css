@@ -768,9 +768,12 @@
   max-width: var(--work-max);
   margin: 0 auto;
   position: relative;
-  /* Optischer Ausgleich: Etwas nach rechts verschoben, da links die
-     mächtigen Überschriften stehen und rechts mehr Leerraum ist. */
-  transform: translateX(60px);
+  /* Hier stand ein `transform: translateX(60px)` als „optischer
+     Ausgleich" für die Überschrift, die daneben stand. Ein von Hand
+     gesetzter Versatz gleicht aber nur eine einzige Überschriftenlänge
+     aus — bei „Ausgabe" stimmte er nicht mehr, und bei jedem
+     Schrittwechsel sprang die Leiste. Sie hat jetzt ihre eigene Zeile
+     und steht mittig, ohne Nachhilfe. */
 }
 
 .stepbar-step {
@@ -930,12 +933,21 @@
 }
 .work-head[hidden] { display: none; }
 
-/* Die Titelzeile sitzt jetzt unter der Schrittleiste. */
+/* Die Schrittleiste hat ihre eigene Zeile. Sie behält damit ihren
+   Platz, gleichgültig wie lang die Überschrift darunter ist. Die
+   Mindesthöhe hält die Zeile offen, wenn die Leiste ausgeblendet ist —
+   in der Patientenübersicht ist sie das. */
+.work-head-oben { position: relative; min-height: var(--h-md); }
+
+/* Die Titelzeile sitzt unter der Schrittleiste. */
 .work-head-titel {
   display: flex;
   align-items: flex-end;
-  gap: var(--s4);
+  gap: var(--s3);
 }
+/* Speicherstand und Menü stehen rechts, auf der Grundlinie der
+   Überschrift. */
+.work-head-titel .btn-icon { flex: none; align-self: flex-end; }
 .work-title { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1 1 auto; }
 .work-eyebrow {
   font-family: var(--face-record);

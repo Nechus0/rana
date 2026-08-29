@@ -151,7 +151,8 @@ function aufbau(p: Profile): string {
     "  (a) Ein Absatz ohne Label zur Begründung der Fortführung, der mit dem Satzteil „Weitere Behandlungsziele:“ endet.",
     "  (b) Direkt danach die Ziele als NUMMERIERTE Aufzählung. JEDES Ziel steht auf einer EIGENEN ZEILE, beginnend mit „1. “, „2. “, „3. “. Höchstens vier Ziele, je höchstens 20 Wörter. Niemals mehrere Ziele in eine Zeile schreiben.",
     `  (c) Ein Absatz „Methodik und Setting: “ – Verfahren, Frequenz und Zahl der beantragten Sitzungen. Der Absatz beginnt mit der Formulierung „Die Behandlung soll als ${p.verfahren.art === "tp" ? "tiefenpsychologisch fundierte Psychotherapie" : bezeichnung(p).toLowerCase()} im ${settingWort(p)} fortgeführt werden.“ – also „soll fortgeführt werden“ und niemals „wird fortgeführt“.`,
-    "  Der Leitfaden verlangt im selben Absatz eine Aussage zu geänderten Behandlungsmethoden und -techniken: Ist dazu etwas angegeben, wird es in einem Satz genannt. Ist nichts angegeben, endet der Absatz mit „Die Behandlungsmethoden und -techniken bleiben unverändert.“",
+    "  Der Leitfaden verlangt im selben Absatz, dass Methodik und Setting ERLÄUTERT werden — nicht bloss genannt. Also: mit welchen Techniken weitergearbeitet wird, und warum Verfahren, Setting und Frequenz für diesen Fall angemessen sind. Ist unter „Methodik und Setting – Erläuterung“ etwas angegeben, wird es dafür verwendet; ist nichts angegeben, wird die Begründung aus Verfahren, Setting und Frequenz gebildet und bleibt knapp.",
+    "  Der Absatz endet mit „Die Behandlungsmethoden und -techniken bleiben unverändert.“, sofern nichts anderes angegeben ist.",
     "  (d) Ein Absatz „Prognose: “ – günstige Faktoren, Veränderungshindernisse. Nach den Veränderungshindernissen folgt PFLICHT ein eigener Satz zur Planung des Therapieabschlusses, weil der Leitfaden diese ausdrücklich verlangt, etwa „Der Abschluss ist nach Bearbeitung der genannten Ziele vorgesehen.“ Sind weiterführende Maßnahmen nach Therapieende angegeben, folgt dazu ein weiterer kurzer Satz. Erst danach endet der Absatz mit dem festen Schlusssatz: „Die geplante Behandlung ist damit ausreichend begründet und erfolgversprechend.“",
   ].join("\n");
 }
@@ -249,10 +250,17 @@ export function userPrompt(f: Felder, p: Profile): string {
     "Aktuelle ICD-10-Diagnose(n) (zu Punkt 2): " + leer(f.f_diag_neu),
     "Begründung Fortführung / weitere Planung / geänderte Ziele und Methoden (zu Punkt 3): " + leer(f.f_begruendung),
     "Prognose / Veränderungshindernisse (zu Punkt 3): " + leer(f.f_prognose),
-    "Geänderte Behandlungsmethoden und -techniken (zu Punkt 3): " +
+    // Das Feld hiess bis 2.5.4 „Geänderte Behandlungsmethoden“ und
+    // fragte nach einer Änderung. Das geht am Leitfaden vorbei: er
+    // verlangt keine Änderungsmeldung, sondern eine Erläuterung von
+    // Methodik und Setting — womit behandelt wird und warum Verfahren,
+    // Frequenz und Rahmen für diesen Fall die richtigen sind. Die
+    // Methode bleibt in aller Regel dieselbe; erklärt werden muss sie
+    // trotzdem.
+    "Methodik und Setting – Erläuterung (zu Punkt 3): " +
       (f.f_methoden && f.f_methoden.trim()
         ? f.f_methoden.trim()
-        : "(keine Angabe – den Absatz „Methodik und Setting“ deshalb mit dem Satz „Die Behandlungsmethoden und -techniken bleiben unverändert.“ abschliessen, NICHT mit 【BITTE ERGÄNZEN】)"),
+        : "(keine Angabe – die Erläuterung deshalb aus Verfahren, Setting und Frequenz bilden und den Absatz mit dem Satz „Die Behandlungsmethoden und -techniken bleiben unverändert.“ abschliessen, NICHT mit 【BITTE ERGÄNZEN】)"),
     "Planung des Therapieabschlusses / weiterführende Maßnahmen (zu Punkt 3): " +
       (f.f_abschluss && f.f_abschluss.trim()
         ? f.f_abschluss.trim()

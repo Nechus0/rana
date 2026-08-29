@@ -118,14 +118,24 @@ document.getElementById("app").innerHTML = `
 
   <main class="work">
     <header class="work-head">
-      <nav class="stepbar" role="tablist" style="display:none"></nav>
+      <div class="work-head-oben">
+        <nav class="stepbar" role="tablist">
+          ${SCHRITTE.map((s, i) => `
+            <button class="stepbar-step ${i === 3 ? "is-current" : ""} ${i < 3 ? "is-done" : ""} ${i === 2 ? "has-gap" : ""}" role="tab">
+              <span class="stepbar-node">${i + 1}</span>
+              <span class="stepbar-label">${s}</span>
+              <span class="stepbar-flag"></span>
+            </button>`).join("")}
+        </nav>
+      </div>
       <div class="work-head-titel">
         <div class="work-title">
-          <span class="work-eyebrow">Patient</span>
-          <h2>Vißer, Claudia</h2>
+          <span class="work-eyebrow">Meike von Fintel · 1. Fortführungsantrag · Schritt 4 von 5</span>
+          <h2>Bericht formulieren</h2>
         </div>
         <span class="spacer"></span>
         <span class="save-indicator"><span class="save-dot"></span><span class="save-text">Gespeichert</span></span>
+        <button class="btn btn-quiet btn-icon">${icon.dots}</button>
       </div>
     </header>
     <div class="work-body">

@@ -84,7 +84,7 @@ export const FELD_NAMEN: Record<string, string> = {
   f_beginn: "Therapiebeginn",
   f_ausgangslage: "Ausgangslage bei Therapiebeginn",
   f_zielstatus: "Stand der Therapieziele",
-  f_methoden: "Behandlungsmethoden",
+  f_methoden: "Methodik und Setting",
   f_abschluss: "Planung des Therapieabschlusses",
 };
 
