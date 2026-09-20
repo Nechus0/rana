@@ -78,29 +78,89 @@ pub struct GenerateResult {
 // Die Klarnamensperre
 // ---------------------------------------------------------------
 
+/// Namensteile, die für sich genommen kein Name sind.
+///
+/// Adelsprädikate und Fügewörter — „von", „van", „de", „zu" — stehen in
+/// beinahe jedem deutschen Satz. Als eigenständiger Suchbegriff schlagen
+/// sie deshalb immer an: bei einer Patientin „Meike von Fintel" meldete
+/// Rana „der Text enthält den Namen von" und schickte nichts, obwohl in
+/// der Anfrage nur Chiffre und Verlauf standen. Der Fehler trat erst mit
+/// dem ersten solchen Namen auf — vorher hatte kein Klarname ein
+/// Fügewort, und die Sperre fiel nie auf.
+///
+/// Geprüft wird stattdessen der eigentliche Namensteil („Fintel") und
+/// die Verbindung aus Fügewort und folgendem Teil („von Fintel"). Der
+/// Schutz bleibt damit vollständig: ein Name kommt nie ohne seinen
+/// tragenden Teil vor.
+const FUEGEWOERTER: &[&str] = &[
+    "von", "vom", "van", "zu", "zur", "zum", "auf", "der", "den", "dem",
+    "die", "das", "de", "del", "della", "di", "da", "do", "dos", "du",
+    "la", "le", "las", "los", "ten", "ter", "af", "av", "el", "al",
+    "bin", "ibn", "und", "genannt", "gen",
+];
+
+fn ist_fuegewort(teil: &str) -> bool {
+    let t = teil.to_lowercase();
+    FUEGEWOERTER.iter().any(|f| *f == t)
+}
+
+/// Zerlegt einen Klarnamen in die Zeichenfolgen, nach denen gesucht wird.
+///
+/// Bewusst grosszügig — lieber ein Fehlalarm zu viel als ein Name im
+/// Netz —, aber nicht so grosszügig, dass ein Allerweltswort darunter
+/// gerät. Siehe [`FUEGEWOERTER`].
+fn namensteile(full: &str) -> Vec<String> {
+    let roh: Vec<String> = full
+        .split_whitespace()
+        .map(|p| p.trim_matches(|c: char| !c.is_alphanumeric()).to_string())
+        .filter(|p| !p.is_empty())
+        .collect();
+
+    let mut out: Vec<String> = Vec::new();
+
+    for (i, teil) in roh.iter().enumerate() {
+        if ist_fuegewort(teil) {
+            // „von" allein bleibt aussen vor, „von Fintel" nicht.
+            if let Some(j) = (i + 1..roh.len()).find(|&j| !ist_fuegewort(&roh[j])) {
+                out.push(roh[i..=j].join(" "));
+            }
+            continue;
+        }
+        if teil.chars().count() >= 3 {
+            out.push(teil.clone());
+        }
+    }
+
+    // Der ganze Name, so wie er im Feld steht.
+    let whole = full.trim();
+    if whole.chars().count() >= 3 && !ist_fuegewort(whole) {
+        out.push(whole.to_string());
+    }
+
+    let mut gesehen: Vec<String> = Vec::new();
+    out.retain(|p| {
+        let k = p.to_lowercase();
+        if gesehen.contains(&k) {
+            false
+        } else {
+            gesehen.push(k);
+            true
+        }
+    });
+    out
+}
+
 /// Prüft, ob ein zu schützender Name im Text vorkommt.
 ///
 /// Verglichen wird ohne Rücksicht auf Gross- und Kleinschreibung und an
 /// Wortgrenzen, damit „Berger" nicht in „Bergerkrankung" anschlägt.
-/// Einzelne Buchstaben und sehr kurze Bruchstücke werden übergangen —
-/// sie würden nur Fehlalarme erzeugen.
+/// Einzelne Buchstaben, sehr kurze Bruchstücke und blosse Fügewörter
+/// werden übergangen — sie würden nur Fehlalarme erzeugen.
 pub fn find_clear_name(text: &str, names: &[String]) -> Option<String> {
     let hay = text.to_lowercase();
 
     for full in names {
-        // Der ganze Name und jeder einzelne Namensteil werden geprüft.
-        // In den Feldern steht oft nur der Nachname.
-        let mut parts: Vec<String> = full
-            .split_whitespace()
-            .map(|p| p.trim_matches(|c: char| !c.is_alphanumeric()).to_string())
-            .filter(|p| p.chars().count() >= 3)
-            .collect();
-        let whole = full.trim();
-        if whole.chars().count() >= 3 {
-            parts.push(whole.to_string());
-        }
-
-        for part in parts {
+        for part in namensteile(full) {
             let needle = part.to_lowercase();
             if contains_word(&hay, &needle) {
                 return Some(part);
@@ -497,6 +557,41 @@ mod tests {
         let n = vec!["Berg".to_string()];
         assert_eq!(find_clear_name("Freude am Bergsteigen", &n), None);
         assert_eq!(find_clear_name("Herr Berg kam pünktlich", &n), Some("Berg".into()));
+    }
+
+    #[test]
+    fn adelspraedikat_loest_keinen_fehlalarm_aus() {
+        // Der Fehler, der Rana 2.7.2 lahmlegte: „von" steht in jedem
+        // zweiten Satz der Anfrage.
+        let n = vec!["Meike von Fintel".to_string()];
+        assert_eq!(
+            find_clear_name(
+                "Die Patientin berichtet von anhaltender Erschöpfung; der Bericht \
+                 der Vorbehandlerin liegt vor.",
+                &n
+            ),
+            None
+        );
+    }
+
+    #[test]
+    fn name_mit_adelspraedikat_wird_trotzdem_erkannt() {
+        let n = vec!["Meike von Fintel".to_string()];
+        assert_eq!(find_clear_name("Frau von Fintel berichtet", &n), Some("von Fintel".into()));
+        assert_eq!(find_clear_name("Frau Fintel berichtet", &n), Some("Fintel".into()));
+        assert_eq!(find_clear_name("Meike wirkt gefasst", &n), Some("Meike".into()));
+        assert_eq!(
+            find_clear_name("Meike von Fintel, 52 Jahre", &n),
+            Some("Meike".into())
+        );
+    }
+
+    #[test]
+    fn weitere_fuegewoerter() {
+        let n = vec!["Jan van der Velde".to_string()];
+        assert_eq!(find_clear_name("sie kommt aus der Region", &n), None);
+        assert_eq!(find_clear_name("Herr van der Velde", &n), Some("van der Velde".into()));
+        assert_eq!(find_clear_name("Herr Velde", &n), Some("Velde".into()));
     }
 
     #[test]

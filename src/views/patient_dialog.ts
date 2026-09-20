@@ -79,6 +79,30 @@ export async function zeigePatientStammdaten(patientId: string | null, onSaved?:
         return false;
       }
       
+      // Die Chiffre und die soziodemographische Zeile gehen an die
+      // Schnittstelle, der Klarname bleibt im Programm. Steht er doch in
+      // einem der beiden Felder, fällt das besser hier auf als später
+      // beim Formulieren — dort bricht Rana ab, ohne dass klar wäre,
+      // woher der Name kommt.
+      const chiffre = v("p_chiffre").trim();
+      const sozio = v("p_sozio").trim();
+      if (chiffre || sozio) {
+        try {
+          const treffer = await api.checkClearNames(`${chiffre}\n${sozio}`, [name]);
+          if (treffer) {
+            toast(
+              `„${treffer}" steht in der Chiffre oder den soziodemographischen Angaben. ` +
+              `Beide Felder werden übermittelt — bitte ohne Klarnamen.`,
+              "danger",
+            );
+            return false;
+          }
+        } catch {
+          // Die Prüfung ist eine Hilfe, kein Tor: die Sperre vor dem
+          // Senden greift ohnehin.
+        }
+      }
+
       patient.fields["f_name"] = name;
       patient.fields["f_chiffre"] = v("p_chiffre");
       patient.fields["f_gebdatum"] = v("p_gebdatum");
