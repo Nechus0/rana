@@ -17,6 +17,7 @@ import * as api from "../core/ipc";
 import * as S from "../core/state";
 import { confirmDialog, esc, icon, on, qsa, relDate, toast } from "../ui/kit";
 import { zeigePatientStammdaten } from "./patient_dialog";
+import { ageSuffix, fmtDate } from "../report/render";
 
 export interface PatientAnsichtHandler {
   /** Einen Antrag öffnen. */
@@ -74,7 +75,7 @@ export function renderPatient(d: PatientDaten): string {
 
       <dl class="stammblatt">
         ${stammfeld("Chiffre", oder(f.f_chiffre))}
-        ${stammfeld("Geburtsdatum", oder(f.f_gebdatum))}
+        ${stammfeld("Geburtsdatum", f.f_gebdatum ? `${fmtDate(f.f_gebdatum)}${ageSuffix(f.f_gebdatum)}` : "—")}
         ${stammfeld("Kostenträger", oder(f.f_kasse))}
         ${stammfeld("Therapiebeginn", oder(f.f_beginn || f.f_therapiebeginn))}
         ${stammfeld("Angelegt", relDate(d.patient.created_at))}

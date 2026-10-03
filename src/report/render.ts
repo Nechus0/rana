@@ -443,10 +443,30 @@ export function sozioText(f: Felder): string {
   const gb = g(f, "f_gebdatum");
   const geb = gb ? `geb. ${fmtDate(gb)}${ageSuffix(gb)}` : "geb. [Geburtsdatum fehlt]";
   const hatDatum = /geb\.|geboren|\d{1,2}\.\d{1,2}\.\d{2,4}/i.test(s);
-  if (s) return hatDatum ? s : `${geb}, ${s}`;
+  if (s) return hatDatum ? alterImText(s, gb) : `${geb}, ${s}`;
   const parts = [geb];
   if (g(f, "f_geschlecht")) parts.push(g(f, "f_geschlecht"));
   return parts.join(", ");
+}
+
+/**
+ * Steht das Geburtsdatum im eigenen Text, fehlte bis 2.8.0 das Alter —
+ * die Metabox ergänzt dann bewusst nichts, um nichts doppelt zu setzen.
+ * Jetzt kommt das Alter in Klammern hinter das erste vierstellige
+ * Datum. Steht schon eine Altersangabe in Klammern da, bleibt der Text
+ * unverändert.
+ */
+function alterImText(s: string, gb: string): string {
+  if (/\(\s*\d{1,3}\s*J/i.test(s)) return s;
+  const m = /(\d{1,2})\.(\d{1,2})\.(\d{4})/.exec(s);
+  if (!m) return s;
+  const iso = `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  // Weicht das Datum im Text vom Stammdatum ab, gilt das Stammdatum —
+  // es ist das gepflegte Feld, der Freitext kann veraltet sein.
+  const alter = ageSuffix(gb || iso);
+  if (!alter) return s;
+  const ende = m.index + m[0].length;
+  return s.slice(0, ende) + alter + s.slice(ende);
 }
 
 function sozioLine(f: Felder): string {
