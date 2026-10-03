@@ -10,7 +10,15 @@ on:
     tags: ["v*"]
   pull_request:
     branches: [main]
+  # Von Hand gestartet, kann der Lauf eine Marke mitbekommen. Dann legt
+  # tauri-action Marke und Veröffentlichung selbst über die GitHub-API
+  # an — für Umgebungen, die eine Marke nicht schieben dürfen.
   workflow_dispatch:
+    inputs:
+      marke:
+        description: "Veröffentlichen unter dieser Marke, z. B. v2.8.0 (leer: nur bauen)"
+        required: false
+        default: ""
 
 env:
   CARGO_TERM_COLOR: always
@@ -111,8 +119,8 @@ jobs:
         with:
           # Bei einer Marke entsteht eine Veröffentlichung, sonst nur
           # ein Download am Arbeitslauf.
-          tagName: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
-          releaseName: "Rana ${{ github.ref_name }}"
+          tagName: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || inputs.marke || '' }}
+          releaseName: "Rana ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || inputs.marke || github.ref_name }}"
           releaseBody: |
             **Rana — Version Arvalis**
 
@@ -133,7 +141,7 @@ jobs:
       # Auch ohne Marke soll der Installer erreichbar sein — sonst
       # müsste für jeden Zwischenstand eine Veröffentlichung entstehen.
       - name: Installer bereitstellen
-        if: "!startsWith(github.ref, 'refs/tags/')"
+        if: "!startsWith(github.ref, 'refs/tags/') && !inputs.marke"
         uses: actions/upload-artifact@v4
         with:
           name: Rana-Windows

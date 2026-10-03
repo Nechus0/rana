@@ -108,6 +108,14 @@ das Update dann **in Rana selbst** ein: Seitenschiene → Aktualisierung →
 
 ---
 
+### 3.6 Ohne Marke veröffentlichen
+
+Darf die Umgebung keine Marke schieben (so in Claude-Sitzungen in der
+Cloud), genügt ein Handstart des Workflows „Rana bauen" auf `main` mit
+dem Feld **marke** = `v2.8.0`. tauri-action legt Marke und
+Veröffentlichung dann selbst an. Die Versionsnummer in den Dateien muss
+trotzdem vorher stimmen (5.1).
+
 ## 4 · Wenn der Lauf scheitert
 
 Protokoll des fehlgeschlagenen Schritts holen:
