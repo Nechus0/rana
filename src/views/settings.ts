@@ -7,6 +7,7 @@
 
 import { save as saveDialog, open as openDialog } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import type { Update } from "@tauri-apps/plugin-updater";
 import * as api from "../core/ipc";
 import * as S from "../core/state";
 import { confirmDialog, dialog, esc, eur, icon, on, qs, qsa, relDate, toast } from "../ui/kit";
@@ -14,7 +15,7 @@ import { confirmDialog, dialog, esc, eur, icon, on, qs, qsa, relDate, toast } fr
 const CONSOLE_LIMITS = "https://platform.claude.com/settings/limits";
 
 /** Steht auch in package.json, Cargo.toml und tauri.conf.json. */
-export const EIGENE_VERSION = "2.8.0";
+export const EIGENE_VERSION = "2.8.1";
 
 // ===============================================================
 // Einstellungen
@@ -684,16 +685,11 @@ export async function zeigeUeber(): Promise<void> {
 }
 
 /**
- * Aktualisierung — ausschliesslich auf Anforderung.
+ * Aktualisierung von Hand.
  *
- * Der Vorgänger prüfte still beim Start. Das war bequem und stand im
- * Widerspruch zu dem, was das README verspricht: dass Rana ruhig
- * bleibt, solange sie nichts sendet. Ein Programm, das beim Start
- * unbemerkt GitHub anruft, hält dieses Versprechen nicht.
- *
- * Deshalb passiert hier nichts von selbst. Die Prüfung läuft nur, wenn
- * dieser Dialog geöffnet und der Knopf gedrückt wird — und sie ist
- * dabei die ganze Zeit sichtbar.
+ * Beim Start fragt Rana einmal selbst nach (main.ts) und schlägt eine
+ * neue Fassung vor. Hier lässt sich die Prüfung jederzeit wiederholen.
+ * Installiert wird in beiden Fällen nur nach Klick.
  *
  * Heruntergeladen wird nur, was mit Anjas privatem Schlüssel signiert
  * ist. Ein untergeschobener Installer wird von der Signaturprüfung
@@ -705,8 +701,9 @@ export async function zeigeAktualisierung(): Promise<void> {
     cancel: "Schliessen",
     body: `
       <p class="hint">
-        Rana prüft nur, wenn Sie es hier auslösen — nie von selbst und nie im
-        Hintergrund. Geprüft wird gegen die Veröffentlichungen auf GitHub.
+        Rana sieht beim Start einmal selbst nach und schlägt eine neue Fassung
+        vor. Hier lässt sich die Prüfung wiederholen. Geprüft wird gegen die
+        Veröffentlichungen auf GitHub.
       </p>
       <div class="row" style="margin-top: var(--s1)">
         <button class="btn btn-primary" id="u_pruefen" type="button">Nach Aktualisierung suchen</button>
@@ -742,55 +739,7 @@ export async function zeigeAktualisierung(): Promise<void> {
             return;
           }
 
-          status.className = "key-state ok";
-          status.innerHTML = `${icon.check} <span>Fassung ${esc(gefunden.version)} liegt vor.</span>`;
-          details.innerHTML = `
-            <div class="notice" style="margin-top: var(--s3)">
-              ${gefunden.body ? `<p style="margin-bottom: var(--s3)">${esc(gefunden.body).slice(0, 600)}</p>` : ""}
-              <p class="hint">
-                Der Installer wird heruntergeladen, seine Signatur geprüft und
-                anschliessend ausgeführt. Rana startet danach neu. Ihre Fälle
-                bleiben unberührt.
-              </p>
-            </div>
-            <div class="row" style="margin-top: var(--s3)">
-              <button class="btn btn-primary" id="u_install" type="button">Herunterladen und installieren</button>
-              <span class="hint" id="u_fortschritt"></span>
-            </div>`;
-
-          on(qs<HTMLElement>("#u_install", details)!, "click", async () => {
-            const btn = qs<HTMLButtonElement>("#u_install", details)!;
-            const fort = qs<HTMLElement>("#u_fortschritt", details)!;
-            btn.disabled = true;
-
-            let gesamt = 0;
-            let geladen = 0;
-            try {
-              await gefunden.downloadAndInstall((e) => {
-                // Der Fortschritt wird angezeigt, weil hier gerade Daten
-                // fliessen — auch das soll nicht unsichtbar passieren.
-                if (e.event === "Started") {
-                  gesamt = e.data.contentLength ?? 0;
-                  fort.textContent = "Lade …";
-                } else if (e.event === "Progress") {
-                  geladen += e.data.chunkLength;
-                  fort.textContent = gesamt
-                    ? `${Math.round((geladen / gesamt) * 100)} %`
-                    : `${Math.round(geladen / 1024)} kB`;
-                } else if (e.event === "Finished") {
-                  fort.textContent = "Signatur geprüft, installiere …";
-                }
-              });
-
-              const { relaunch } = await import("@tauri-apps/plugin-process");
-              await relaunch();
-            } catch (e) {
-              btn.disabled = false;
-              fort.textContent = "";
-              status.className = "key-state bad";
-              status.innerHTML = `${icon.warn} <span>${esc(api.errorText(e))}</span>`;
-            }
-          });
+          zeigeFund(gefunden, status, details);
         } catch (e) {
           // Kein Netz, kein Server, keine Veröffentlichung — alles davon
           // ist harmlos. Gesagt wird es trotzdem, weil die Nutzerin die
@@ -800,6 +749,80 @@ export async function zeigeAktualisierung(): Promise<void> {
           knopf.disabled = false;
         }
       });
+    },
+  });
+}
+
+/** Beschreibung und Installationsknopf für eine gefundene Fassung. */
+function zeigeFund(gefunden: Update, status: HTMLElement, details: HTMLElement): void {
+  status.className = "key-state ok";
+  status.innerHTML = `${icon.check} <span>Fassung ${esc(gefunden.version)} liegt vor.</span>`;
+  details.innerHTML = `
+    <div class="notice" style="margin-top: var(--s3)">
+      ${gefunden.body ? `<p style="margin-bottom: var(--s3)">${esc(gefunden.body).slice(0, 600)}</p>` : ""}
+      <p class="hint">
+        Der Installer wird heruntergeladen, seine Signatur geprüft und
+        anschliessend ausgeführt. Rana startet danach neu. Ihre Fälle
+        bleiben unberührt.
+      </p>
+    </div>
+    <div class="row" style="margin-top: var(--s3)">
+      <button class="btn btn-primary" id="u_install" type="button">Herunterladen und installieren</button>
+      <span class="hint" id="u_fortschritt"></span>
+    </div>`;
+
+  on(qs<HTMLElement>("#u_install", details)!, "click", async () => {
+    const btn = qs<HTMLButtonElement>("#u_install", details)!;
+    const fort = qs<HTMLElement>("#u_fortschritt", details)!;
+    btn.disabled = true;
+
+    let gesamt = 0;
+    let geladen = 0;
+    try {
+      await gefunden.downloadAndInstall((e) => {
+        // Der Fortschritt wird angezeigt, weil hier gerade Daten
+        // fliessen — auch das soll nicht unsichtbar passieren.
+        if (e.event === "Started") {
+          gesamt = e.data.contentLength ?? 0;
+          fort.textContent = "Lade …";
+        } else if (e.event === "Progress") {
+          geladen += e.data.chunkLength;
+          fort.textContent = gesamt
+            ? `${Math.round((geladen / gesamt) * 100)} %`
+            : `${Math.round(geladen / 1024)} kB`;
+        } else if (e.event === "Finished") {
+          fort.textContent = "Signatur geprüft, installiere …";
+        }
+      });
+
+      const { relaunch } = await import("@tauri-apps/plugin-process");
+      await relaunch();
+    } catch (e) {
+      btn.disabled = false;
+      fort.textContent = "";
+      status.className = "key-state bad";
+      status.innerHTML = `${icon.warn} <span>${esc(api.errorText(e))}</span>`;
+    }
+  });
+}
+
+/**
+ * Der Vorschlag beim Start. Derselbe Ablauf wie in den Einstellungen,
+ * nur schon mit dem Fund geöffnet. „Später" schliesst ihn; beim
+ * nächsten Start kommt er wieder.
+ */
+export async function schlageAktualisierungVor(gefunden: Update): Promise<void> {
+  await dialog({
+    title: "Neue Fassung verfügbar",
+    cancel: "Später",
+    body: `
+      <p class="hint">
+        Fassung ${esc(gefunden.version)} liegt vor — installiert ist ${esc(EIGENE_VERSION)}.
+      </p>
+      <div class="key-state" id="u_status" style="min-height:24px"></div>
+      <div id="u_details"></div>`,
+    onOpen: (root) => {
+      zeigeFund(gefunden, qs<HTMLElement>("#u_status", root)!, qs<HTMLElement>("#u_details", root)!);
     },
   });
 }

@@ -34,7 +34,7 @@ import { runSetup } from "./setup/wizard";
 import { bindeSchritt, fallInPapierkorb, renderSchritt, SCHRITTE, schritte } from "./views/steps";
 
 import {
-  EIGENE_VERSION, zeigeEinstellungen,
+  EIGENE_VERSION, schlageAktualisierungVor, zeigeEinstellungen,
 } from "./views/settings";
 import { bindePatient, ladePatient, renderPatient } from "./views/patientview";
 import { confirmDialog, el, esc, icon, marke, on, qsa, relDate, toast } from "./ui/kit";
@@ -68,31 +68,40 @@ async function main(): Promise<void> {
 }
 
 /**
- * Sieht beim Start nach, ob eine neuere Fassung vorliegt.
+ * Sieht beim Start nach, ob eine neuere Fassung vorliegt, und schlägt
+ * sie zur Installation vor.
  *
- * Kein Dialog, der sich vor die Arbeit schiebt: eine Meldung unten,
- * die von selbst verschwindet, und ein Weg in die Einstellungen, wo
- * die Installation steht. Fehlt das Netz, passiert schlicht nichts —
- * eine Fehlermeldung über einen Dienst, nach dem niemand gefragt hat,
- * wäre eine Zumutung.
+ * Bis 2.8.0 stand hier nur eine Meldung, die nach vierzehn Sekunden
+ * verschwand — der Weg zur Installation führte dann noch über die
+ * Einstellungen. Jetzt öffnet sich der Dialog mit dem Installationsknopf
+ * direkt. Installiert wird erst auf Klick; „Später" schliesst ihn. Fehlt
+ * das Netz, passiert schlicht nichts — eine Fehlermeldung über einen
+ * Dienst, nach dem niemand gefragt hat, wäre eine Zumutung.
  */
 async function pruefeUpdate(): Promise<void> {
+  let gefunden;
   try {
     const { check } = await import("@tauri-apps/plugin-updater");
     // Dieselbe Zielangabe wie in den Einstellungen: der NSIS-Installer
     // läuft im Benutzerprofil und kommt ohne Rückfrage der
     // Benutzerkontensteuerung aus.
-    const gefunden = await check({ target: "windows-x86_64-nsis" });
-    if (!gefunden) return;
-
+    gefunden = await check({ target: "windows-x86_64-nsis" });
+  } catch {
+    // Kein Netz, keine Meldung.
+    return;
+  }
+  if (!gefunden) return;
+  // Steht schon ein Dialog offen (etwa die Nachfrage beim Öffnen eines
+  // Falls), nicht darüberlegen — dann genügt die Meldung unten.
+  if (document.querySelector(".scrim")) {
     toast(
       `Fassung ${gefunden.version} liegt vor — installiert ist ${EIGENE_VERSION}. `
       + "Unter Einstellungen → Aktualisierung lässt sie sich einspielen.",
       "info", 14000,
     );
-  } catch {
-    // Kein Netz, keine Meldung.
+    return;
   }
+  await schlageAktualisierungVor(gefunden);
 }
 
 async function starteArbeitsansicht(): Promise<void> {
@@ -108,11 +117,6 @@ async function starteArbeitsansicht(): Promise<void> {
 
   zeichneGeruest();
   S.subscribe(() => { aktualisiereRand(); });
-  // Hier stand einmal eine Abfrage bei GitHub beim Start. Sie ist
-  // entfernt: das README sagt zu, dass Rana von sich aus nichts ins
-  // Netz schickt, und eine Zusage, die nur meistens gilt, ist keine.
-  // Die Prüfung läuft ausschliesslich über Einstellungen →
-  // Aktualisierung, auf Klick und sichtbar.
 }
 
 // ===============================================================

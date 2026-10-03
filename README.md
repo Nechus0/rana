@@ -1,6 +1,6 @@
 # Rana
 
-**Version Arvalis · 2.8.0**
+**Version Arvalis · 2.8.1**
 
 Assistent für Berichte an den Gutachter zu Anträgen auf Psychotherapie
 (Formblatt PTV 3). Windows-Anwendung. Alle Falldaten bleiben verschlüsselt
@@ -81,10 +81,11 @@ weder vortäuschen noch unterdrücken. Solange etwas blau leuchtet, spricht
 Rana mit Anthropic. Ist es ruhig, tut sie es nicht.
 
 Seit Fassung 1.1.0 gibt es einen zweiten möglichen Gesprächspartner, GitHub,
-für die Aktualisierung. Damit der Satz oben wahr bleibt, ruft Rana dort
-**nie von selbst** an — auch nicht beim Start. Die Prüfung läuft
-ausschliesslich, wenn Sie in der Seitenschiene auf „Aktualisierung“ gehen und
-den Knopf drücken, und sie ist dabei die ganze Zeit im Dialog sichtbar.
+für die Aktualisierung. Beim Start fragt Rana dort einmal nach, ob eine neue
+Fassung vorliegt — abgerufen wird nur die öffentliche Datei `latest.json`,
+gesendet wird nichts aus Ihren Fällen. Liegt eine neue Fassung vor, schlägt
+ein Dialog die Installation vor; heruntergeladen und installiert wird erst
+auf Klick. Von Hand geht es jederzeit über die Seitenschiene → „Aktualisierung“.
 
 ---
 
@@ -95,7 +96,7 @@ den Knopf drücken, und sie ist dabei die ganze Zeit im Dialog sichtbar.
 | **Anthropic-Schlüssel** | Windows Credential Manager. Erreicht die Oberfläche nie — dort ist er nur maskiert sichtbar (`sk-ant-…4f2a`). |
 | **Falldaten** | AES-256-GCM, Schlüssel im Windows-Tresor. Im Klartext stehen in der Datei nur Kennung und Zeitstempel — kein Name, keine Chiffre, keine Diagnose. |
 | **Klarnamen** | Werden getrennt gehalten und gehen **nie** an die Schnittstelle. Vor jedem Aufruf prüft Rust den gesamten Anfragetext an Wortgrenzen; ein Treffer bricht ab, bevor etwas gesendet wird. |
-| **Netz** | Zwei Ziele, beide nur über TLS mit Zertifikatsprüfung: `api.anthropic.com` für die Berichte, `github.com` ausschliesslich für die Aktualisierung — und die läuft nur, wenn Sie sie in der Seitenschiene auslösen. Keine Telemetrie, keine Absturzberichte, keine Analysedienste. |
+| **Netz** | Zwei Ziele, beide nur über TLS mit Zertifikatsprüfung: `api.anthropic.com` für die Berichte, `github.com` ausschliesslich für die Aktualisierung — eine Nachfrage beim Start, installiert wird nur auf Klick. Keine Telemetrie, keine Absturzberichte, keine Analysedienste. |
 | **Aktualisierung** | Heruntergeladene Installer müssen mit dem privaten Schlüssel der Praxis signiert sein. Eine untergeschobene Datei wird verworfen, bevor sie ausgeführt wird. |
 | **Oberfläche** | Strenge CSP, kein Nachladen von aussen. Eingefügter Text wird als reiner Text übernommen. |
 | **Sicherungsdatei** | AES-256-GCM, Schlüssel per PBKDF2-HMAC-SHA-256 mit 600.000 Runden aus dem Passwort. Enthält **nicht** den Anthropic-Schlüssel. |
